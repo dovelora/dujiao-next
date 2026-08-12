@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly COMPOSE_FILE="/Project/compose.yml"
+readonly COMPOSE_FILE="/Project/deployments/dujiao/compose.yml"
 readonly DEPLOY_ENV="/Project/deployments/dujiao/deploy.env"
 readonly REGISTRY="ghcr.io"
 readonly IMAGE_REPOSITORY="ghcr.io/dovelora/dujiao-next"
