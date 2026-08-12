@@ -53,13 +53,6 @@
       class="relative z-20 flex flex-1 flex-col"
       :class="compact ? 'px-2 py-1.5' : 'px-3 py-2.5 md:py-3'"
     >
-      <div
-        v-if="product.category?.name"
-        class="truncate uppercase tracking-wider text-muted-foreground"
-        :class="compact ? 'mb-0.5 text-[9px]' : 'mb-1 text-xs'"
-      >
-        {{ t('products.categoryLabel') }} · {{ getLocalizedText(product.category.name) }}
-      </div>
       <h3
         class="line-clamp-1 font-bold text-foreground transition-colors"
         :class="compact ? 'mb-1 text-[11px] leading-4' : 'mb-1 text-sm md:mb-1.5 md:text-base'"
@@ -103,6 +96,14 @@
           {{ getStockStatusLabel(product) }}
         </Badge>
       </div>
+
+      <p
+        v-if="product.description"
+        class="hidden text-muted-foreground md:block line-clamp-2"
+        :class="compact ? 'mb-1.5 text-[10px] leading-4' : 'mb-2 text-sm leading-5'"
+      >
+        {{ getLocalizedText(product.description) }}
+      </p>
 
       <div class="mt-auto flex items-center justify-between border-t" :class="compact ? 'pt-1.5' : 'pt-2'">
         <div class="min-w-0">
