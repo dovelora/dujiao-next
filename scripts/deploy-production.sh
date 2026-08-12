@@ -1,43 +1,59 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly REPOSITORY_DIR="/Project/workspaces/dovelora/dujiao-next"
 readonly COMPOSE_FILE="/Project/compose.yml"
 readonly DEPLOY_ENV="/Project/deployments/dujiao/deploy.env"
-readonly IMAGE_REPOSITORY="dovelora/dujiao-next"
+readonly REGISTRY="ghcr.io"
+readonly IMAGE_REPOSITORY="ghcr.io/dovelora/dujiao-next"
+readonly LEGACY_IMAGE_REPOSITORY="dovelora/dujiao-next"
 
-if [[ "$#" -ne 1 ]]; then
-  echo "Expected exactly one Git commit SHA." >&2
+if [[ "$#" -ne 3 ]]; then
+  echo "Expected a GHCR image reference, digest, and registry username." >&2
   exit 2
 fi
 
-commit_sha="$1"
-if [[ ! "${commit_sha}" =~ ^[0-9a-f]{40}$ ]]; then
-  echo "Expected one full 40-character Git commit SHA." >&2
+candidate_image="$1"
+expected_digest="$2"
+registry_username="$3"
+if [[ ! "${candidate_image}" =~ ^ghcr\.io/dovelora/dujiao-next:gh-[0-9a-f]{12}-[0-9]+-[0-9]+$ ]]; then
+  echo "Expected a uniquely tagged dovelora/dujiao-next GHCR image." >&2
+  exit 2
+fi
+if [[ ! "${expected_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+  echo "Expected a sha256 image digest." >&2
+  exit 2
+fi
+if [[ -z "${registry_username}" || "${registry_username}" =~ [[:space:]] ]]; then
+  echo "Expected a non-empty registry username without whitespace." >&2
   exit 2
 fi
 
-short_sha="${commit_sha:0:12}"
-candidate_image="${IMAGE_REPOSITORY}:gh-${short_sha}"
-build_dir="$(mktemp -d /tmp/dovelora-production.XXXXXX)"
+docker_config_dir="$(mktemp -d /tmp/dovelora-docker-config.XXXXXX)"
 
 cleanup() {
-  rm -rf "${build_dir}"
+  rm -rf "${docker_config_dir}"
 }
 trap cleanup EXIT
 
-read_current_image() {
-  awk -F= '$1 == "DUJIAO_IMAGE" { print substr($0, index($0, "=") + 1); exit }' "${DEPLOY_ENV}"
+read_image_pointer() {
+  local key="$1"
+  awk -F= -v key="${key}" '$1 == key { print substr($0, index($0, "=") + 1); exit }' "${DEPLOY_ENV}"
 }
 
-write_image_pointer() {
-  local image="$1"
+write_image_pointers() {
+  local current_image="$1"
+  local rollback_image="${2:-}"
   local pointer_dir
   local temporary_pointer
   pointer_dir="$(dirname "${DEPLOY_ENV}")"
   mkdir -p "${pointer_dir}"
   temporary_pointer="$(mktemp "${pointer_dir}/.deploy.env.XXXXXX")"
-  printf 'DUJIAO_IMAGE=%s\n' "${image}" > "${temporary_pointer}"
+  {
+    printf 'DUJIAO_IMAGE=%s\n' "${current_image}"
+    if [[ -n "${rollback_image}" ]]; then
+      printf 'DUJIAO_PREVIOUS_IMAGE=%s\n' "${rollback_image}"
+    fi
+  } > "${temporary_pointer}"
   chmod 640 "${temporary_pointer}"
   mv "${temporary_pointer}" "${DEPLOY_ENV}"
 }
@@ -75,10 +91,40 @@ wait_for_public_health() {
 
 rollback() {
   local previous_image="$1"
+  local previous_rollback_image="${2:-}"
   echo "Deployment failed; restoring ${previous_image}." >&2
-  write_image_pointer "${previous_image}"
+  write_image_pointers "${previous_image}" "${previous_rollback_image}"
   recreate_storefront
   wait_for_local_health
+}
+
+cleanup_failed_candidate() {
+  local candidate_image="$1"
+
+  if ! docker image rm "${candidate_image}" >/dev/null 2>&1; then
+    echo "Warning: failed to remove unsuccessful candidate image ${candidate_image}." >&2
+  fi
+}
+
+cleanup_old_application_images() {
+  local current_image="$1"
+  local rollback_image="$2"
+  local image
+  local repository
+
+  for repository in "${IMAGE_REPOSITORY}" "${LEGACY_IMAGE_REPOSITORY}"; do
+    while IFS= read -r image; do
+      if [[ -z "${image}" || "${image}" == "${current_image}" || "${image}" == "${rollback_image}" ]]; then
+        continue
+      fi
+
+      if docker image rm "${image}" >/dev/null; then
+        echo "Removed superseded application image ${image}."
+      else
+        echo "Warning: failed to remove superseded application image ${image}." >&2
+      fi
+    done < <(docker image ls "${repository}" --format '{{.Repository}}:{{.Tag}}' | sort -u)
+  done
 }
 
 if [[ ! -f "${DEPLOY_ENV}" ]]; then
@@ -86,42 +132,68 @@ if [[ ! -f "${DEPLOY_ENV}" ]]; then
   exit 1
 fi
 
-previous_image="$(read_current_image)"
+previous_image="$(read_image_pointer DUJIAO_IMAGE)"
 if [[ -z "${previous_image}" ]]; then
   echo "Deployment pointer does not contain DUJIAO_IMAGE." >&2
   exit 1
 fi
+previous_rollback_image="$(read_image_pointer DUJIAO_PREVIOUS_IMAGE)"
+
+if [[ "${candidate_image}" == "${previous_image}" ]]; then
+  rollback_image="${previous_rollback_image}"
+else
+  rollback_image="${previous_image}"
+fi
 
 payment_before="$(docker inspect -f '{{.Id}}|{{.State.StartedAt}}' epusdt)"
 
-git -c safe.directory="${REPOSITORY_DIR}" -C "${REPOSITORY_DIR}" fetch --quiet origin "${commit_sha}"
-git -c safe.directory="${REPOSITORY_DIR}" -C "${REPOSITORY_DIR}" cat-file -e "${commit_sha}^{commit}"
-git -c safe.directory="${REPOSITORY_DIR}" -C "${REPOSITORY_DIR}" archive "${commit_sha}" | tar -x -C "${build_dir}"
+registry_token="$(cat)"
+if [[ -z "${registry_token}" ]]; then
+  echo "Expected a GHCR token on standard input." >&2
+  exit 2
+fi
+printf '%s' "${registry_token}" \
+  | docker --config "${docker_config_dir}" login "${REGISTRY}" \
+      --username "${registry_username}" --password-stdin >/dev/null
+unset registry_token
+pinned_image="${candidate_image}@${expected_digest}"
+docker --config "${docker_config_dir}" pull "${pinned_image}"
+pulled_image_id="$(docker image inspect -f '{{.Id}}' "${pinned_image}")"
+docker image tag "${pulled_image_id}" "${candidate_image}"
 
-docker build \
-  --build-arg "APP_VERSION=gh-${short_sha}" \
-  --tag "${candidate_image}" \
-  "${build_dir}"
-
-write_image_pointer "${candidate_image}"
+write_image_pointers "${candidate_image}" "${rollback_image}"
 if ! recreate_storefront || ! wait_for_local_health || ! wait_for_public_health; then
-  rollback "${previous_image}"
+  rollback "${previous_image}" "${previous_rollback_image}"
+  if [[ "${candidate_image}" != "${previous_image}" ]]; then
+    cleanup_failed_candidate "${candidate_image}"
+  fi
   exit 1
 fi
 
 payment_after="$(docker inspect -f '{{.Id}}|{{.State.StartedAt}}' epusdt)"
 if [[ "${payment_before}" != "${payment_after}" ]]; then
   echo "Payment container identity changed outside the deployment action." >&2
-  rollback "${previous_image}"
+  rollback "${previous_image}" "${previous_rollback_image}"
+  if [[ "${candidate_image}" != "${previous_image}" ]]; then
+    cleanup_failed_candidate "${candidate_image}"
+  fi
   exit 1
 fi
 
 deployed_image="$(docker inspect -f '{{.Config.Image}}' dujiao)"
 if [[ "${deployed_image}" != "${candidate_image}" ]]; then
   echo "Storefront is running ${deployed_image}, expected ${candidate_image}." >&2
-  rollback "${previous_image}"
+  rollback "${previous_image}" "${previous_rollback_image}"
+  if [[ "${candidate_image}" != "${previous_image}" ]]; then
+    cleanup_failed_candidate "${candidate_image}"
+  fi
   exit 1
 fi
 
-echo "Deployed ${candidate_image} from ${commit_sha}."
+cleanup_old_application_images "${candidate_image}" "${rollback_image}"
+
+echo "Deployed ${candidate_image}."
+if [[ -n "${rollback_image}" ]]; then
+  echo "Retained ${rollback_image} for rollback."
+fi
 echo "Payment container remained ${payment_after}."
