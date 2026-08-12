@@ -1,9 +1,12 @@
 <template>
   <Card
-    class="group relative overflow-hidden flex flex-col h-full rounded-2xl transition-all theme-slide-up"
-    :class="isSoldOut(product)
-      ? 'cursor-default opacity-85 grayscale-[0.25] saturate-50 border-destructive/30'
-      : 'cursor-pointer hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg'"
+    class="group relative overflow-hidden flex flex-col h-full transition-all theme-slide-up"
+    :class="[
+      compact ? 'rounded-xl' : 'rounded-2xl',
+      isSoldOut(product)
+        ? 'cursor-default opacity-85 grayscale-[0.25] saturate-50 border-destructive/30'
+        : 'cursor-pointer hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg',
+    ]"
     :style="{ animationDelay: `${index * animationStep}ms` }"
     @click="$emit('click', product.slug)">
     <!-- Image Area -->
@@ -35,7 +38,7 @@
       </Badge>
 
       <!-- Tags -->
-      <div v-if="!isSoldOut(product) && product.tags && product.tags.length > 0"
+      <div v-if="!hideTags && !isSoldOut(product) && product.tags && product.tags.length > 0"
         class="absolute right-2 top-2 z-20 flex flex-wrap justify-end gap-1 md:right-3 md:top-3">
         <span v-for="(tag, tagIndex) in product.tags.slice(0, maxTags)" :key="tagIndex"
           class="inline-flex items-center rounded-md border border-white/25 bg-black/55 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
@@ -45,16 +48,26 @@
     </div>
 
     <!-- Content Area -->
-    <div class="relative z-20 flex flex-1 flex-col px-3 py-2.5 md:py-3">
-      <div v-if="product.category?.name" class="mb-1 truncate text-xs uppercase tracking-wider text-muted-foreground">
+    <div
+      class="relative z-20 flex flex-1 flex-col"
+      :class="compact ? 'px-2 py-1.5' : 'px-3 py-2.5 md:py-3'"
+    >
+      <div
+        v-if="product.category?.name"
+        class="truncate uppercase tracking-wider text-muted-foreground"
+        :class="compact ? 'mb-0.5 text-[10px]' : 'mb-1 text-xs'"
+      >
         {{ t('products.categoryLabel') }} · {{ getLocalizedText(product.category.name) }}
       </div>
-      <h3 class="mb-1 line-clamp-1 text-sm font-bold text-foreground transition-colors md:mb-1.5 md:text-base">
+      <h3
+        class="line-clamp-1 font-bold text-foreground transition-colors"
+        :class="compact ? 'mb-1 text-xs leading-4' : 'mb-1 text-sm md:mb-1.5 md:text-base'"
+      >
         {{ getLocalizedText(product.title) }}
       </h3>
 
       <!-- Badges -->
-      <div class="mb-2 flex flex-wrap items-center gap-1">
+      <div v-if="!hideTags" class="mb-2 flex flex-wrap items-center gap-1">
         <!-- Mobile: show only fulfillment type badge -->
         <Badge
           class="md:hidden"
@@ -90,17 +103,18 @@
         </Badge>
       </div>
 
-      <p class="mb-2 hidden text-sm leading-5 text-muted-foreground md:block line-clamp-2">
+      <p v-if="!compact" class="mb-2 hidden text-sm leading-5 text-muted-foreground md:block line-clamp-2">
         {{ getLocalizedText(product.description) }}
       </p>
 
-      <div class="mt-auto flex items-center justify-between border-t pt-2">
+      <div class="mt-auto flex items-center justify-between border-t" :class="compact ? 'pt-1.5' : 'pt-2'">
         <div class="min-w-0">
           <div class="flex items-baseline gap-1.5">
-            <span class="hidden text-xs uppercase tracking-wider text-muted-foreground md:inline">{{ t('products.price') }}</span>
+            <span v-if="!compact" class="hidden text-xs uppercase tracking-wider text-muted-foreground md:inline">{{ t('products.price') }}</span>
             <span
               v-if="hasPromotionPrice(product)"
               class="theme-price-sm theme-price-promotion"
+              :class="compact ? '!text-xs' : ''"
               :aria-label="t('products.promotionPriceAria', { price: formatPrice(getPromotionPriceAmount(product), siteCurrency) })"
             >
               {{ formatPrice(getPromotionPriceAmount(product), siteCurrency) }}
@@ -108,12 +122,13 @@
             <span
               v-else
               class="theme-price-sm"
+              :class="compact ? '!text-xs' : ''"
               :aria-label="t('products.priceAria', { price: formatPrice(product.price_amount, siteCurrency) })"
             >
               {{ formatPrice(product.price_amount, siteCurrency) }}
             </span>
           </div>
-          <div v-if="hasPromotionPrice(product)" class="mt-0.5 flex flex-wrap items-center gap-1.5">
+          <div v-if="hasPromotionPrice(product) && !hideTags" class="mt-0.5 flex flex-wrap items-center gap-1.5">
             <span
               class="hidden md:inline text-xs text-muted-foreground opacity-80 line-through"
               :aria-label="t('products.originalPriceAria', { price: formatPrice(product.price_amount, siteCurrency) })"
@@ -122,12 +137,12 @@
               {{ t('products.promotionTag') }}
             </Badge>
           </div>
-          <div v-else-if="hasWholesalePrices(product)" class="mt-0.5 flex flex-wrap items-center gap-1.5">
+          <div v-else-if="!hideTags && hasWholesalePrices(product)" class="mt-0.5 flex flex-wrap items-center gap-1.5">
             <Badge variant="success" size="xs">
               {{ t('products.wholesaleTag') }}
             </Badge>
           </div>
-          <div v-else-if="hasPromotionRules(product)" class="mt-0.5 flex flex-wrap items-center gap-1.5">
+          <div v-else-if="!hideTags && hasPromotionRules(product)" class="mt-0.5 flex flex-wrap items-center gap-1.5">
             <Badge variant="warning" size="xs">
               {{ t('products.promotionBadge') }}
             </Badge>
@@ -140,20 +155,26 @@
             type="button"
             variant="outline"
             size="icon"
-            class="w-8 h-8 md:w-9 md:h-9"
+            :class="compact ? 'h-7 w-7' : 'h-8 w-8 md:h-9 md:w-9'"
             :aria-label="t('products.quickBuyAria')"
             :disabled="isSoldOut(product)"
             @click.stop="$emit('quickBuy', product)"
           >
-            <ShoppingCart class="h-4 w-4" />
+            <ShoppingCart :class="compact ? 'h-3.5 w-3.5' : 'h-4 w-4'" />
           </Button>
           <!-- Desktop: view details -->
           <span
-            class="hidden md:flex text-xs uppercase font-bold transition-colors items-center gap-1"
+            class="hidden items-center gap-1 text-xs font-bold uppercase transition-colors md:flex"
             :class="isSoldOut(product)
               ? 'text-destructive/90'
               : 'text-muted-foreground group-hover:text-foreground'">
-            <ArrowRight class="w-4 h-4 transition-transform" :class="isSoldOut(product) ? '' : 'group-hover:translate-x-1'" />
+            <ArrowRight
+              class="transition-transform"
+              :class="[
+                compact ? 'h-3.5 w-3.5' : 'h-4 w-4',
+                isSoldOut(product) ? '' : 'group-hover:translate-x-1',
+              ]"
+            />
           </span>
           <!-- Mobile: arrow only -->
           <ChevronRight class="md:hidden w-4 h-4 text-muted-foreground" />
@@ -178,10 +199,14 @@ const props = withDefaults(defineProps<{
   index?: number
   maxTags?: number
   animationStep?: number
+  compact?: boolean
+  hideTags?: boolean
 }>(), {
   index: 0,
   maxTags: 2,
   animationStep: 50,
+  compact: false,
+  hideTags: false,
 })
 
 defineEmits<{
