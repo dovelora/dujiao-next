@@ -116,15 +116,15 @@
 
   <!-- Desktop Sidebar -->
   <aside class="hidden lg:block flex-shrink-0" :class="compact ? 'lg:w-60' : 'lg:w-64'">
-    <div class="bg-card backdrop-blur-xl border rounded-2xl sticky top-24" :class="compact ? 'p-5' : 'p-6'">
+    <div class="bg-card backdrop-blur-xl border rounded-2xl sticky top-24" :class="compact ? 'p-4' : 'p-6'">
       <!-- Search (desktop, only for Products page) -->
-      <div v-if="showSearch" :class="compact ? 'mb-4' : 'mb-6'">
-        <label class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <div v-if="showSearch" :class="compact ? 'mb-3' : 'mb-6'">
+        <label class="font-semibold uppercase tracking-wider text-muted-foreground" :class="compact ? 'text-[10px]' : 'text-xs'">
           {{ t('products.searchLabel') }}
         </label>
-        <div class="mt-3 flex items-center gap-2">
+        <div class="flex items-center gap-2" :class="compact ? 'mt-1.5' : 'mt-3'">
           <Input :model-value="searchQuery" @update:model-value="$emit('update:searchQuery', String($event))" type="text"
-            class="min-w-0 flex-1"
+            class="min-w-0 flex-1" :class="compact ? 'h-8 text-xs' : ''"
             :placeholder="t('products.searchPlaceholder')" />
           <Button v-if="searchQuery" variant="secondary" size="sm" type="button" class="shrink-0 whitespace-nowrap rounded-xl text-xs" @click="$emit('clearSearch')">
             {{ t('common.cancel') }}
@@ -132,18 +132,18 @@
         </div>
       </div>
 
-      <h2 :class="compact ? 'text-base font-bold mb-4' : 'text-lg font-bold mb-6'"
+      <h2 :class="compact ? 'mb-2.5 text-sm font-bold' : 'mb-6 text-lg font-bold'"
         class="text-foreground flex items-center gap-2">
-        <span class="w-1 h-5 bg-primary rounded-full"></span>
+        <span class="w-1 bg-primary rounded-full" :class="compact ? 'h-4' : 'h-5'"></span>
         {{ t('products.categories') }}
       </h2>
 
-      <ul :class="compact ? 'space-y-1.5' : 'space-y-2'">
+      <ul :class="compact ? 'space-y-0.5' : 'space-y-2'">
         <li>
           <button @click="$emit('selectCategory', null)"
             class="w-full text-left rounded-xl transition-all duration-300 border"
             :class="[
-              compact ? 'px-3 py-2.5 text-sm' : 'px-4 py-3',
+              compact ? 'px-3 py-1.5 text-xs' : 'px-4 py-3',
               selectedCategory === null
                 ? 'bg-primary text-primary-foreground border border-transparent'
                 : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-secondary'
@@ -152,12 +152,12 @@
           </button>
         </li>
         <li v-for="group in categories" :key="group.id">
-          <div :class="compact ? 'space-y-1.5' : 'space-y-2'">
-            <div class="flex items-stretch" :class="compact ? 'gap-1.5' : 'gap-2'">
+          <div :class="compact ? 'space-y-0.5' : 'space-y-2'">
+            <div class="flex items-stretch" :class="compact ? 'gap-1' : 'gap-2'">
               <button @click="$emit('selectCategory', group.id)"
                 class="flex-1 min-w-0 text-left rounded-xl transition-all duration-300 border flex items-center gap-2"
                 :class="[
-                  compact ? 'px-3 py-2.5 text-sm' : 'px-4 py-3',
+                  compact ? 'px-3 py-1.5 text-xs' : 'px-4 py-3',
                   selectedCategory === group.id
                     ? 'bg-primary text-primary-foreground border border-transparent'
                     : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-secondary'
@@ -173,7 +173,7 @@
                 type="button"
                 class="shrink-0 self-center rounded-full border flex items-center justify-center shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
                 :class="[
-                  compact ? 'h-9 w-9' : 'h-10 w-10',
+                  compact ? 'h-8 w-8' : 'h-10 w-10',
                   expandedParentIds.includes(group.id) ? 'bg-primary text-primary-foreground border-transparent' : 'bg-card/70 text-muted-foreground hover:text-foreground'
                 ]"
                 @click.stop="$emit('toggleParent', group.id)"
@@ -186,12 +186,12 @@
               </button>
             </div>
             <ul v-if="group.children.length > 0 && expandedParentIds.includes(group.id)"
-              :class="compact ? 'space-y-1.5 pl-3' : 'space-y-2 pl-4'">
+              :class="compact ? 'space-y-0.5 pl-3' : 'space-y-2 pl-4'">
               <li v-for="child in group.children" :key="child.id">
                 <button @click="$emit('selectCategory', child.id)"
                   class="w-full text-left rounded-xl transition-all duration-300 border flex items-center gap-2"
                   :class="[
-                    compact ? 'px-3 py-2.5 text-sm' : 'px-4 py-3',
+                    compact ? 'px-3 py-1.5 text-xs' : 'px-4 py-3',
                     selectedCategory === child.id
                       ? 'bg-primary text-primary-foreground border border-transparent'
                       : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-secondary'

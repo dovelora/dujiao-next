@@ -8,6 +8,7 @@
           :expanded-parent-ids="expandedParentIds"
           :show-drawer="showFilterDrawer"
           :show-search="true"
+          compact
           :search-query="searchQuery"
           @select-category="selectCategory"
           @toggle-parent="toggleParentCategory"

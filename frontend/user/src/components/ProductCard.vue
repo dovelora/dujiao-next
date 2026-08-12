@@ -41,7 +41,8 @@
       <div v-if="!isSoldOut(product) && product.tags && product.tags.length > 0"
         class="absolute right-2 top-2 z-20 flex flex-wrap justify-end gap-1 md:right-3 md:top-3">
         <span v-for="(tag, tagIndex) in product.tags.slice(0, maxTags)" :key="tagIndex"
-          class="inline-flex items-center rounded-md border border-white/25 bg-black/55 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
+          class="inline-flex items-center rounded-md border border-white/25 bg-black/55 font-medium text-white backdrop-blur-sm"
+          :class="compact ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-0.5 text-xs'">
           {{ tag }}
         </span>
       </div>
@@ -55,22 +56,22 @@
       <div
         v-if="product.category?.name"
         class="truncate uppercase tracking-wider text-muted-foreground"
-        :class="compact ? 'mb-0.5 text-[10px]' : 'mb-1 text-xs'"
+        :class="compact ? 'mb-0.5 text-[9px]' : 'mb-1 text-xs'"
       >
         {{ t('products.categoryLabel') }} · {{ getLocalizedText(product.category.name) }}
       </div>
       <h3
         class="line-clamp-1 font-bold text-foreground transition-colors"
-        :class="compact ? 'mb-1 text-xs leading-4' : 'mb-1 text-sm md:mb-1.5 md:text-base'"
+        :class="compact ? 'mb-1 text-[11px] leading-4' : 'mb-1 text-sm md:mb-1.5 md:text-base'"
       >
         {{ getLocalizedText(product.title) }}
       </h3>
 
       <!-- Badges -->
-      <div class="mb-2 flex flex-wrap items-center gap-1">
+      <div class="flex flex-wrap items-center" :class="compact ? 'mb-1.5 gap-0.5' : 'mb-2 gap-1'">
         <!-- Mobile: show only fulfillment type badge -->
         <Badge
-          class="md:hidden"
+          class="md:hidden" :class="compact ? '!px-1 !text-[9px]' : ''"
           size="xs"
           :variant="product.fulfillment_type === 'auto' ? 'info' : 'neutral'"
         >
@@ -79,7 +80,7 @@
 
         <!-- Desktop: show all badges -->
         <Badge
-          class="hidden md:inline-flex"
+          class="hidden md:inline-flex" :class="compact ? '!gap-0.5 !px-1 !text-[9px] [&_svg]:h-2.5 [&_svg]:w-2.5' : ''"
           size="xs"
           :variant="product.purchase_type === 'guest' ? 'warning' : 'success'"
         >
@@ -89,7 +90,7 @@
         </Badge>
 
         <Badge
-          class="hidden md:inline-flex"
+          class="hidden md:inline-flex" :class="compact ? '!gap-0.5 !px-1 !text-[9px] [&_svg]:h-2.5 [&_svg]:w-2.5' : ''"
           size="xs"
           :variant="product.fulfillment_type === 'auto' ? 'info' : 'neutral'"
         >
@@ -98,17 +99,10 @@
           {{ getFulfillmentTypeLabel(product.fulfillment_type) }}
         </Badge>
 
-        <Badge class="hidden md:inline-flex" size="xs" :variant="getStockBadgeVariant(product.stock_status)">
+        <Badge class="hidden md:inline-flex" :class="compact ? '!px-1 !text-[9px]' : ''" size="xs" :variant="getStockBadgeVariant(product.stock_status)">
           {{ getStockStatusLabel(product) }}
         </Badge>
       </div>
-
-      <p
-        class="hidden text-muted-foreground md:block line-clamp-2"
-        :class="compact ? 'mb-1.5 text-xs leading-4' : 'mb-2 text-sm leading-5'"
-      >
-        {{ getLocalizedText(product.description) }}
-      </p>
 
       <div class="mt-auto flex items-center justify-between border-t" :class="compact ? 'pt-1.5' : 'pt-2'">
         <div class="min-w-0">
@@ -117,7 +111,7 @@
             <span
               v-if="hasPromotionPrice(product)"
               class="theme-price-sm theme-price-promotion"
-              :class="compact ? '!text-xs' : ''"
+              :class="compact ? '!text-[11px]' : ''"
               :aria-label="t('products.promotionPriceAria', { price: formatPrice(getPromotionPriceAmount(product), siteCurrency) })"
             >
               {{ formatPrice(getPromotionPriceAmount(product), siteCurrency) }}
@@ -125,7 +119,7 @@
             <span
               v-else
               class="theme-price-sm"
-              :class="compact ? '!text-xs' : ''"
+              :class="compact ? '!text-[11px]' : ''"
               :aria-label="t('products.priceAria', { price: formatPrice(product.price_amount, siteCurrency) })"
             >
               {{ formatPrice(product.price_amount, siteCurrency) }}
