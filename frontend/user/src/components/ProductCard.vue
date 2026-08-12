@@ -38,7 +38,7 @@
       </Badge>
 
       <!-- Tags -->
-      <div v-if="!hideTags && !isSoldOut(product) && product.tags && product.tags.length > 0"
+      <div v-if="!isSoldOut(product) && product.tags && product.tags.length > 0"
         class="absolute right-2 top-2 z-20 flex flex-wrap justify-end gap-1 md:right-3 md:top-3">
         <span v-for="(tag, tagIndex) in product.tags.slice(0, maxTags)" :key="tagIndex"
           class="inline-flex items-center rounded-md border border-white/25 bg-black/55 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
@@ -67,7 +67,7 @@
       </h3>
 
       <!-- Badges -->
-      <div v-if="!hideTags" class="mb-2 flex flex-wrap items-center gap-1">
+      <div class="mb-2 flex flex-wrap items-center gap-1">
         <!-- Mobile: show only fulfillment type badge -->
         <Badge
           class="md:hidden"
@@ -103,7 +103,10 @@
         </Badge>
       </div>
 
-      <p v-if="!compact" class="mb-2 hidden text-sm leading-5 text-muted-foreground md:block line-clamp-2">
+      <p
+        class="hidden text-muted-foreground md:block line-clamp-2"
+        :class="compact ? 'mb-1.5 text-xs leading-4' : 'mb-2 text-sm leading-5'"
+      >
         {{ getLocalizedText(product.description) }}
       </p>
 
@@ -128,7 +131,7 @@
               {{ formatPrice(product.price_amount, siteCurrency) }}
             </span>
           </div>
-          <div v-if="hasPromotionPrice(product) && !hideTags" class="mt-0.5 flex flex-wrap items-center gap-1.5">
+          <div v-if="hasPromotionPrice(product)" class="mt-0.5 flex flex-wrap items-center gap-1.5">
             <span
               class="hidden md:inline text-xs text-muted-foreground opacity-80 line-through"
               :aria-label="t('products.originalPriceAria', { price: formatPrice(product.price_amount, siteCurrency) })"
@@ -137,12 +140,12 @@
               {{ t('products.promotionTag') }}
             </Badge>
           </div>
-          <div v-else-if="!hideTags && hasWholesalePrices(product)" class="mt-0.5 flex flex-wrap items-center gap-1.5">
+          <div v-else-if="hasWholesalePrices(product)" class="mt-0.5 flex flex-wrap items-center gap-1.5">
             <Badge variant="success" size="xs">
               {{ t('products.wholesaleTag') }}
             </Badge>
           </div>
-          <div v-else-if="!hideTags && hasPromotionRules(product)" class="mt-0.5 flex flex-wrap items-center gap-1.5">
+          <div v-else-if="hasPromotionRules(product)" class="mt-0.5 flex flex-wrap items-center gap-1.5">
             <Badge variant="warning" size="xs">
               {{ t('products.promotionBadge') }}
             </Badge>
@@ -200,13 +203,11 @@ const props = withDefaults(defineProps<{
   maxTags?: number
   animationStep?: number
   compact?: boolean
-  hideTags?: boolean
 }>(), {
   index: 0,
   maxTags: 2,
   animationStep: 50,
   compact: false,
-  hideTags: false,
 })
 
 defineEmits<{
