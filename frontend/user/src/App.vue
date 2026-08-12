@@ -14,7 +14,7 @@
     <!-- classic 模板 / 分销控制台（保持原有结构不变） -->
     <template v-else>
       <Navbar v-if="!isResellerConsole" />
-      <main class="flex-1" :class="isResellerConsole ? '' : 'pb-14 lg:pb-0'">
+      <main class="flex-1" :class="isResellerConsole ? '' : isProductDetail ? 'pb-0' : 'pb-14 lg:pb-0'">
         <ErrorBoundary>
           <RouterView v-slot="{ Component }">
             <Transition name="page-fade" mode="out-in">
@@ -25,7 +25,7 @@
       </main>
       <Footer v-if="!isResellerConsole" />
       <BackToTop v-if="!isResellerConsole" />
-      <MobileBottomNav v-if="!isResellerConsole" />
+      <MobileBottomNav v-if="!isResellerConsole && !isProductDetail" />
     </template>
 
     <Loading :loading="appStore.loading" />
@@ -55,6 +55,7 @@ const VaultLayout = defineAsyncComponent(() => import('./templates/vault/layout/
 const appStore = useAppStore()
 const route = useRoute()
 const isResellerConsole = computed(() => route.meta.resellerConsole === true)
+const isProductDetail = computed(() => route.name === 'product-detail')
 // getActiveTemplate 读取 appStore.config（响应式），config 加载后会重新计算
 const isVault = computed(() => getActiveTemplate() === 'vault')
 </script>
