@@ -1,14 +1,6 @@
 <template>
-  <div class="products-page min-h-screen bg-background text-foreground pt-20 pb-16">
+  <div class="products-page min-h-screen bg-background text-foreground pt-20 pb-16 lg:pt-24">
     <div class="container mx-auto px-4">
-      <!-- Page Header -->
-      <div class="mb-12 mt-12 text-center">
-        <h1 class="text-4xl md:text-5xl font-black mb-4 tracking-tight text-foreground">{{ t('nav.products') }}</h1>
-        <p class="text-muted-foreground max-w-2xl mx-auto text-lg border-b pb-8">
-          {{ t('products.subtitle') }}
-        </p>
-      </div>
-
       <div class="flex flex-col lg:flex-row gap-8">
         <CategorySidebar
           :categories="categoryGroups"
