@@ -5,28 +5,37 @@
     enter-to-class="translate-y-0 opacity-100"
     leave-active-class="transition duration-200 ease-in"
     leave-from-class="translate-y-0 opacity-100"
-    leave-to-class="translate-y-full opacity-0"
-  >
-    <div v-if="visible" class="product-mobile-bar theme-safe-bottom">
-      <div class="product-mobile-actions">
-        <Button v-if="requiresLogin" class="product-mobile-button product-mobile-button--buy" @click="$emit('goLogin')">
+    leave-to-class="translate-y-full opacity-0">
+    <div v-if="visible"
+      class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-xl border-t shadow-2xl theme-safe-bottom">
+      <div class="flex items-center gap-3 px-4 py-3">
+        <!-- Price -->
+        <div class="flex-1 min-w-0">
+          <span v-if="showMemberPrice" class="theme-price-sm text-amber-600 dark:text-amber-300 truncate block">
+            {{ memberPriceDisplay }}
+          </span>
+          <span v-else-if="showSkuPromotionPrice" class="theme-price-sm text-rose-600 dark:text-rose-300 truncate block">
+            {{ skuPromotionPriceDisplay }}
+          </span>
+          <span v-else-if="showSkuPrice" class="theme-price-sm text-primary truncate block">
+            {{ skuPriceDisplay }}
+          </span>
+          <span v-else-if="showProductPromotionPrice" class="theme-price-sm text-rose-600 dark:text-rose-300 truncate block">
+            {{ productPromotionPriceDisplay }}
+          </span>
+          <span v-else class="theme-price-sm text-primary truncate block">
+            {{ productPriceDisplay }}
+          </span>
+        </div>
+        <!-- Actions -->
+        <Button v-if="requiresLogin" size="lg" class="rounded-xl font-bold" @click="$emit('goLogin')">
           {{ t('productDetail.loginToBuy') }}
         </Button>
         <template v-else>
-          <Button
-            variant="secondary"
-            class="product-mobile-button product-mobile-button--cart"
-            :disabled="!canPurchase"
-            @click="$emit('addToCart')"
-          >
-            <ShoppingCart />
+          <Button variant="secondary" size="lg" class="rounded-xl font-bold" :disabled="!canPurchase" @click="$emit('addToCart')">
             {{ t('productDetail.addToCart') }}
           </Button>
-          <Button
-            class="product-mobile-button product-mobile-button--buy"
-            :disabled="!canPurchase"
-            @click="$emit('buyNow')"
-          >
+          <Button size="lg" class="rounded-xl font-bold" :disabled="!canPurchase" @click="$emit('buyNow')">
             {{ t('productDetail.buyNow') }}
           </Button>
         </template>
@@ -37,7 +46,6 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { ShoppingCart } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 
 const { t } = useI18n()
@@ -46,6 +54,15 @@ defineProps<{
   visible: boolean
   requiresLogin: boolean
   canPurchase: boolean
+  showMemberPrice: boolean
+  memberPriceDisplay: string
+  showSkuPromotionPrice: boolean
+  skuPromotionPriceDisplay: string
+  showSkuPrice: boolean
+  skuPriceDisplay: string
+  showProductPromotionPrice: boolean
+  productPromotionPriceDisplay: string
+  productPriceDisplay: string
 }>()
 
 defineEmits<{
@@ -54,51 +71,3 @@ defineEmits<{
   goLogin: []
 }>()
 </script>
-
-<style scoped>
-.product-mobile-bar {
-  position: fixed;
-  z-index: 50;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  display: none;
-  background: color-mix(in srgb, var(--ui-bg-elevated) 92%, transparent);
-  box-shadow: 0 -14px 34px -24px rgba(22, 42, 73, 0.46);
-  backdrop-filter: blur(18px);
-}
-
-.product-mobile-actions {
-  display: flex;
-  gap: 8px;
-  width: min(390px, 100%);
-  min-height: 72px;
-  margin: 0 auto;
-  padding: 10px 16px 12px;
-}
-
-.product-mobile-button {
-  height: 50px;
-  flex: 1;
-  border-radius: 14px;
-  font-size: 14px;
-  font-weight: 750;
-  box-shadow: none;
-}
-
-.product-mobile-button--cart {
-  color: var(--ui-accent);
-  background: var(--ui-accent-soft);
-}
-
-.product-mobile-button--buy {
-  background: linear-gradient(135deg, var(--ui-accent), color-mix(in srgb, var(--ui-accent) 78%, #5a73ff));
-  box-shadow: 0 14px 24px -18px color-mix(in srgb, var(--ui-accent) 72%, transparent);
-}
-
-@media (max-width: 1023px) {
-  .product-mobile-bar {
-    display: block;
-  }
-}
-</style>

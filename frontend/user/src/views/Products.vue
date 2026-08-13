@@ -1,6 +1,14 @@
 <template>
-  <div class="products-page min-h-screen bg-background text-foreground pt-20 pb-16 lg:pt-24">
+  <div class="products-page min-h-screen bg-background text-foreground pt-20 pb-16">
     <div class="container mx-auto px-4">
+      <!-- Page Header -->
+      <div class="mb-12 mt-12 text-center">
+        <h1 class="text-4xl md:text-5xl font-black mb-4 tracking-tight text-foreground">{{ t('nav.products') }}</h1>
+        <p class="text-muted-foreground max-w-2xl mx-auto text-lg border-b pb-8">
+          {{ t('products.subtitle') }}
+        </p>
+      </div>
+
       <div class="flex flex-col lg:flex-row gap-8">
         <CategorySidebar
           :categories="categoryGroups"
@@ -8,7 +16,6 @@
           :expanded-parent-ids="expandedParentIds"
           :show-drawer="showFilterDrawer"
           :show-search="true"
-          compact
           :search-query="searchQuery"
           @select-category="selectCategory"
           @toggle-parent="toggleParentCategory"
@@ -20,16 +27,22 @@
         <!-- Main Content - Products Grid -->
         <main class="flex-1">
           <!-- Loading Skeleton -->
-          <div v-if="loading" class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            <div v-for="i in 12" :key="i"
-              class="overflow-hidden rounded-xl border bg-card flex flex-col">
-              <div class="aspect-[16/9] theme-skeleton"></div>
-              <div class="space-y-1.5 p-2">
+          <div v-if="loading" class="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4">
+            <div v-for="i in 6" :key="i"
+              class="rounded-2xl border bg-card overflow-hidden flex flex-col">
+              <div class="h-36 md:h-56 theme-skeleton"></div>
+              <div class="p-3 md:p-5 space-y-3">
                 <div class="h-3 w-16 rounded theme-skeleton"></div>
-                <div class="h-4 w-3/4 rounded theme-skeleton"></div>
-                <div class="border-t pt-1.5 flex justify-between items-center">
+                <div class="h-5 w-3/4 rounded theme-skeleton"></div>
+                <div class="flex gap-2">
+                  <div class="h-5 w-14 rounded-full theme-skeleton"></div>
+                  <div class="h-5 w-14 rounded-full theme-skeleton"></div>
+                </div>
+                <div class="h-3 w-full rounded theme-skeleton"></div>
+                <div class="h-3 w-2/3 rounded theme-skeleton"></div>
+                <div class="border-t pt-3 flex justify-between items-center">
+                  <div class="h-6 w-20 rounded theme-skeleton"></div>
                   <div class="h-4 w-16 rounded theme-skeleton"></div>
-                  <div class="h-7 w-7 rounded theme-skeleton"></div>
                 </div>
               </div>
             </div>
@@ -37,13 +50,13 @@
 
           <!-- Products Grid -->
           <div v-else-if="products.length > 0">
-            <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            <div class="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4">
               <ProductCard
                 v-for="(product, idx) in products"
                 :key="product.id"
                 :product="product"
                 :index="idx"
-                compact
+                :max-tags="isMobileGrid ? 1 : 2"
                 :animation-step="50"
                 @click="goToProduct"
                 @quick-buy="openQuickBuy"
@@ -147,15 +160,23 @@ const openQuickBuy = (product: any) => {
   quickBuyVisible.value = true
 }
 
+// Detect mobile 2-col grid (< md breakpoint)
+const isMobileGrid = ref(window.innerWidth < 768)
+const handleResize = () => {
+  isMobileGrid.value = window.innerWidth < 768
+}
+
 const goToProduct = (slug: string) => {
   router.push(`/products/${slug}`)
 }
 
 onMounted(async () => {
+  window.addEventListener('resize', handleResize, { passive: true })
   await initialize()
 })
 
 onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
   cleanup()
 })
 </script>

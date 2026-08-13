@@ -1,7 +1,7 @@
 import { computed, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-    LayoutGrid, Newspaper, Bell, Info,
+    Home, LayoutGrid, Newspaper, Bell, Info,
     Link2, FileText, Globe, Star, Heart, MessageCircle, Gift, Zap, Shield,
     BookOpen, Code, Phone, MapPin, Music, Camera,
 } from 'lucide-vue-next'
@@ -123,11 +123,14 @@ export const useNavConfig = () => {
             .filter((item) => item.label && item.path)
     })
 
-    /** 商品 + 内置 + 自定义，供顶栏主导航使用；首页与商品中心为同一入口，不再重复展示 */
+    /** 首页 + 商品 + 内置 + 自定义，供顶栏主导航使用 */
     const primaryNavItems = computed<NavItem[]>(() => {
         const items: NavItem[] = [
-            { key: 'products', path: '/products', label: t('nav.products'), icon: LayoutGrid, type: 'route', target: '_self' },
+            { key: 'home', path: '/', label: t('nav.home'), icon: Home, type: 'route', target: '_self' },
         ]
+        if (!isListMode.value) {
+            items.push({ key: 'products', path: '/products', label: t('nav.products'), icon: LayoutGrid, type: 'route', target: '_self' })
+        }
         items.push(...builtinNavItems.value, ...customNavItems.value)
         return items
     })

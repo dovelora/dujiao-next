@@ -1,32 +1,40 @@
 <template>
-  <div class="product-detail-page min-h-screen bg-background text-foreground">
-    <div class="product-detail-shell">
+  <div
+    class="product-detail-page min-h-screen bg-background text-foreground pt-24 pb-16">
+    <div class="container mx-auto px-4">
       <!-- Loading Skeleton -->
-      <div v-if="loading" class="space-y-5">
-        <div class="h-4 w-56 rounded theme-skeleton"></div>
-        <div class="product-hero product-hero--loading">
-          <div class="min-h-[520px] rounded-[18px] theme-skeleton"></div>
-          <div class="flex flex-col gap-5 px-6 py-8">
-            <div class="h-10 w-3/5 rounded theme-skeleton"></div>
-            <div class="flex gap-3">
-              <div v-for="i in 3" :key="i" class="h-12 w-28 rounded-xl theme-skeleton"></div>
+      <div v-if="loading" class="space-y-8">
+        <div class="h-5 w-48 rounded theme-skeleton"></div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-0 bg-card border rounded-3xl overflow-hidden">
+          <div class="p-4 md:p-8 bg-secondary border-r">
+            <div class="h-[300px] md:h-[500px] rounded-xl theme-skeleton"></div>
+            <div class="mt-4 flex gap-3 overflow-hidden">
+              <div v-for="i in 4" :key="i" class="w-16 h-16 rounded-lg theme-skeleton shrink-0"></div>
+            </div>
+          </div>
+          <div class="p-6 md:p-12 space-y-6">
+            <div class="h-3 w-24 rounded theme-skeleton"></div>
+            <div class="h-10 w-3/4 rounded theme-skeleton"></div>
+            <div class="flex gap-2">
+              <div class="h-6 w-16 rounded-full theme-skeleton"></div>
+              <div class="h-6 w-16 rounded-full theme-skeleton"></div>
+              <div class="h-6 w-16 rounded-full theme-skeleton"></div>
             </div>
             <div class="h-14 w-48 rounded theme-skeleton"></div>
-            <div class="mt-3 flex gap-3">
-              <div v-for="i in 3" :key="i" class="h-16 w-32 rounded-xl theme-skeleton"></div>
-            </div>
-            <div class="mt-auto flex gap-3">
-              <div class="h-13 w-56 rounded-xl theme-skeleton"></div>
-              <div class="h-13 w-56 rounded-xl theme-skeleton"></div>
+            <div class="h-4 w-full rounded theme-skeleton"></div>
+            <div class="h-4 w-2/3 rounded theme-skeleton"></div>
+            <div class="flex gap-4 mt-8">
+              <div class="h-14 flex-1 rounded-xl theme-skeleton"></div>
+              <div class="h-14 flex-1 rounded-xl theme-skeleton"></div>
             </div>
           </div>
         </div>
-        <div class="h-[420px] rounded-[24px] theme-skeleton"></div>
       </div>
 
+      <!-- Product Content -->
       <div v-else-if="product">
         <BreadcrumbNav
-          class="product-breadcrumb"
+          class="mb-8"
           :items="[
             { label: t('nav.home'), to: '/' },
             { label: t('nav.products'), to: '/products' },
@@ -34,312 +42,366 @@
           ]"
         />
 
-        <!-- Main purchase card -->
-        <section class="product-hero">
-          <ProductImageGallery
-            :images="images"
-            :current-image="currentImage"
-            :product-title="getLocalizedText(product.title)"
-            @update:current-image="currentImage = $event"
-          />
+        <!-- Main Info Card -->
+        <div
+          class="bg-card backdrop-blur-xl border rounded-3xl overflow-hidden mb-8 shadow-2xl">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-0">
+            <!-- Product Images (Left) -->
+            <ProductImageGallery
+              :images="images"
+              :current-image="currentImage"
+              :product-title="getLocalizedText(product.title)"
+              @update:current-image="currentImage = $event"
+            />
 
-          <div class="product-buy-panel">
-            <h1 class="product-title">{{ getLocalizedText(product.title) }}</h1>
+            <!-- Product Info (Right) -->
+            <div class="p-6 md:p-8 lg:p-12 flex flex-col justify-center">
+              <div class="mb-6">
+                <div v-if="categoryName" class="mb-3 text-xs uppercase tracking-wider text-muted-foreground">
+                  {{ t('productDetail.categoryLabel') }} · {{ categoryName }}
+                </div>
 
-            <!-- Purchase / fulfillment / stock states keep their own semantic colors. -->
-            <div class="product-status-row">
-              <div
-                class="product-status"
-                :class="product.purchase_type === 'guest' ? 'product-status--guest' : 'product-status--member'"
-              >
-                <UserPlus v-if="product.purchase_type === 'guest'" />
-                <Lock v-else />
-                <span>{{ getPurchaseTypeLabel(product.purchase_type) }}</span>
-              </div>
-
-              <div
-                class="product-status"
-                :class="product.fulfillment_type === 'auto' ? 'product-status--auto' : 'product-status--manual'"
-              >
-                <Zap v-if="product.fulfillment_type === 'auto'" />
-                <Pencil v-else />
-                <span>{{ getFulfillmentTypeLabel(product.fulfillment_type) }}</span>
-              </div>
-
-              <div
-                class="product-status"
-                :class="`product-status--stock-${getStockBadgeVariant(product.stock_status)}`"
-              >
-                <Package />
-                <span>{{ getStockStatusLabel(product) }}</span>
-              </div>
-            </div>
-
-            <!-- Price -->
-            <div ref="priceSection" class="product-price-block">
-              <div class="product-price-label-row">
-                <span class="product-section-label">{{ t('products.price') }}</span>
-                <span
-                  v-if="(selectedSku && hasSkuPromotionPrice(selectedSku)) || (!selectedSku && hasPromotionPrice(product))"
-                  class="price-flag price-flag--promotion"
-                >
-                  {{ t('products.promotionTag') }}
-                </span>
-                <span v-if="showSelectedSkuMemberBadge" class="price-flag price-flag--member">
-                  {{ t('products.memberPriceTag') }}
-                </span>
-                <span v-if="hasSelectedSkuWholesalePrice" class="price-flag price-flag--wholesale">
-                  {{ t('products.wholesaleTag') }}
-                </span>
-              </div>
-
-              <template v-if="selectedSku && hasSelectedSkuWholesalePrice">
-                <div class="product-price-row">
-                  <span
-                    class="product-price"
-                    :class="selectedSkuWholesaleFinalIsMember ? 'product-price--member' : 'product-price--wholesale'"
+                <div v-if="product.tags && product.tags.length > 0" class="mb-4 flex flex-wrap gap-2">
+                  <Badge
+                    v-for="(tag, index) in product.tags"
+                    :key="index"
+                    variant="neutral"
                   >
-                    {{ formatPrice(selectedSkuWholesaleFinalPrice!, siteCurrency) }}
-                  </span>
-                  <span class="product-price-original">{{ formatPrice(selectedSku.price_amount, siteCurrency) }}</span>
+                    {{ tag }}
+                  </Badge>
                 </div>
-                <p
-                  class="product-price-note"
-                  :class="selectedSkuWholesaleFinalIsMember ? 'product-price--member' : 'product-price--wholesale'"
-                >
-                  {{ selectedSkuWholesaleFinalIsMember ? t('products.memberPriceTag') : t('products.wholesaleTag') }} ·
-                  {{ t('products.saveAmount') }}
-                  {{ formatPrice(Number(selectedSku.price_amount) - Number(selectedSkuWholesaleFinalPrice), siteCurrency) }}
-                </p>
-              </template>
 
-              <template v-else-if="selectedSku && hasSkuPromotionPrice(selectedSku)">
-                <div class="product-price-row">
-                  <span
-                    class="product-price"
-                    :class="selectedSkuPromotionFinalIsMember ? 'product-price--member' : 'product-price--promotion'"
-                  >
-                    {{ formatPrice(selectedSkuPromotionFinalIsMember ? selectedSkuPromotionFinalPrice! : selectedSkuPromotionPrice!, siteCurrency) }}
-                  </span>
-                  <span class="product-price-original">{{ formatPrice(selectedSku.price_amount, siteCurrency) }}</span>
+                <h1 class="mb-4 text-2xl md:text-3xl lg:text-5xl font-black leading-tight text-foreground">
+                  {{ getLocalizedText(product.title) }}
+                </h1>
+
+                <div class="mb-6 flex flex-wrap items-center gap-2">
+                  <Badge :variant="product.purchase_type === 'guest' ? 'warning' : 'success'">
+                    <UserPlus v-if="product.purchase_type === 'guest'" class="h-3 w-3" />
+                    <Lock v-else class="h-3 w-3" />
+                    {{ getPurchaseTypeLabel(product.purchase_type) }}
+                  </Badge>
+
+                  <Badge :variant="product.fulfillment_type === 'auto' ? 'info' : 'neutral'">
+                    <Zap v-if="product.fulfillment_type === 'auto'" class="h-3 w-3" />
+                    <Pencil v-else class="h-3 w-3" />
+                    {{ getFulfillmentTypeLabel(product.fulfillment_type) }}
+                  </Badge>
+
+                  <Badge :variant="getStockBadgeVariant(product.stock_status)">
+                    {{ getStockStatusLabel(product) }}
+                  </Badge>
                 </div>
-                <p
-                  class="product-price-note"
-                  :class="selectedSkuPromotionFinalIsMember ? 'product-price--member' : 'product-price--promotion'"
-                >
-                  <template v-if="selectedSkuPromotionFinalIsMember">
-                    {{ t('products.memberPriceTag') }} · {{ t('products.saveAmount') }}
-                    {{ formatPrice(Number(selectedSku.price_amount) - Number(selectedSkuPromotionFinalPrice), siteCurrency) }}
-                  </template>
-                  <template v-else>
-                    {{ t('products.saveAmount') }} {{ formatPrice(getSkuPromotionSaveAmount(selectedSku), siteCurrency) }}
-                  </template>
-                </p>
-              </template>
 
-              <template v-else-if="selectedSku && hasMemberPrice">
-                <div class="product-price-row">
-                  <span class="product-price product-price--member">
-                    {{ formatPrice(selectedSkuMemberPrice!, siteCurrency) }}
-                  </span>
-                  <span class="product-price-original">{{ formatPrice(selectedSku.price_amount, siteCurrency) }}</span>
+                <div class="mb-8 border-b pb-8" ref="priceSection">
+                  <div class="mb-3 flex flex-wrap items-center gap-2">
+                    <span class="text-sm text-muted-foreground">{{ t('products.price') }}</span>
+                    <Badge v-if="(selectedSku && hasSkuPromotionPrice(selectedSku)) || (!selectedSku && hasPromotionPrice(product))" variant="danger">
+                      {{ t('products.promotionTag') }}
+                    </Badge>
+                    <Badge v-if="showSelectedSkuMemberBadge" variant="warning">
+                      {{ t('products.memberPriceTag') }}
+                    </Badge>
+                    <Badge v-if="hasSelectedSkuWholesalePrice" variant="success">
+                      {{ t('products.wholesaleTag') }}
+                    </Badge>
+                  </div>
+                  <div v-if="selectedSku && hasSelectedSkuWholesalePrice" class="space-y-2">
+                    <div class="flex flex-wrap items-end gap-4">
+                      <span
+                        class="theme-price-lg"
+                        :class="selectedSkuWholesaleFinalIsMember ? 'text-amber-600 dark:text-amber-300' : 'text-emerald-600 dark:text-emerald-300'"
+                      >
+                        {{ formatPrice(selectedSkuWholesaleFinalPrice!, siteCurrency) }}
+                      </span>
+                      <span class="theme-price-original">
+                        {{ formatPrice(selectedSku.price_amount, siteCurrency) }}
+                      </span>
+                    </div>
+                    <p
+                      class="text-sm font-medium"
+                      :class="selectedSkuWholesaleFinalIsMember ? 'text-amber-600 dark:text-amber-300' : 'text-emerald-600 dark:text-emerald-300'"
+                    >
+                      {{ selectedSkuWholesaleFinalIsMember ? t('products.memberPriceTag') : t('products.wholesaleTag') }} ·
+                      {{ t('products.saveAmount') }} {{ formatPrice(Number(selectedSku.price_amount) - Number(selectedSkuWholesaleFinalPrice), siteCurrency) }}
+                    </p>
+                  </div>
+                  <!-- 选中 SKU 且有促销价 -->
+                  <div v-else-if="selectedSku && hasSkuPromotionPrice(selectedSku)" class="space-y-2">
+                    <div class="flex flex-wrap items-end gap-4">
+                      <span v-if="selectedSkuPromotionFinalIsMember" class="theme-price-lg text-amber-600 dark:text-amber-300">
+                        {{ formatPrice(selectedSkuPromotionFinalPrice!, siteCurrency) }}
+                      </span>
+                      <span v-else class="theme-price-lg text-rose-600 dark:text-rose-300">
+                        {{ formatPrice(selectedSkuPromotionPrice!, siteCurrency) }}
+                      </span>
+                      <span class="theme-price-original">
+                        {{ formatPrice(selectedSku.price_amount, siteCurrency) }}
+                      </span>
+                    </div>
+                    <p v-if="selectedSkuPromotionFinalIsMember" class="text-sm font-medium text-amber-600 dark:text-amber-300">
+                      {{ t('products.memberPriceTag') }} · {{ t('products.saveAmount') }} {{ formatPrice(Number(selectedSku.price_amount) - Number(selectedSkuPromotionFinalPrice), siteCurrency) }}
+                    </p>
+                    <p v-else class="text-sm font-medium text-rose-500 dark:text-rose-300">
+                      {{ t('products.saveAmount') }} {{ formatPrice(getSkuPromotionSaveAmount(selectedSku), siteCurrency) }}
+                    </p>
+                  </div>
+                  <!-- 选中 SKU 有会员价但无促销价 -->
+                  <div v-else-if="selectedSku && hasMemberPrice" class="space-y-2">
+                    <div class="flex flex-wrap items-end gap-4">
+                      <span class="theme-price-lg text-amber-600 dark:text-amber-300">
+                        {{ formatPrice(selectedSkuMemberPrice!, siteCurrency) }}
+                      </span>
+                      <span class="theme-price-original">
+                        {{ formatPrice(selectedSku.price_amount, siteCurrency) }}
+                      </span>
+                    </div>
+                    <p class="text-sm font-medium text-amber-600 dark:text-amber-300">
+                      {{ t('products.memberPriceTag') }} · {{ t('products.saveAmount') }} {{ formatPrice(Number(selectedSku.price_amount) - selectedSkuMemberPrice!, siteCurrency) }}
+                    </p>
+                  </div>
+                  <!-- 选中 SKU 但无促销价也无会员价 -->
+                  <div v-else-if="selectedSku" class="flex items-end gap-4">
+                    <span class="theme-price-lg text-primary">
+                      {{ formatPrice(selectedSku.price_amount, siteCurrency) }}
+                    </span>
+                  </div>
+                  <!-- 未选 SKU，产品级有促销价 -->
+                  <div v-else-if="hasPromotionPrice(product)" class="space-y-2">
+                    <div class="flex flex-wrap items-end gap-4">
+                      <span class="theme-price-lg text-rose-600 dark:text-rose-300">
+                        {{ formatPrice(getPromotionPriceAmount(product), siteCurrency) }}
+                      </span>
+                      <span class="theme-price-original">
+                        {{ formatPrice(product.price_amount, siteCurrency) }}
+                      </span>
+                    </div>
+                    <p class="text-sm font-medium text-rose-500 dark:text-rose-300">
+                      {{ t('products.saveAmount') }} {{ formatPrice(getPromotionSaveAmount(product), siteCurrency) }}
+                    </p>
+                  </div>
+                  <!-- 未选 SKU，无促销 -->
+                  <div v-else class="flex items-end gap-4">
+                    <span class="theme-price-lg text-primary">
+                      {{ formatPrice(product.price_amount, siteCurrency) }}
+                    </span>
+                  </div>
                 </div>
-                <p class="product-price-note product-price--member">
-                  {{ t('products.memberPriceTag') }} · {{ t('products.saveAmount') }}
-                  {{ formatPrice(Number(selectedSku.price_amount) - selectedSkuMemberPrice!, siteCurrency) }}
-                </p>
-              </template>
 
-              <div v-else-if="selectedSku" class="product-price-row">
-                <span class="product-price">{{ formatPrice(selectedSku.price_amount, siteCurrency) }}</span>
-              </div>
-
-              <template v-else-if="hasPromotionPrice(product)">
-                <div class="product-price-row">
-                  <span class="product-price product-price--promotion">
-                    {{ formatPrice(getPromotionPriceAmount(product), siteCurrency) }}
-                  </span>
-                  <span class="product-price-original">{{ formatPrice(product.price_amount, siteCurrency) }}</span>
+                <!-- 批发价规则展示 -->
+                <div v-if="selectedSkuWholesaleRules.length" class="mb-8 rounded-xl border border-emerald-200 bg-emerald-50/50 px-4 py-3 dark:border-emerald-800/50 dark:bg-emerald-950/20">
+                  <h2 class="mb-2 flex items-center gap-1.5 text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                    {{ t('products.wholesaleRulesTitle') }}
+                  </h2>
+                  <div class="flex flex-wrap gap-2">
+                    <Badge v-for="tier in selectedSkuWholesaleRules" :key="`${tier.sku_id || tier.sku_code || 'all'}-${tier.min_quantity}`" variant="success" class="rounded-full px-3 py-1 font-medium">
+                      {{ formatWholesaleTier(tier) }}
+                    </Badge>
+                  </div>
                 </div>
-                <p class="product-price-note product-price--promotion">
-                  {{ t('products.saveAmount') }} {{ formatPrice(getPromotionSaveAmount(product), siteCurrency) }}
-                </p>
-              </template>
 
-              <div v-else class="product-price-row">
-                <span class="product-price">{{ formatPrice(product.price_amount, siteCurrency) }}</span>
+                <!-- 活动规则展示 -->
+                <div v-if="hasPromotionRules(product)" class="mb-8 rounded-xl border border-orange-200 dark:border-orange-800/50 bg-orange-50/50 dark:bg-orange-950/20 px-4 py-3">
+                  <h2 class="mb-2 text-sm font-bold text-orange-700 dark:text-orange-300 flex items-center gap-1.5">
+                    <Tag class="w-4 h-4" />
+                    {{ t('products.promotionRulesTitle') }}
+                  </h2>
+                  <ul class="space-y-1">
+                    <li v-for="rule in getPromotionRules(product)" :key="rule.id" class="text-sm text-orange-600 dark:text-orange-300/90 flex items-center gap-1.5">
+                      <span class="w-1 h-1 rounded-full bg-orange-400 dark:bg-orange-500 shrink-0"></span>
+                      <span>{{ formatPromotionRule(rule) }}</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div v-if="activeSkus.length" class="mb-8">
+                  <h2 class="mb-3 text-sm font-bold uppercase tracking-widest text-muted-foreground">
+                    {{ t('productDetail.skuTitle') }}
+                  </h2>
+                  <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <button
+                      v-for="sku in activeSkus"
+                      :key="sku.id"
+                      type="button"
+                      class="flex flex-col items-start rounded-xl border px-3 py-2 text-sm transition-all min-h-[44px]"
+                      :class="[
+                        normalizeSkuId(sku.id) === selectedSkuId ? 'border-primary/40 bg-primary/10 ring-1 ring-primary/30' : 'border bg-secondary text-foreground',
+                        isSkuPurchasable(sku) ? 'hover:-translate-y-0.5' : 'cursor-not-allowed opacity-55 border-dashed',
+                      ]"
+                      :disabled="!isSkuPurchasable(sku)"
+                      @click="selectedSkuId = normalizeSkuId(sku.id)"
+                    >
+                      <span class="font-semibold leading-tight">{{ skuDisplayText(sku) }}</span>
+                      <span
+                        class="mt-1 rounded-full border px-2 py-0.5 text-[11px]"
+                        :class="skuStockBadgeClass(sku)"
+                      >
+                        {{ skuStockText(sku) }}
+                      </span>
+                    </button>
+                  </div>
+                  <p v-if="requiresSKUSelection" class="mt-2 text-xs text-amber-500">
+                    {{ t('productDetail.skuRequired') }}
+                  </p>
+                </div>
+
+                <div class="mb-8">
+                  <h2 class="mb-3 text-sm font-bold uppercase tracking-widest text-muted-foreground">
+                    {{ t('productDetail.description') }}
+                  </h2>
+                  <p class="text-lg leading-relaxed text-muted-foreground">
+                    {{ getLocalizedText(product.description) }}
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <!-- Optional pricing rules are retained, but kept visually compact. -->
-            <div v-if="selectedSkuWholesaleRules.length" class="product-rule product-rule--wholesale">
-              <h2>{{ t('products.wholesaleRulesTitle') }}</h2>
-              <div class="flex flex-wrap gap-1.5">
-                <span
-                  v-for="tier in selectedSkuWholesaleRules"
-                  :key="`${tier.sku_id || tier.sku_code || 'all'}-${tier.min_quantity}`"
-                  class="product-rule-pill"
-                >
-                  {{ formatWholesaleTier(tier) }}
-                </span>
+              <!-- Quantity Selector -->
+                <div class="mb-8">
+                  <h2 class="mb-3 text-sm font-bold uppercase tracking-widest text-muted-foreground">
+                    {{ t('productDetail.quantity') }}
+                  </h2>
+                  <div class="flex items-center rounded-lg border overflow-hidden w-fit">
+                    <button
+                      type="button"
+                      class="w-10 h-10 flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors disabled:opacity-30"
+                      :disabled="quantity <= quantityEffectiveMin"
+                      @click="quantity = Math.max(quantityEffectiveMin, quantity - 1)"
+                    >
+                      <Minus class="w-4 h-4" :stroke-width="2.5" />
+                    </button>
+                    <input
+                      type="text"
+                      inputmode="numeric"
+                      class="w-14 h-10 text-center text-sm font-semibold text-foreground border-x bg-transparent outline-none tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      :value="quantity"
+                      @change="handleQuantityInput($event)"
+                      @keydown.enter.prevent="($event.target as HTMLInputElement)?.blur()"
+                    />
+                    <button
+                      type="button"
+                      class="w-10 h-10 flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors disabled:opacity-30"
+                      :disabled="quantityEffectiveLimit !== null && quantity >= quantityEffectiveLimit"
+                      @click="quantity = quantity + 1"
+                    >
+                      <Plus class="w-4 h-4" :stroke-width="2.5" />
+                    </button>
+                  </div>
+                </div>
+
+              <!-- Purchase Actions (Desktop + original position) -->
+              <div ref="purchaseActionsRef" class="mt-auto space-y-6">
+                <Alert v-if="cannotPurchaseReason" variant="destructive">
+                  <AlertDescription class="font-semibold">{{ cannotPurchaseReason }}</AlertDescription>
+                </Alert>
+                <Alert v-if="purchaseWarning" class="border-warning/40 text-warning">
+                  <AlertDescription class="font-semibold text-warning">{{ purchaseWarning }}</AlertDescription>
+                </Alert>
+
+                <div class="space-y-3">
+                  <Button v-if="requiresLogin" class="w-full h-12 font-bold" @click="goLogin">
+                    {{ t('productDetail.loginToBuy') }}
+                  </Button>
+                  <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Button variant="secondary" class="h-12 font-bold" :disabled="!canPurchase" @click="addToCart">
+                      {{ t('productDetail.addToCart') }}
+                    </Button>
+                    <Button class="h-12 font-bold" :disabled="!canPurchase" @click="buyNow">
+                      {{ t('productDetail.buyNow') }}
+                    </Button>
+                  </div>
+                </div>
+
               </div>
-            </div>
-
-            <div v-if="hasPromotionRules(product)" class="product-rule product-rule--promotion">
-              <h2><Tag /> {{ t('products.promotionRulesTitle') }}</h2>
-              <ul>
-                <li v-for="rule in getPromotionRules(product)" :key="rule.id">
-                  {{ formatPromotionRule(rule) }}
-                </li>
-              </ul>
-            </div>
-
-            <!-- SKUs use their content width and wrap only when the viewport requires it. -->
-            <div v-if="activeSkus.length" class="product-sku-block">
-              <h2 class="product-section-label">{{ t('productDetail.skuTitle') }}</h2>
-              <div class="product-sku-list">
-                <button
-                  v-for="sku in activeSkus"
-                  :key="sku.id"
-                  type="button"
-                  class="product-sku"
-                  :class="[
-                    normalizeSkuId(sku.id) === selectedSkuId ? 'product-sku--selected' : '',
-                    !isSkuPurchasable(sku) ? 'product-sku--disabled' : '',
-                  ]"
-                  :disabled="!isSkuPurchasable(sku)"
-                  @click="selectedSkuId = normalizeSkuId(sku.id)"
-                >
-                  <span class="product-sku-name">{{ skuDisplayText(sku) }}</span>
-                  <span class="product-sku-stock" :class="skuStockBadgeClass(sku)">
-                    {{ skuStockText(sku) }}
-                  </span>
-                </button>
-              </div>
-              <p v-if="requiresSKUSelection" class="mt-2 text-xs font-medium text-warning">
-                {{ t('productDetail.skuRequired') }}
-              </p>
-            </div>
-
-            <div class="product-quantity-row">
-              <h2 class="product-section-label">{{ t('productDetail.quantity') }}</h2>
-              <div class="product-quantity-control">
-                <button
-                  type="button"
-                  :aria-label="t('productDetail.quantity')"
-                  :disabled="quantity <= quantityEffectiveMin"
-                  @click="quantity = Math.max(quantityEffectiveMin, quantity - 1)"
-                >
-                  <Minus />
-                </button>
-                <input
-                  type="text"
-                  inputmode="numeric"
-                  :aria-label="t('productDetail.quantity')"
-                  :value="quantity"
-                  @change="handleQuantityInput($event)"
-                  @keydown.enter.prevent="($event.target as HTMLInputElement)?.blur()"
-                />
-                <button
-                  type="button"
-                  :aria-label="t('productDetail.quantity')"
-                  :disabled="quantityEffectiveLimit !== null && quantity >= quantityEffectiveLimit"
-                  @click="quantity = quantity + 1"
-                >
-                  <Plus />
-                </button>
-              </div>
-            </div>
-
-            <div class="product-purchase-messages">
-              <Alert v-if="cannotPurchaseReason" variant="destructive">
-                <AlertDescription class="font-semibold">{{ cannotPurchaseReason }}</AlertDescription>
-              </Alert>
-              <Alert v-if="purchaseWarning" class="border-warning/30 bg-warning/10 text-warning">
-                <AlertDescription class="font-semibold text-warning">{{ purchaseWarning }}</AlertDescription>
-              </Alert>
-            </div>
-
-            <!-- Desktop actions. Mobile actions live in the fixed purchase bar. -->
-            <div class="product-actions">
-              <Button v-if="requiresLogin" class="product-action product-action--login" @click="goLogin">
-                {{ t('productDetail.loginToBuy') }}
-              </Button>
-              <template v-else>
-                <Button
-                  variant="secondary"
-                  class="product-action product-action--cart"
-                  :disabled="!canPurchase"
-                  @click="addToCart"
-                >
-                  <ShoppingCart />
-                  {{ t('productDetail.addToCart') }}
-                </Button>
-                <Button class="product-action product-action--buy" :disabled="!canPurchase" @click="buyNow">
-                  {{ t('productDetail.buyNow') }}
-                </Button>
-              </template>
             </div>
           </div>
-        </section>
+        </div>
 
-        <!-- Long-form product content deliberately keeps generous space. -->
-        <section class="product-details-card">
-          <h2 class="product-details-title">
-            <span><FileText /></span>
+        <!-- Details Content Card -->
+        <div v-if="product.content"
+          class="bg-card backdrop-blur-xl border rounded-3xl overflow-hidden mb-12 p-6 md:p-8 lg:p-12 relative">
+          <h2
+            class="text-2xl font-bold mb-8 text-foreground flex items-center gap-3 border-b pb-6">
+            <span class="w-1.5 h-8 bg-primary rounded-full"></span>
             {{ t('productDetail.details') }}
           </h2>
-          <div
-            v-if="product.content"
-            v-html="processHtmlForDisplay(getLocalizedText(product.content))"
-            class="product-rich-text prose prose-gray dark:prose-invert max-w-none theme-prose"
-          ></div>
-        </section>
+          <div v-html="processHtmlForDisplay(getLocalizedText(product.content))"
+            class="prose prose-gray dark:prose-invert prose-lg max-w-none theme-prose">
+          </div>
+        </div>
 
-        <section v-if="relatedPosts.length" class="related-posts-card">
-          <h2 class="product-details-title">
-            <span><Newspaper /></span>
+        <!-- Related Posts -->
+        <section v-if="relatedPosts.length"
+          class="bg-card backdrop-blur-xl border rounded-3xl overflow-hidden mb-12 p-6 md:p-8 lg:p-12 relative">
+          <h2 class="text-2xl font-bold text-foreground mb-8 flex items-center gap-3 border-b pb-6">
+            <span class="w-1.5 h-8 bg-primary rounded-full"></span>
             {{ t('productDetail.relatedPosts') }}
           </h2>
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             <router-link
               v-for="rp in relatedPosts"
               :key="rp.id"
               :to="`/blog/${rp.slug}`"
-              class="related-post"
+              class="group bg-card backdrop-blur-md border rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-0.5 transition-all flex flex-col"
             >
-              <img
-                v-if="rp.thumbnail"
-                :src="getImageUrl(rp.thumbnail)"
-                :alt="getLocalizedText(rp.title)"
-                loading="lazy"
-              />
-              <div>
-                <h3>{{ getLocalizedText(rp.title) }}</h3>
-                <p v-if="rp.summary">{{ getLocalizedText(rp.summary) }}</p>
-                <time>{{ formatRelatedPostDate(rp.published_at) }}</time>
+              <div v-if="rp.thumbnail" class="h-32 overflow-hidden relative">
+                <img :src="getImageUrl(rp.thumbnail)" :alt="getLocalizedText(rp.title)" loading="lazy"
+                  class="h-full w-full object-cover transition-transform group-hover:scale-110" />
+              </div>
+              <div class="p-5 flex flex-col flex-1">
+                <h3 class="font-semibold text-foreground line-clamp-2 mb-2">{{ getLocalizedText(rp.title) }}</h3>
+                <p v-if="rp.summary" class="text-sm text-muted-foreground line-clamp-2 leading-relaxed mb-3">
+                  {{ getLocalizedText(rp.summary) }}
+                </p>
+                <time class="mt-auto text-xs text-muted-foreground font-mono">
+                  {{ formatRelatedPostDate(rp.published_at) }}
+                </time>
               </div>
             </router-link>
           </div>
         </section>
 
+        <!-- Back Button -->
+        <div class="mb-12 text-center">
+          <router-link to="/products"
+            class="inline-flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors border-b border-transparent hover:border-current pb-1">
+            <ArrowLeft class="w-5 h-5" />
+            <span>{{ t('productDetail.backToProducts') }}</span>
+          </router-link>
+        </div>
+
+        <!-- Mobile Fixed Purchase Bar -->
         <ProductMobileBar
-          :visible="!!product && !loading"
+          :visible="showMobileBar && !!product && !loading"
           :requires-login="requiresLogin"
           :can-purchase="canPurchase"
+          :show-member-price="mobileBarShowMemberPrice"
+          :member-price-display="mobileBarMemberPriceDisplay"
+          :show-sku-promotion-price="mobileBarShowSkuPromotionPrice"
+          :sku-promotion-price-display="mobileBarSkuPromotionPriceDisplay"
+          :show-sku-price="mobileBarShowSkuPrice"
+          :sku-price-display="mobileBarSkuPriceDisplay"
+          :show-product-promotion-price="mobileBarShowProductPromotionPrice"
+          :product-promotion-price-display="mobileBarProductPromotionPriceDisplay"
+          :product-price-display="mobileBarProductPriceDisplay"
           @add-to-cart="addToCart"
           @buy-now="buyNow"
           @go-login="goLogin"
         />
       </div>
 
-      <EmptyState v-else size="lg" icon="alert" :title="t('productDetail.notFound')">
+      <!-- Error State -->
+      <EmptyState
+        v-else
+        size="lg"
+        icon="alert"
+        :title="t('productDetail.notFound')"
+      >
         <template #action>
-          <Button class="h-10 rounded-full" @click="loadProduct">
+          <Button class="rounded-full h-10" @click="loadProduct">
             <RotateCw />
             {{ t('errorBoundary.retry') }}
           </Button>
-          <Button variant="secondary" as-child class="h-10 rounded-full">
+          <Button variant="secondary" as-child class="rounded-full h-10">
             <router-link to="/products">{{ t('productDetail.backToProducts') }}</router-link>
           </Button>
         </template>
@@ -349,21 +411,9 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {
-  FileText,
-  Lock,
-  Minus,
-  Newspaper,
-  Package,
-  Pencil,
-  Plus,
-  RotateCw,
-  ShoppingCart,
-  Tag,
-  UserPlus,
-  Zap,
-} from 'lucide-vue-next'
+import { ArrowLeft, Lock, Minus, Pencil, Plus, RotateCw, Tag, UserPlus, Zap } from 'lucide-vue-next'
 import { getImageUrl } from '../utils/image'
 import { processHtmlForDisplay } from '../utils/content'
 import { useProductDetail } from '../composables/useProductDetail'
@@ -372,10 +422,32 @@ import ProductMobileBar from '../components/product/ProductMobileBar.vue'
 import BreadcrumbNav from '../components/BreadcrumbNav.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
 const { t } = useI18n()
 
+// 视图专属：移动端固定购买条（IntersectionObserver 监听桌面购买区是否出屏）
+const purchaseActionsRef = ref<HTMLElement | null>(null)
+const showMobileBar = ref(false)
+let observer: IntersectionObserver | null = null
+
+const setupMobileBarObserver = () => {
+  if (observer) observer.disconnect()
+  if (!purchaseActionsRef.value) return
+  observer = new IntersectionObserver(
+    (entries) => {
+      const entry = entries[0]
+      if (entry) {
+        showMobileBar.value = !entry.isIntersecting
+      }
+    },
+    { threshold: 0.1 }
+  )
+  observer.observe(purchaseActionsRef.value)
+}
+
+// 全部业务逻辑由 useProductDetail 提供（与 vault 模板共用，保证功能一致）
 const {
   getLocalizedText, siteCurrency, formatPrice,
   getPurchaseTypeLabel, getFulfillmentTypeLabel, getStockBadgeVariant, getStockStatusLabel,
@@ -393,710 +465,18 @@ const {
   isSkuPurchasable, skuDisplayText, skuStockText, skuStockBadgeClass,
   quantityEffectiveLimit, quantityEffectiveMin, handleQuantityInput,
   requiresLogin, requiresSKUSelection, canPurchase, cannotPurchaseReason,
-  images,
+  categoryName, images,
   addToCart, buyNow, goLogin, loadProduct,
-} = useProductDetail()
+  mobileBarShowMemberPrice, mobileBarMemberPriceDisplay,
+  mobileBarShowSkuPromotionPrice, mobileBarSkuPromotionPriceDisplay,
+  mobileBarShowSkuPrice, mobileBarSkuPriceDisplay,
+  mobileBarShowProductPromotionPrice, mobileBarProductPromotionPriceDisplay, mobileBarProductPriceDisplay,
+} = useProductDetail({ onLoaded: () => setupMobileBarObserver() })
+
+onUnmounted(() => {
+  if (observer) {
+    observer.disconnect()
+    observer = null
+  }
+})
 </script>
-
-<style scoped>
-.product-detail-page {
-  padding: 88px 0 54px;
-  background:
-    radial-gradient(circle at 78% 12%, color-mix(in srgb, var(--ui-accent) 7%, transparent), transparent 28rem),
-    var(--ui-bg-page);
-}
-
-.product-detail-shell {
-  width: min(1320px, calc(100% - 32px));
-  margin: 0 auto;
-}
-
-.product-breadcrumb {
-  margin-bottom: 20px;
-}
-
-.product-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 650px) minmax(0, 1fr);
-  gap: 22px;
-  min-height: 560px;
-  padding: 18px;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--ui-border) 72%, transparent);
-  border-radius: 28px;
-  background:
-    linear-gradient(125deg, var(--ui-bg-elevated) 0%, var(--ui-bg-elevated) 58%, color-mix(in srgb, var(--ui-accent) 4%, var(--ui-bg-elevated)) 100%);
-  box-shadow: 0 24px 58px -34px rgba(22, 42, 73, 0.34), 0 8px 20px -16px rgba(22, 42, 73, 0.2);
-}
-
-.product-hero--loading {
-  grid-template-columns: minmax(0, 650px) minmax(0, 1fr);
-}
-
-.product-buy-panel {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  padding: 18px 28px 8px 4px;
-}
-
-.product-title {
-  margin: 0 0 18px;
-  font-size: clamp(2rem, 2.35vw, 2.25rem);
-  font-weight: 800;
-  letter-spacing: -0.035em;
-  color: var(--ui-text-primary);
-}
-
-.product-status-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 22px;
-}
-
-.product-status {
-  display: inline-flex;
-  width: max-content;
-  height: 48px;
-  align-items: center;
-  gap: 9px;
-  padding: 0 16px;
-  border-radius: 13px;
-  font-size: 14px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.product-status svg {
-  width: 20px;
-  height: 20px;
-  stroke-width: 1.9;
-}
-
-.product-status--guest,
-.product-status--auto {
-  color: var(--ui-info);
-  background: var(--ui-info-soft);
-}
-
-.product-status--member,
-.product-status--stock-info,
-.product-status--stock-success {
-  color: var(--ui-success);
-  background: var(--ui-success-soft);
-}
-
-.product-status--manual,
-.product-status--stock-warning {
-  color: var(--ui-warning);
-  background: var(--ui-warning-soft);
-}
-
-.product-status--stock-destructive,
-.product-status--stock-danger {
-  color: var(--ui-danger);
-  background: var(--ui-danger-soft);
-}
-
-.product-status--stock-neutral,
-.product-status--stock-secondary {
-  color: var(--ui-text-muted);
-  background: var(--ui-bg-soft);
-}
-
-.product-price-block {
-  margin-bottom: 20px;
-}
-
-.product-price-label-row,
-.product-price-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.product-price-label-row {
-  min-height: 20px;
-  gap: 7px;
-  margin-bottom: 4px;
-}
-
-.product-section-label {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  color: var(--ui-text-secondary);
-}
-
-.price-flag {
-  display: inline-flex;
-  align-items: center;
-  min-height: 21px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.price-flag--promotion {
-  color: var(--ui-danger);
-  background: var(--ui-danger-soft);
-}
-
-.price-flag--member {
-  color: var(--ui-warning);
-  background: var(--ui-warning-soft);
-}
-
-.price-flag--wholesale {
-  color: var(--ui-success);
-  background: var(--ui-success-soft);
-}
-
-.product-price-row {
-  gap: 12px;
-  align-items: baseline;
-}
-
-.product-price {
-  font-size: clamp(2.15rem, 2.7vw, 2.5rem);
-  line-height: 1.14;
-  font-weight: 820;
-  letter-spacing: -0.025em;
-  color: var(--ui-accent);
-  font-variant-numeric: tabular-nums;
-}
-
-.product-price--promotion {
-  color: var(--ui-danger);
-}
-
-.product-price--member {
-  color: var(--ui-warning);
-}
-
-.product-price--wholesale {
-  color: var(--ui-success);
-}
-
-.product-price-original {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ui-text-muted);
-  text-decoration: line-through;
-}
-
-.product-price-note {
-  margin-top: 3px;
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.product-rule {
-  width: fit-content;
-  max-width: 100%;
-  margin-bottom: 12px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-}
-
-.product-rule h2 {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-bottom: 5px;
-  font-size: 12px;
-  font-weight: 750;
-}
-
-.product-rule h2 svg {
-  width: 14px;
-  height: 14px;
-}
-
-.product-rule ul {
-  display: grid;
-  gap: 2px;
-}
-
-.product-rule--wholesale {
-  color: var(--ui-success);
-  background: var(--ui-success-soft);
-}
-
-.product-rule--promotion {
-  color: var(--ui-warning);
-  background: var(--ui-warning-soft);
-}
-
-.product-rule-pill {
-  display: inline-flex;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--ui-bg-elevated) 72%, transparent);
-  font-weight: 650;
-}
-
-.product-sku-block {
-  margin-bottom: 18px;
-}
-
-.product-sku-block > .product-section-label {
-  display: block;
-  margin-bottom: 9px;
-}
-
-.product-sku-list {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  gap: 10px;
-}
-
-.product-sku {
-  display: inline-flex;
-  width: max-content;
-  min-width: 112px;
-  min-height: 62px;
-  max-width: 100%;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 4px;
-  padding: 9px 18px;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  background: var(--ui-bg-soft);
-  color: var(--ui-text-primary);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ui-border) 52%, transparent), 0 5px 14px -12px rgba(22, 42, 73, 0.35);
-  transition: transform var(--ui-duration-fast) var(--ui-ease-out), box-shadow var(--ui-duration-fast) var(--ui-ease-out), background var(--ui-duration-fast) var(--ui-ease-out);
-}
-
-.product-sku:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: inset 0 0 0 1px var(--ui-border-strong), 0 10px 20px -16px rgba(22, 42, 73, 0.4);
-}
-
-.product-sku--selected {
-  border-color: color-mix(in srgb, var(--ui-accent) 60%, transparent);
-  background: var(--ui-accent-soft);
-  color: var(--ui-accent);
-  box-shadow: 0 10px 22px -16px color-mix(in srgb, var(--ui-accent) 50%, transparent);
-}
-
-.product-sku--disabled {
-  cursor: not-allowed;
-  opacity: 0.48;
-}
-
-.product-sku-name {
-  max-width: 220px;
-  overflow: hidden;
-  font-size: 14px;
-  font-weight: 750;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.product-sku-stock {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  font-size: 12px;
-  font-weight: 650;
-  line-height: 1.2;
-}
-
-.product-quantity-row {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 9px;
-  margin-bottom: 18px;
-}
-
-.product-quantity-control {
-  display: inline-flex;
-  width: 128px;
-  height: 44px;
-  overflow: hidden;
-  border-radius: 11px;
-  background: var(--ui-bg-soft);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ui-border) 62%, transparent);
-}
-
-.product-quantity-control button {
-  display: grid;
-  width: 40px;
-  flex: none;
-  place-items: center;
-  color: var(--ui-text-muted);
-  transition: color var(--ui-duration-fast), background var(--ui-duration-fast);
-}
-
-.product-quantity-control button:hover:not(:disabled) {
-  color: var(--ui-text-primary);
-  background: var(--ui-bg-muted);
-}
-
-.product-quantity-control button:disabled {
-  opacity: 0.35;
-}
-
-.product-quantity-control button svg {
-  width: 16px;
-  height: 16px;
-}
-
-.product-quantity-control input {
-  width: 48px;
-  min-width: 0;
-  border: 0;
-  border-inline: 1px solid var(--ui-border);
-  outline: 0;
-  background: transparent;
-  text-align: center;
-  font-size: 14px;
-  font-weight: 750;
-  color: var(--ui-text-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-.product-purchase-messages {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.product-purchase-messages:empty {
-  display: none;
-}
-
-.product-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: auto;
-}
-
-.product-action {
-  width: 228px;
-  height: 52px;
-  border-radius: 13px;
-  font-size: 15px;
-  font-weight: 750;
-  box-shadow: none;
-}
-
-.product-action--cart {
-  color: var(--ui-accent);
-  background: var(--ui-accent-soft);
-}
-
-.product-action--cart:hover {
-  background: color-mix(in srgb, var(--ui-accent) 20%, var(--ui-bg-elevated));
-}
-
-.product-action--buy,
-.product-action--login {
-  background: linear-gradient(135deg, var(--ui-accent), color-mix(in srgb, var(--ui-accent) 78%, #5a73ff));
-  box-shadow: 0 14px 26px -18px color-mix(in srgb, var(--ui-accent) 72%, transparent);
-}
-
-.product-details-card,
-.related-posts-card {
-  margin-top: 30px;
-  padding: 28px 32px;
-  border: 1px solid color-mix(in srgb, var(--ui-border) 72%, transparent);
-  border-radius: 24px;
-  background: var(--ui-bg-elevated);
-  box-shadow: 0 18px 40px -32px rgba(22, 42, 73, 0.34);
-}
-
-.product-details-card {
-  min-height: 420px;
-}
-
-.product-details-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0 0 24px;
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.product-details-title > span {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  flex: none;
-  place-items: center;
-  border-radius: 8px;
-  background: var(--ui-accent-soft);
-  color: var(--ui-accent);
-}
-
-.product-details-title svg {
-  width: 16px;
-  height: 16px;
-}
-
-.product-rich-text {
-  padding-top: 20px;
-  border-top: 1px solid color-mix(in srgb, var(--ui-border) 62%, transparent);
-  color: var(--ui-text-secondary);
-  line-height: 1.75;
-}
-
-.related-post {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 14px;
-  min-height: 118px;
-  padding: 14px;
-  border-radius: 16px;
-  background: var(--ui-bg-soft);
-  color: inherit;
-  transition: transform var(--ui-duration-normal) var(--ui-ease-out), box-shadow var(--ui-duration-normal) var(--ui-ease-out);
-}
-
-.related-post:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--ui-shadow-soft);
-}
-
-.related-post img {
-  width: 96px;
-  height: 90px;
-  border-radius: 11px;
-  object-fit: cover;
-}
-
-.related-post h3 {
-  display: -webkit-box;
-  overflow: hidden;
-  font-size: 15px;
-  font-weight: 750;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.related-post p {
-  display: -webkit-box;
-  overflow: hidden;
-  margin-top: 5px;
-  font-size: 12px;
-  color: var(--ui-text-muted);
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.related-post time {
-  display: block;
-  margin-top: 7px;
-  font-size: 11px;
-  color: var(--ui-text-muted);
-}
-
-@media (max-width: 1100px) {
-  .product-hero {
-    grid-template-columns: minmax(0, 1.03fr) minmax(0, 0.97fr);
-    gap: 16px;
-  }
-
-  .product-buy-panel {
-    padding-right: 12px;
-  }
-
-  .product-status-row {
-    gap: 8px;
-  }
-
-  .product-status {
-    padding-inline: 12px;
-  }
-}
-
-@media (max-width: 1023px) {
-  .product-detail-page {
-    padding-top: 78px;
-    padding-bottom: 92px;
-  }
-
-  .product-detail-shell {
-    width: min(760px, calc(100% - 32px));
-  }
-
-  .product-breadcrumb {
-    margin-bottom: 14px;
-  }
-
-  .product-hero,
-  .product-hero--loading {
-    display: block;
-    min-height: 0;
-    padding: 0;
-    overflow: visible;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-
-  .product-buy-panel {
-    margin-top: 12px;
-    padding: 22px;
-    border: 1px solid color-mix(in srgb, var(--ui-border) 68%, transparent);
-    border-radius: 20px;
-    background: var(--ui-bg-elevated);
-    box-shadow: 0 18px 38px -30px rgba(22, 42, 73, 0.38);
-  }
-
-  .product-actions {
-    display: none;
-  }
-
-  .product-details-card,
-  .related-posts-card {
-    margin-top: 18px;
-  }
-}
-
-@media (max-width: 639px) {
-  .product-detail-page {
-    padding-top: 74px;
-  }
-
-  .product-detail-shell {
-    width: calc(100% - 32px);
-  }
-
-  .product-buy-panel {
-    min-height: 374px;
-    padding: 18px;
-    border-radius: 18px;
-  }
-
-  .product-title {
-    margin-bottom: 14px;
-    font-size: 26px;
-  }
-
-  .product-status-row {
-    flex-wrap: nowrap;
-    gap: 7px;
-    margin-bottom: 17px;
-  }
-
-  .product-status {
-    min-width: 0;
-    height: 34px;
-    gap: 6px;
-    padding: 0 9px;
-    border-radius: 10px;
-    font-size: 11px;
-  }
-
-  .product-status svg {
-    width: 14px;
-    height: 14px;
-  }
-
-  .product-price-block {
-    margin-bottom: 16px;
-  }
-
-  .product-section-label {
-    font-size: 12px;
-  }
-
-  .product-price {
-    font-size: 30px;
-  }
-
-  .product-sku-block {
-    margin-bottom: 16px;
-  }
-
-  .product-sku-list {
-    flex-wrap: wrap;
-    gap: 7px;
-  }
-
-  .product-sku {
-    min-width: 96px;
-    min-height: 58px;
-    padding: 8px 11px;
-    border-radius: 10px;
-  }
-
-  .product-sku-name {
-    max-width: 128px;
-    font-size: 12px;
-  }
-
-  .product-sku-stock {
-    font-size: 10px;
-  }
-
-  .product-quantity-row {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0;
-  }
-
-  .product-quantity-control {
-    width: 112px;
-    height: 40px;
-  }
-
-  .product-quantity-control button {
-    width: 36px;
-  }
-
-  .product-quantity-control input {
-    width: 40px;
-  }
-
-  .product-purchase-messages {
-    margin-top: 12px;
-    margin-bottom: 0;
-  }
-
-  .product-details-card,
-  .related-posts-card {
-    padding: 22px 20px;
-    border-radius: 18px;
-  }
-
-  .product-details-card {
-    min-height: 370px;
-  }
-
-  .product-details-title {
-    margin-bottom: 18px;
-    font-size: 18px;
-  }
-
-  .product-rich-text {
-    padding-top: 16px;
-    font-size: 14px;
-  }
-
-  .related-post {
-    grid-template-columns: 76px minmax(0, 1fr);
-  }
-
-  .related-post img {
-    width: 76px;
-    height: 76px;
-  }
-}
-</style>

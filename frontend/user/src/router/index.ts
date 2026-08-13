@@ -35,7 +35,7 @@ const router = createRouter({
         {
             path: '/',
             name: 'home',
-            redirect: { name: 'products' },
+            component: templateView('Home', homeViewLoader),
         },
         {
             path: '/products',
