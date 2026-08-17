@@ -8,16 +8,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
 	"github.com/dujiao-next/internal/logger"
-
-	"github.com/google/uuid"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // upstreamHTTPError 上游返回非 200 时的结构化错误
@@ -118,8 +116,8 @@ func (a *DujiaoNextAdapter) ListProducts(ctx context.Context, opts ListProductsO
 // 上游已删除（软删）→ 返回 ErrUpstreamProductDeleted
 // 旧版上游对下架商品也返回 404 product_unavailable → 返回 ErrUpstreamProductUnavailable
 // 新版上游下架商品改为 200 + is_active=false，调用方应根据 IsActive 字段判断
-func (a *DujiaoNextAdapter) GetProduct(ctx context.Context, productID uint) (*UpstreamProduct, error) {
-	path := fmt.Sprintf("/api/v1/upstream/products/%d", productID)
+func (a *DujiaoNextAdapter) GetProduct(ctx context.Context, productID Reference) (*UpstreamProduct, error) {
+	path := "/api/v1/upstream/products/" + productID.String()
 	var result struct {
 		OK      bool            `json:"ok"`
 		Product UpstreamProduct `json:"product"`
@@ -139,16 +137,31 @@ func (a *DujiaoNextAdapter) GetProduct(ctx context.Context, productID uint) (*Up
 
 // CreateOrder 发起采购单
 func (a *DujiaoNextAdapter) CreateOrder(ctx context.Context, req CreateUpstreamOrderReq) (*CreateUpstreamOrderResp, error) {
+	skuID, err := strconv.ParseUint(req.SKUID.String(), 10, strconv.IntSize)
+	if err != nil {
+		return nil, fmt.Errorf("invalid Dujiao-Next SKU reference %q", req.SKUID)
+	}
+	wireReq := struct {
+		SKUID             uint         `json:"sku_id"`
+		Quantity          int          `json:"quantity"`
+		ManualFormData    jsonmap.JSON `json:"manual_form_data,omitempty"`
+		DownstreamOrderNo string       `json:"downstream_order_no"`
+		TraceID           string       `json:"trace_id"`
+		CallbackURL       string       `json:"callback_url"`
+	}{
+		SKUID: uint(skuID), Quantity: req.Quantity, ManualFormData: req.ManualFormData,
+		DownstreamOrderNo: req.DownstreamOrderNo, TraceID: req.TraceID, CallbackURL: req.CallbackURL,
+	}
 	var result CreateUpstreamOrderResp
-	if err := a.doRequest(ctx, http.MethodPost, "/api/v1/upstream/orders", req, &result); err != nil {
+	if err := a.doRequest(ctx, http.MethodPost, "/api/v1/upstream/orders", wireReq, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
 }
 
 // GetOrder 查询上游订单状态
-func (a *DujiaoNextAdapter) GetOrder(ctx context.Context, orderID uint) (*UpstreamOrderDetail, error) {
-	path := fmt.Sprintf("/api/v1/upstream/orders/%d", orderID)
+func (a *DujiaoNextAdapter) GetOrder(ctx context.Context, orderID Reference) (*UpstreamOrderDetail, error) {
+	path := "/api/v1/upstream/orders/" + orderID.String()
 	var result UpstreamOrderDetail
 	if err := a.doRequest(ctx, http.MethodGet, path, nil, &result); err != nil {
 		return nil, err
@@ -157,8 +170,8 @@ func (a *DujiaoNextAdapter) GetOrder(ctx context.Context, orderID uint) (*Upstre
 }
 
 // CancelOrder 取消采购单
-func (a *DujiaoNextAdapter) CancelOrder(ctx context.Context, orderID uint) error {
-	path := fmt.Sprintf("/api/v1/upstream/orders/%d/cancel", orderID)
+func (a *DujiaoNextAdapter) CancelOrder(ctx context.Context, orderID Reference) error {
+	path := "/api/v1/upstream/orders/" + orderID.String() + "/cancel"
 	var result struct {
 		OK bool `json:"ok"`
 	}
@@ -173,56 +186,7 @@ func (a *DujiaoNextAdapter) CancelOrder(ctx context.Context, orderID uint) error
 
 // DownloadImage 下载图片到本地
 func (a *DujiaoNextAdapter) DownloadImage(ctx context.Context, imageURL string) (string, error) {
-	// 相对路径转绝对 URL
-	fullURL := imageURL
-	if strings.HasPrefix(imageURL, "/") {
-		fullURL = a.baseURL + imageURL
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
-	if err != nil {
-		return "", fmt.Errorf("create download request: %w", err)
-	}
-
-	resp, err := a.client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("download image: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("download image: status %d", resp.StatusCode)
-	}
-
-	// 确定文件扩展名
-	ext := filepath.Ext(imageURL)
-	if ext == "" || len(ext) > 6 {
-		ext = ".jpg"
-	}
-	// 去除 query string
-	if idx := strings.Index(ext, "?"); idx > 0 {
-		ext = ext[:idx]
-	}
-
-	filename := uuid.New().String() + ext
-	dir := filepath.Join(a.uploadsDir, "upstream")
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", fmt.Errorf("create uploads dir: %w", err)
-	}
-
-	filePath := filepath.Join(dir, filename)
-	f, err := os.Create(filePath)
-	if err != nil {
-		return "", fmt.Errorf("create file: %w", err)
-	}
-	defer f.Close()
-
-	if _, err := io.Copy(f, resp.Body); err != nil {
-		return "", fmt.Errorf("write file: %w", err)
-	}
-
-	// 返回相对路径
-	return "/uploads/upstream/" + filename, nil
+	return downloadUpstreamImage(ctx, a.baseURL, imageURL, a.uploadsDir)
 }
 
 // doRequest 发送签名请求

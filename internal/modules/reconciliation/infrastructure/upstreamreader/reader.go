@@ -45,8 +45,8 @@ func (r *Reader) Open(connectionID uint) (reconciliationcontract.UpstreamOrderRe
 	return &session{adapter: adapter}, nil
 }
 
-func (s *session) Get(ctx context.Context, upstreamOrderID uint) (*reconciliationcontract.UpstreamOrder, error) {
-	detail, err := s.adapter.GetOrder(ctx, upstreamOrderID)
+func (s *session) Get(ctx context.Context, upstreamOrderID string) (*reconciliationcontract.UpstreamOrder, error) {
+	detail, err := s.adapter.GetOrder(ctx, upstream.Reference(upstreamOrderID))
 	if err != nil {
 		return nil, err
 	}

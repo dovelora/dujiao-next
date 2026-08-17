@@ -216,7 +216,8 @@ func (s *Service) fillUpstreamRefundRecordsForProcurementOrder(order *procuremen
 	}
 	order.UpstreamRefundRecords = nil
 	order.UpstreamRefundedAmount = ""
-	if s.connections == nil || order.UpstreamOrderID == 0 || !shouldSyncUpstreamRefundStatus(order.Status) {
+	upstreamOrderID := strings.TrimSpace(order.UpstreamOrderID)
+	if s.connections == nil || upstreamOrderID == "" || upstreamOrderID == "0" || !shouldSyncUpstreamRefundStatus(order.Status) {
 		return
 	}
 	connection, err := s.connections.Open(order.ConnectionID)

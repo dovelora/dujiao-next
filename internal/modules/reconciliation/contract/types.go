@@ -24,7 +24,7 @@ type RunInput struct {
 // ProcurementOrder 是对账从采购域读取的最小快照。
 type ProcurementOrder struct {
 	ID              uint
-	UpstreamOrderID uint
+	UpstreamOrderID string
 	LocalOrderNo    string
 	UpstreamOrderNo string
 	Status          string

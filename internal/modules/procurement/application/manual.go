@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
@@ -65,7 +66,8 @@ func (s *Service) CancelManual(id uint) error {
 	}
 
 	// 已被上游接受：尝试取消上游订单
-	if procOrder.Status == "accepted" && procOrder.UpstreamOrderID > 0 {
+	upstreamOrderID := strings.TrimSpace(procOrder.UpstreamOrderID)
+	if procOrder.Status == "accepted" && upstreamOrderID != "" && upstreamOrderID != "0" {
 		connection, err := s.connections.Open(procOrder.ConnectionID)
 		if err == nil && connection != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)

@@ -16,7 +16,7 @@ func TestConvertUpstreamWholesalePricesRemapsUpstreamSKUScope(t *testing.T) {
 		{SKUID: 201, MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 	}, decimal.NewFromInt(1), decimal.Zero, "none", buildUpstreamWholesaleSKUIndex(
 		[]productdomain.ProductSKU{{ID: 11, SKUCode: "SKU-A"}},
-		[]upstream.UpstreamSKU{{ID: 201, SKUCode: "SKU-A"}},
+		[]upstream.UpstreamSKU{{ID: "201", SKUCode: "SKU-A"}},
 		nil,
 	))
 

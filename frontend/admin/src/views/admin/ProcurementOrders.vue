@@ -97,6 +97,7 @@ const statusOptions = [
   { value: 'accepted', key: 'procurement.status.accepted' },
   { value: 'rejected', key: 'procurement.status.rejected' },
   { value: 'failed', key: 'procurement.status.failed' },
+  { value: 'review_required', key: 'procurement.status.review_required' },
   { value: 'partially_refunded', key: 'procurement.status.partially_refunded' },
   { value: 'fulfilled', key: 'procurement.status.fulfilled' },
   { value: 'refunded', key: 'procurement.status.refunded' },
@@ -283,6 +284,7 @@ const statusBadgeClass = (status: string) => {
     case 'accepted': return 'text-sky-700 border-sky-200 bg-sky-50'
     case 'rejected': return 'text-red-700 border-red-200 bg-red-50'
     case 'failed': return 'text-red-700 border-red-200 bg-red-50'
+    case 'review_required': return 'text-violet-700 border-violet-200 bg-violet-50'
     case 'partially_refunded': return 'text-orange-700 border-orange-200 bg-orange-50'
     case 'fulfilled': return 'text-emerald-700 border-emerald-200 bg-emerald-50'
     case 'completed': return 'text-emerald-700 border-emerald-200 bg-emerald-50'
@@ -296,7 +298,7 @@ const statusIcon = (status: string) => {
   switch (status) {
     case 'pending': return 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' // clock
     case 'accepted': return 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' // check circle
-    case 'rejected': case 'failed': return 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' // exclamation
+    case 'rejected': case 'failed': case 'review_required': return 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' // exclamation
     case 'fulfilled': case 'completed': return 'M5 13l4 4L19 7' // check
     case 'partially_refunded': case 'refunded': return 'M3 10h12M3 14h9m7-9v14l-3-2-3 2V5a1 1 0 011-1h4a1 1 0 011 1z' // refund
     case 'canceled': return 'M6 18L18 6M6 6l12 12' // x
@@ -411,7 +413,7 @@ const profitClass = (order: ProcurementOrderWithRelations) => {
 }
 
 const canRetry = (status: string) => ['failed', 'rejected'].includes(status)
-const canCancel = (status: string) => ['pending', 'submitted', 'accepted', 'failed'].includes(status)
+const canCancel = (status: string) => ['pending', 'submitted', 'accepted', 'failed', 'review_required'].includes(status)
 
 onMounted(() => {
   fetchConnections()

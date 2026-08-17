@@ -12,6 +12,7 @@ import (
 	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
@@ -24,6 +25,90 @@ import (
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
+
+type legacyProductMappingReference struct {
+	ID                      uint   `gorm:"primarykey"`
+	ConnectionID            uint   `gorm:"not null;default:0"`
+	LocalProductID          uint   `gorm:"not null;default:0"`
+	UpstreamProductID       uint   `gorm:"not null"`
+	UpstreamFulfillmentType string `gorm:"not null;default:'manual'"`
+	UpstreamStatus          string `gorm:"not null;default:'active'"`
+	IsActive                bool   `gorm:"not null;default:true"`
+}
+
+func (legacyProductMappingReference) TableName() string { return "product_mappings" }
+
+type legacySKUMappingReference struct {
+	ID               uint   `gorm:"primarykey"`
+	ProductMappingID uint   `gorm:"not null;default:0"`
+	LocalSKUID       uint   `gorm:"column:local_sku_id;not null;default:0"`
+	UpstreamSKUID    uint   `gorm:"column:upstream_sku_id;not null"`
+	UpstreamPrice    string `gorm:"type:decimal(20,2);not null;default:0"`
+	UpstreamStock    int    `gorm:"not null;default:0"`
+	UpstreamIsActive bool   `gorm:"not null;default:true"`
+}
+
+func (legacySKUMappingReference) TableName() string { return "sku_mappings" }
+
+type legacyProcurementOrderReference struct {
+	ID               uint `gorm:"primarykey"`
+	ConnectionID     uint `gorm:"not null;default:0"`
+	LocalOrderID     uint `gorm:"not null;default:0"`
+	UpstreamOrderID  uint
+	Status           string `gorm:"not null;default:'pending'"`
+	UpstreamAmount   string `gorm:"type:decimal(20,2);not null;default:0"`
+	UpstreamCurrency string `gorm:"not null;default:''"`
+	LocalSellAmount  string `gorm:"type:decimal(20,2);not null;default:0"`
+	Currency         string `gorm:"not null;default:''"`
+	RetryCount       int    `gorm:"not null;default:0"`
+}
+
+func (legacyProcurementOrderReference) TableName() string { return "procurement_orders" }
+
+func TestUpstreamReferencesMigrateFromNumericColumns(t *testing.T) {
+	db := setupSKUMigrationTestDB(t)
+	if err := db.AutoMigrate(
+		&legacyProductMappingReference{},
+		&legacySKUMappingReference{},
+		&legacyProcurementOrderReference{},
+	); err != nil {
+		t.Fatalf("create legacy reference schema: %v", err)
+	}
+	if err := db.Create(&legacyProductMappingReference{ID: 1, UpstreamProductID: 101}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&legacySKUMappingReference{ID: 1, UpstreamSKUID: 201}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&legacyProcurementOrderReference{ID: 1, UpstreamOrderID: 301}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&legacyProcurementOrderReference{ID: 2, UpstreamOrderID: 0}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureUpstreamReferenceColumnTypes(db); err != nil {
+		t.Fatalf("prepare upstream reference migration: %v", err)
+	}
+	if err := db.AutoMigrate(&mappingdomain.Mapping{}, &mappingdomain.SKUMapping{}, &procurementdomain.Order{}); err != nil {
+		t.Fatalf("migrate reference schema: %v", err)
+	}
+	var productMapping mappingdomain.Mapping
+	var skuMapping mappingdomain.SKUMapping
+	var procurement procurementdomain.Order
+	if err := db.First(&productMapping, 1).Error; err != nil || productMapping.UpstreamProductID != "101" {
+		t.Fatalf("product reference = %q, %v", productMapping.UpstreamProductID, err)
+	}
+	if err := db.First(&skuMapping, 1).Error; err != nil || skuMapping.UpstreamSKUID != "201" {
+		t.Fatalf("SKU reference = %q, %v", skuMapping.UpstreamSKUID, err)
+	}
+	if err := db.First(&procurement, 1).Error; err != nil || procurement.UpstreamOrderID != "301" {
+		t.Fatalf("order reference = %q, %v", procurement.UpstreamOrderID, err)
+	}
+	procurement = procurementdomain.Order{}
+	if err := db.First(&procurement, 2).Error; err != nil || procurement.UpstreamOrderID != "" {
+		t.Fatalf("empty order reference = %q, %v", procurement.UpstreamOrderID, err)
+	}
+}
 
 func setupSKUMigrationTestDB(t *testing.T) *gorm.DB {
 	t.Helper()

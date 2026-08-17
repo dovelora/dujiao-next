@@ -22,6 +22,9 @@ var (
 	// 旧版上游对下架商品返回 product_unavailable，新版改为 200 + is_active=false；
 	// 此错误仅作为旧版兼容兜底使用。
 	ErrUpstreamProductUnavailable = errors.New("upstream product unavailable")
+	// ErrOrderOutcomeUnknown 表示请求可能已在上游生效，但客户端未拿到可确认的响应。
+	// 调用方不得自动重试，否则可能重复扣款。
+	ErrOrderOutcomeUnknown = errors.New("upstream order outcome unknown")
 )
 
 // PingResult 连接测试结果
@@ -53,7 +56,7 @@ type ProductListResult struct {
 
 // UpstreamProduct 上游商品信息
 type UpstreamProduct struct {
-	ID               uint                              `json:"id"`
+	ID               Reference                         `json:"id"`
 	SeoMeta          jsonmap.JSON                      `json:"seo_meta"`
 	Title            jsonmap.JSON                      `json:"title"`
 	Description      jsonmap.JSON                      `json:"description"`
@@ -91,7 +94,7 @@ type CategoryListResult struct {
 
 // UpstreamSKU 上游 SKU 信息
 type UpstreamSKU struct {
-	ID            uint         `json:"id"`
+	ID            Reference    `json:"id"`
 	SKUCode       string       `json:"sku_code"`
 	SpecValues    jsonmap.JSON `json:"spec_values"`
 	PriceAmount   string       `json:"price_amount"`
@@ -104,7 +107,7 @@ type UpstreamSKU struct {
 
 // CreateUpstreamOrderReq 创建上游采购单请求
 type CreateUpstreamOrderReq struct {
-	SKUID             uint         `json:"sku_id"`
+	SKUID             Reference    `json:"sku_id"`
 	Quantity          int          `json:"quantity"`
 	ManualFormData    jsonmap.JSON `json:"manual_form_data,omitempty"`
 	DownstreamOrderNo string       `json:"downstream_order_no"`
@@ -114,14 +117,15 @@ type CreateUpstreamOrderReq struct {
 
 // CreateUpstreamOrderResp 创建上游采购单响应
 type CreateUpstreamOrderResp struct {
-	OK           bool   `json:"ok"`
-	OrderID      uint   `json:"order_id,omitempty"`
-	OrderNo      string `json:"order_no,omitempty"`
-	Status       string `json:"status,omitempty"`
-	Amount       string `json:"amount,omitempty"`
-	Currency     string `json:"currency,omitempty"`
-	ErrorCode    string `json:"error_code,omitempty"`
-	ErrorMessage string `json:"error_message,omitempty"`
+	OK           bool                 `json:"ok"`
+	OrderID      Reference            `json:"order_id,omitempty"`
+	OrderNo      string               `json:"order_no,omitempty"`
+	Status       string               `json:"status,omitempty"`
+	Amount       string               `json:"amount,omitempty"`
+	Currency     string               `json:"currency,omitempty"`
+	ErrorCode    string               `json:"error_code,omitempty"`
+	ErrorMessage string               `json:"error_message,omitempty"`
+	Fulfillment  *UpstreamFulfillment `json:"fulfillment,omitempty"`
 }
 
 // UpstreamFulfillment 上游交付信息
@@ -135,7 +139,7 @@ type UpstreamFulfillment struct {
 
 // UpstreamOrderDetail 上游订单详情
 type UpstreamOrderDetail struct {
-	OrderID        uint                 `json:"order_id"`
+	OrderID        Reference            `json:"order_id"`
 	OrderNo        string               `json:"order_no"`
 	Status         string               `json:"status"`
 	Amount         string               `json:"amount"`
@@ -158,16 +162,16 @@ type Adapter interface {
 	ListProducts(ctx context.Context, opts ListProductsOpts) (*ProductListResult, error)
 
 	// GetProduct 获取单个商品详情
-	GetProduct(ctx context.Context, productID uint) (*UpstreamProduct, error)
+	GetProduct(ctx context.Context, productID Reference) (*UpstreamProduct, error)
 
 	// CreateOrder 发起采购单
 	CreateOrder(ctx context.Context, req CreateUpstreamOrderReq) (*CreateUpstreamOrderResp, error)
 
 	// GetOrder 查询上游订单状态
-	GetOrder(ctx context.Context, orderID uint) (*UpstreamOrderDetail, error)
+	GetOrder(ctx context.Context, orderID Reference) (*UpstreamOrderDetail, error)
 
 	// CancelOrder 取消采购单
-	CancelOrder(ctx context.Context, orderID uint) error
+	CancelOrder(ctx context.Context, orderID Reference) error
 
 	// DownloadImage 下载图片到本地
 	DownloadImage(ctx context.Context, imageURL string) (localPath string, err error)
@@ -178,6 +182,8 @@ func NewAdapter(conn *siteconnectiondomain.Connection, uploadsDir string) (Adapt
 	switch conn.Protocol {
 	case constants.ConnectionProtocolDujiaoNext:
 		return NewDujiaoNextAdapter(conn, uploadsDir), nil
+	case constants.ConnectionProtocolSharedStock:
+		return NewSharedStockAdapter(conn, uploadsDir), nil
 	default:
 		return nil, fmt.Errorf("unsupported protocol: %s", conn.Protocol)
 	}

@@ -2,6 +2,8 @@ package upstreamgateway
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
@@ -51,26 +53,33 @@ func (s *session) RetryIntervals() string { return s.connection.RetryIntervals }
 
 func (s *session) CreateOrder(ctx context.Context, request procurementcontract.CreateOrderRequest) (*procurementcontract.CreateOrderResult, error) {
 	result, err := s.adapter.CreateOrder(ctx, upstream.CreateUpstreamOrderReq{
-		SKUID: request.SKUID, Quantity: request.Quantity, ManualFormData: request.ManualFormData,
+		SKUID: upstream.Reference(request.SKUID), Quantity: request.Quantity, ManualFormData: request.ManualFormData,
 		DownstreamOrderNo: request.DownstreamOrderNo, TraceID: request.TraceID, CallbackURL: request.CallbackURL,
 	})
 	if err != nil {
+		if errors.Is(err, upstream.ErrOrderOutcomeUnknown) {
+			return nil, fmt.Errorf("%w: %v", procurementcontract.ErrOrderOutcomeUnknown, err)
+		}
 		return nil, err
 	}
-	return &procurementcontract.CreateOrderResult{
-		OK: result.OK, OrderID: result.OrderID, OrderNo: result.OrderNo,
+	response := &procurementcontract.CreateOrderResult{
+		OK: result.OK, OrderID: result.OrderID.String(), OrderNo: result.OrderNo,
 		Status: result.Status, Amount: result.Amount, Currency: result.Currency,
 		ErrorCode: result.ErrorCode, ErrorMessage: result.ErrorMessage,
-	}, nil
+	}
+	if result.Fulfillment != nil {
+		response.Fulfillment = fromUpstreamFulfillment(result.Fulfillment)
+	}
+	return response, nil
 }
 
-func (s *session) GetOrder(ctx context.Context, orderID uint) (*procurementcontract.UpstreamOrder, error) {
-	detail, err := s.adapter.GetOrder(ctx, orderID)
+func (s *session) GetOrder(ctx context.Context, orderID string) (*procurementcontract.UpstreamOrder, error) {
+	detail, err := s.adapter.GetOrder(ctx, upstream.Reference(orderID))
 	if err != nil {
 		return nil, err
 	}
 	result := &procurementcontract.UpstreamOrder{
-		OrderID: detail.OrderID, OrderNo: detail.OrderNo, Status: detail.Status,
+		OrderID: detail.OrderID.String(), OrderNo: detail.OrderNo, Status: detail.Status,
 		Amount: detail.Amount, RefundedAmount: detail.RefundedAmount,
 		Currency: detail.Currency, RefundRecords: detail.RefundRecords,
 	}
@@ -80,8 +89,8 @@ func (s *session) GetOrder(ctx context.Context, orderID uint) (*procurementcontr
 	return result, nil
 }
 
-func (s *session) CancelOrder(ctx context.Context, orderID uint) error {
-	return s.adapter.CancelOrder(ctx, orderID)
+func (s *session) CancelOrder(ctx context.Context, orderID string) error {
+	return s.adapter.CancelOrder(ctx, upstream.Reference(orderID))
 }
 
 func fromUpstreamFulfillment(value *upstream.UpstreamFulfillment) *procurementcontract.Fulfillment {

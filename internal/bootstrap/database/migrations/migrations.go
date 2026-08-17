@@ -21,6 +21,81 @@ import (
 	"gorm.io/gorm"
 )
 
+type upstreamReferenceColumn struct {
+	table      string
+	column     string
+	postgresQL string
+	mysqlSQL   string
+}
+
+var upstreamReferenceColumns = []upstreamReferenceColumn{
+	{
+		table: "product_mappings", column: "upstream_product_id",
+		postgresQL: "ALTER TABLE product_mappings ALTER COLUMN upstream_product_id TYPE varchar(512) USING upstream_product_id::text",
+		mysqlSQL:   "ALTER TABLE product_mappings MODIFY COLUMN upstream_product_id varchar(512) NOT NULL",
+	},
+	{
+		table: "sku_mappings", column: "upstream_sku_id",
+		postgresQL: "ALTER TABLE sku_mappings ALTER COLUMN upstream_sku_id TYPE text USING upstream_sku_id::text",
+		mysqlSQL:   "ALTER TABLE sku_mappings MODIFY COLUMN upstream_sku_id text NOT NULL",
+	},
+	{
+		table: "procurement_orders", column: "upstream_order_id",
+		postgresQL: "ALTER TABLE procurement_orders ALTER COLUMN upstream_order_id TYPE varchar(512) USING upstream_order_id::text",
+		mysqlSQL:   "ALTER TABLE procurement_orders MODIFY COLUMN upstream_order_id varchar(512) NULL",
+	},
+}
+
+// ensureUpstreamReferenceColumnTypes 将历史数字型上游 ID 一次性改为字符串引用。
+// SQLite 采用动态类型且 GORM 会在 AutoMigrate 时安全重建表；PostgreSQL/MySQL
+// 需要显式转换，否则直接改变 Go 字段类型会在已有数据的数据库上启动失败。
+func ensureUpstreamReferenceColumnTypes(db *gorm.DB) error {
+	if db == nil {
+		return errors.New("database is not initialized")
+	}
+	dialect := db.Dialector.Name()
+	for _, reference := range upstreamReferenceColumns {
+		if dialect == "sqlite" {
+			continue
+		}
+		if !db.Migrator().HasTable(reference.table) || !db.Migrator().HasColumn(reference.table, reference.column) {
+			continue
+		}
+		columnTypes, err := db.Migrator().ColumnTypes(reference.table)
+		if err != nil {
+			return err
+		}
+		alreadyText := false
+		for _, columnType := range columnTypes {
+			if !strings.EqualFold(columnType.Name(), reference.column) {
+				continue
+			}
+			databaseType := strings.ToLower(columnType.DatabaseTypeName())
+			alreadyText = strings.Contains(databaseType, "char") || strings.Contains(databaseType, "text")
+			break
+		}
+		if alreadyText {
+			continue
+		}
+		statement := reference.postgresQL
+		if dialect == "mysql" {
+			statement = reference.mysqlSQL
+		}
+		if dialect != "postgres" && dialect != "mysql" {
+			return fmt.Errorf("unsupported database %q for upstream reference migration", dialect)
+		}
+		if err := db.Exec(statement).Error; err != nil {
+			return fmt.Errorf("migrate %s.%s to string reference: %w", reference.table, reference.column, err)
+		}
+	}
+	if db.Migrator().HasTable("procurement_orders") && db.Migrator().HasColumn("procurement_orders", "upstream_order_id") {
+		if err := db.Table("procurement_orders").Where("upstream_order_id = ?", "0").Update("upstream_order_id", "").Error; err != nil {
+			return fmt.Errorf("normalize empty upstream order references: %w", err)
+		}
+	}
+	return nil
+}
+
 const (
 	manualStockRemainingMigrationSettingKey         = "migration/manual_stock_remaining_v1"
 	skuMigrationSettingKey                          = "migration/product_sku_v1"

@@ -1,9 +1,13 @@
 package procurement_test
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
@@ -24,14 +28,14 @@ func TestSubmitToUpstream_Success(t *testing.T) {
 	pm := &mappingdomain.Mapping{
 		ConnectionID:      1,
 		LocalProductID:    1,
-		UpstreamProductID: 101,
+		UpstreamProductID: "101",
 		IsActive:          true,
 	}
 	db.Create(pm)
 	sm := &mappingdomain.SKUMapping{
 		ProductMappingID: pm.ID,
 		LocalSKUID:       1,
-		UpstreamSKUID:    201,
+		UpstreamSKUID:    "201",
 		UpstreamIsActive: true,
 	}
 	db.Create(sm)
@@ -76,8 +80,8 @@ func TestSubmitToUpstream_Success(t *testing.T) {
 	if updatedProc.Status != "accepted" {
 		t.Errorf("expected procurement status 'accepted', got %q", updatedProc.Status)
 	}
-	if updatedProc.UpstreamOrderID != 999 {
-		t.Errorf("expected upstream_order_id=999, got %d", updatedProc.UpstreamOrderID)
+	if updatedProc.UpstreamOrderID != "999" {
+		t.Errorf("expected upstream_order_id=999, got %s", updatedProc.UpstreamOrderID)
 	}
 
 	// 验证本地订单状态 = fulfilling
@@ -92,9 +96,9 @@ func TestSubmitToUpstream_NonRetryableError_Rejects(t *testing.T) {
 	db := setupProcurementTestDB(t)
 
 	order := createProcTestOrder(t, db, "PROC-NONRETRY-001", constants.OrderStatusFulfilling, constants.FulfillmentTypeUpstream)
-	pm := &mappingdomain.Mapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: 101, IsActive: true}
+	pm := &mappingdomain.Mapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: "101", IsActive: true}
 	db.Create(pm)
-	sm := &mappingdomain.SKUMapping{ProductMappingID: pm.ID, LocalSKUID: 1, UpstreamSKUID: 201, UpstreamIsActive: true}
+	sm := &mappingdomain.SKUMapping{ProductMappingID: pm.ID, LocalSKUID: 1, UpstreamSKUID: "201", UpstreamIsActive: true}
 	db.Create(sm)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -138,9 +142,9 @@ func TestSubmitToUpstream_RetryableError_Retries(t *testing.T) {
 	db := setupProcurementTestDB(t)
 
 	order := createProcTestOrder(t, db, "PROC-RETRY-001", constants.OrderStatusFulfilling, constants.FulfillmentTypeUpstream)
-	pm := &mappingdomain.Mapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: 101, IsActive: true}
+	pm := &mappingdomain.Mapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: "101", IsActive: true}
 	db.Create(pm)
-	sm := &mappingdomain.SKUMapping{ProductMappingID: pm.ID, LocalSKUID: 1, UpstreamSKUID: 201, UpstreamIsActive: true}
+	sm := &mappingdomain.SKUMapping{ProductMappingID: pm.ID, LocalSKUID: 1, UpstreamSKUID: "201", UpstreamIsActive: true}
 	db.Create(sm)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -179,16 +183,82 @@ func TestSubmitToUpstream_RetryableError_Retries(t *testing.T) {
 	}
 }
 
+func TestSubmitToSharedStock_AmbiguousTradeStopsAutomaticRetry(t *testing.T) {
+	db := setupProcurementTestDB(t)
+	order := createProcTestOrder(t, db, "PROC-AMBIGUOUS-001", constants.OrderStatusFulfilling, constants.FulfillmentTypeUpstream)
+	productMapping := &mappingdomain.Mapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: "PROD-1", IsActive: true}
+	db.Create(productMapping)
+	skuRef := "ss1_" + base64.RawURLEncoding.EncodeToString([]byte(`{"v":1,"code":"PROD-1"}`))
+	db.Create(&mappingdomain.SKUMapping{
+		ProductMappingID: productMapping.ID,
+		LocalSKUID:       1,
+		UpstreamSKUID:    skuRef,
+		UpstreamIsActive: true,
+	})
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/shared/commodity/inventoryState" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":200,"msg":"success","data":[]}`))
+			return
+		}
+		if r.URL.Path == "/shared/commodity/trade" {
+			hijacker, ok := w.(http.Hijacker)
+			if !ok {
+				t.Fatal("test server does not support hijacking")
+			}
+			conn, _, err := hijacker.Hijack()
+			if err != nil {
+				t.Fatalf("hijack: %v", err)
+			}
+			_ = conn.Close()
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
+	conn, err := connSvc.Create(siteconnectionapp.CreateInput{
+		Name: "shared-stock", BaseURL: server.URL,
+		ApiKey: "merchant", ApiSecret: "secret", Protocol: constants.ConnectionProtocolSharedStock,
+		RetryMax: 3,
+	})
+	if err != nil {
+		t.Fatalf("create connection: %v", err)
+	}
+	proc := createTestProcurementOrder(t, db, conn.ID, order.ID, order.OrderNo, constants.ProcurementStatusPending)
+	svc := newTestProcurementService(db, connSvc)
+	if err := svc.SubmitToUpstream(proc.ID); err != nil {
+		t.Fatalf("ambiguous outcome should be persisted without worker retry: %v", err)
+	}
+
+	var updated ProcurementOrder
+	db.First(&updated, proc.ID)
+	if updated.Status != constants.ProcurementStatusReviewRequired || updated.RetryCount != 0 {
+		t.Fatalf("unexpected procurement after ambiguous outcome: %+v", updated)
+	}
+	expectedRequestNo := sha256.Sum256([]byte(order.OrderNo))
+	if requestNo := hex.EncodeToString(expectedRequestNo[:])[:19]; !strings.Contains(updated.ErrorMessage, requestNo) {
+		t.Fatalf("ambiguous outcome did not retain request_no %s: %s", requestNo, updated.ErrorMessage)
+	}
+	var localOrder orderdomain.Order
+	db.First(&localOrder, order.ID)
+	if localOrder.Status != constants.OrderStatusFulfilling {
+		t.Fatalf("local order was rolled back after ambiguous outcome: %s", localOrder.Status)
+	}
+}
+
 func TestHandleSubmitFailure_MaxRetriesExhausted(t *testing.T) {
 	db := setupProcurementTestDB(t)
 
 	order := createProcTestOrder(t, db, "PROC-MAXRETRY-001", constants.OrderStatusFulfilling, constants.FulfillmentTypeUpstream)
-	productMapping := &mappingdomain.Mapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: 101, IsActive: true}
+	productMapping := &mappingdomain.Mapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: "101", IsActive: true}
 	db.Create(productMapping)
 	db.Create(&mappingdomain.SKUMapping{
 		ProductMappingID: productMapping.ID,
 		LocalSKUID:       1,
-		UpstreamSKUID:    201,
+		UpstreamSKUID:    "201",
 		UpstreamIsActive: true,
 	})
 

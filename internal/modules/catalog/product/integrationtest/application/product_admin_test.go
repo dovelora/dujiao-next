@@ -124,7 +124,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 	pm := mappingdomain.Mapping{
 		ConnectionID:      1,
 		LocalProductID:    product.ID,
-		UpstreamProductID: 100,
+		UpstreamProductID: "100",
 	}
 	if err := db.Create(&pm).Error; err != nil {
 		t.Fatalf("create product mapping: %v", err)
@@ -134,7 +134,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 	sm := mappingdomain.SKUMapping{
 		ProductMappingID: pm.ID,
 		LocalSKUID:       sku.ID,
-		UpstreamSKUID:    200,
+		UpstreamSKUID:    "200",
 	}
 	if err := db.Create(&sm).Error; err != nil {
 		t.Fatalf("create sku mapping: %v", err)
@@ -246,7 +246,7 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 	mapping := mappingdomain.Mapping{
 		ConnectionID:      1,
 		LocalProductID:    product.ID,
-		UpstreamProductID: 99,
+		UpstreamProductID: "99",
 	}
 	if err := db.Create(&mapping).Error; err != nil {
 		t.Fatalf("create product mapping failed: %v", err)

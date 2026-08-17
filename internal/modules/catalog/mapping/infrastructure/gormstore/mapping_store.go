@@ -57,7 +57,7 @@ func (r *MappingStore) GetByLocalProductID(productID uint) (*mappingdomain.Mappi
 	return &m, nil
 }
 
-func (r *MappingStore) GetByConnectionAndUpstreamID(connectionID, upstreamProductID uint) (*mappingdomain.Mapping, error) {
+func (r *MappingStore) GetByConnectionAndUpstreamID(connectionID uint, upstreamProductID string) (*mappingdomain.Mapping, error) {
 	var m mappingdomain.Mapping
 	if err := r.db.Where("deleted_at IS NULL AND connection_id = ? AND upstream_product_id = ?", connectionID, upstreamProductID).First(&m).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -167,8 +167,8 @@ func (r *MappingStore) ListByLocalProductIDs(productIDs []uint) ([]mappingdomain
 	return mappings, nil
 }
 
-func (r *MappingStore) ListUpstreamIDsByConnection(connectionID uint) ([]uint, error) {
-	var ids []uint
+func (r *MappingStore) ListUpstreamIDsByConnection(connectionID uint) ([]string, error) {
+	var ids []string
 	if err := r.db.Model(&mappingdomain.Mapping{}).
 		Where("deleted_at IS NULL AND connection_id = ?", connectionID).
 		Pluck("upstream_product_id", &ids).Error; err != nil {

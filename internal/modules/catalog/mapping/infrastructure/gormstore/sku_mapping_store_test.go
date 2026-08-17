@@ -1,6 +1,7 @@
 package gormstore
 
 import (
+	"fmt"
 	"testing"
 
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
@@ -13,7 +14,7 @@ func TestSKUMappingStoreListByProductMappingIDs(t *testing.T) {
 		if err := skuStore.Create(&mappingdomain.SKUMapping{
 			ProductMappingID: mappingID,
 			LocalSKUID:       uint(100 + i),
-			UpstreamSKUID:    uint(200 + i),
+			UpstreamSKUID:    fmt.Sprint(200 + i),
 		}); err != nil {
 			t.Fatalf("create sku mapping failed: %v", err)
 		}
@@ -42,7 +43,7 @@ func TestSKUMappingStoreDeleteHidesRowsAndPersistsMarker(t *testing.T) {
 	mapping := &mappingdomain.SKUMapping{
 		ProductMappingID: 77,
 		LocalSKUID:       88,
-		UpstreamSKUID:    99,
+		UpstreamSKUID:    "99",
 	}
 	if err := skuStore.Create(mapping); err != nil {
 		t.Fatalf("create sku mapping: %v", err)

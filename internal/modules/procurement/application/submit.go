@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -85,6 +86,23 @@ func (s *Service) SubmitToUpstream(procurementOrderID uint) error {
 
 	resp, err := connection.CreateOrder(ctx, req)
 	if err != nil {
+		if errors.Is(err, procurementcontract.ErrOrderOutcomeUnknown) {
+			message := fmt.Sprintf("上游可能已经扣款，但本次请求未收到可确认的结果；已停止自动重试，请到上游核对。%v", err)
+			now := time.Now()
+			if updateErr := s.procRepo.UpdateStatus(procOrder.ID, constants.ProcurementStatusReviewRequired, map[string]interface{}{
+				"error_message": message,
+				"updated_at":    now,
+			}); updateErr != nil {
+				return fmt.Errorf("mark ambiguous upstream outcome: %w", updateErr)
+			}
+			s.notifyProcurementFailure(procOrder, message)
+			logger.Errorw("procurement_order_outcome_unknown",
+				"procurement_order_id", procOrder.ID,
+				"local_order_no", localOrder.OrderNo,
+				"error", err,
+			)
+			return nil
+		}
 		return s.handleSubmitFailure(procOrder, connection, fmt.Sprintf("upstream request error: %v", err), true)
 	}
 
@@ -122,6 +140,10 @@ func (s *Service) SubmitToUpstream(procurementOrderID uint) error {
 	_ = s.orderRepo.UpdateStatus(localOrder.ID, constants.OrderStatusFulfilling, map[string]interface{}{
 		"updated_at": now,
 	})
+
+	if resp.Fulfillment != nil && (resp.Status == "delivered" || resp.Status == "completed" || resp.Status == "fulfilled") {
+		return s.HandleUpstreamCallback(procOrder.ID, resp.Status, resp.Fulfillment)
+	}
 
 	// 入队轮询任务（30s 延迟，作为回调的 fallback）
 	if s.queue != nil {

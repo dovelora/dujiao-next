@@ -30,10 +30,10 @@ func (r *ProductReader) FindConnectionID(productID uint) (uint, bool, error) {
 	return mapping.ConnectionID, true, nil
 }
 
-func (r *SKUReader) FindUpstreamSKUID(skuID uint) (uint, bool, error) {
+func (r *SKUReader) FindUpstreamSKUID(skuID uint) (string, bool, error) {
 	mapping, err := r.source.GetByLocalSKUID(skuID)
 	if err != nil || mapping == nil {
-		return 0, false, err
+		return "", false, err
 	}
 	return mapping.UpstreamSKUID, true, nil
 }
