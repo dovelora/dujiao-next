@@ -611,7 +611,7 @@ func buildSharedStockProduct(item sharedStockItem, categoryID uint) (UpstreamPro
 	if code == "" {
 		return UpstreamProduct{}, errors.New("SharedStock 商品缺少对接码")
 	}
-	basePrice := sharedStockFirstNonEmpty(item.FactoryPrice, item.UserPrice, item.Price)
+	basePrice := sharedStockPreferredPrice(item.FactoryPrice, item.UserPrice, item.Price)
 	if basePrice == "" {
 		basePrice = "0"
 	}
@@ -1086,13 +1086,22 @@ func lowestSharedStockPrice(skus []UpstreamSKU, fallback string) string {
 	return lowestRaw
 }
 
-func sharedStockFirstNonEmpty(values ...sharedStockString) string {
+func sharedStockPreferredPrice(values ...sharedStockString) string {
+	fallback := ""
 	for _, value := range values {
-		if trimmed := strings.TrimSpace(string(value)); trimmed != "" {
+		trimmed := strings.TrimSpace(string(value))
+		if trimmed == "" {
+			continue
+		}
+		if fallback == "" {
+			fallback = trimmed
+		}
+		amount, err := decimal.NewFromString(trimmed)
+		if err == nil && amount.GreaterThan(decimal.Zero) {
 			return trimmed
 		}
 	}
-	return ""
+	return fallback
 }
 
 func firstNonEmptyString(values ...string) string {

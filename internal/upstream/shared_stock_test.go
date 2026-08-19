@@ -28,6 +28,15 @@ func TestSharedStockSignMatchesPHPVector(t *testing.T) {
 	}
 }
 
+func TestSharedStockPreferredPriceSkipsZeroFactoryPrice(t *testing.T) {
+	if got := sharedStockPreferredPrice("0", "700", "700"); got != "700" {
+		t.Fatalf("preferred price = %q, want 700", got)
+	}
+	if got := sharedStockPreferredPrice("0", "0.00", "0"); got != "0" {
+		t.Fatalf("all-zero preferred price = %q, want first zero", got)
+	}
+}
+
 func TestReferenceKeepsNonCanonicalNumericStringsOpaque(t *testing.T) {
 	encoded, err := json.Marshal(Reference("00123"))
 	if err != nil {
