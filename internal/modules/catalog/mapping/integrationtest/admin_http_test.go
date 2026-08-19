@@ -161,7 +161,6 @@ func TestBatchImportUpstreamProductsAutoCreatesCategory(t *testing.T) {
 				"ok": true,
 				"product": upstream.UpstreamProduct{
 					ID:              "101",
-					CategoryID:      9,
 					Title:           jsonmap.JSON{"zh-CN": "上游商品"},
 					Description:     jsonmap.JSON{"zh-CN": "描述"},
 					Content:         jsonmap.JSON{"zh-CN": "内容"},
@@ -182,7 +181,7 @@ func TestBatchImportUpstreamProductsAutoCreatesCategory(t *testing.T) {
 	})
 	defer cleanup()
 
-	body := fmt.Sprintf(`{"connection_id":%d,"upstream_product_ids":["101"],"auto_create_category":true}`, connID)
+	body := fmt.Sprintf(`{"connection_id":%d,"upstream_product_ids":["101"],"upstream_category_ids":{"101":9},"auto_create_category":true}`, connID)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/product-mappings/batch-import", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

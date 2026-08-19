@@ -27,17 +27,17 @@ import (
 
 // ImportUpstreamProduct 从上游导入商品（克隆为本地商品 + 建立映射）
 func (s *Service) ImportUpstreamProduct(connectionID uint, upstreamProductID string, categoryID uint, slug string) (*mappingdomain.Mapping, error) {
-	return s.importUpstreamProduct(connectionID, upstreamProductID, categoryID, slug, false, nil)
+	return s.importUpstreamProduct(connectionID, upstreamProductID, 0, categoryID, slug, false, nil)
 }
 
 // ImportUpstreamProductWithAutoCategory 从上游导入商品，并按上游分类自动创建/匹配本地分类。
-func (s *Service) ImportUpstreamProductWithAutoCategory(connectionID uint, upstreamProductID string, categoryID uint, slug string, autoCreateCategory bool) (*mappingdomain.Mapping, error) {
-	return s.importUpstreamProduct(connectionID, upstreamProductID, categoryID, slug, autoCreateCategory, nil)
+func (s *Service) ImportUpstreamProductWithAutoCategory(connectionID uint, upstreamProductID string, upstreamCategoryID, categoryID uint, slug string, autoCreateCategory bool) (*mappingdomain.Mapping, error) {
+	return s.importUpstreamProduct(connectionID, upstreamProductID, upstreamCategoryID, categoryID, slug, autoCreateCategory, nil)
 }
 
 // importUpstreamProduct 内部导入实现。catMap 可由批量入口预先注入以避免 N+1 的上游 ListCategories 调用；
 // 为 nil 时在需要时单次拉取。
-func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID string, categoryID uint, slug string, autoCreateCategory bool, catMap map[uint]upstream.UpstreamCategory) (*mappingdomain.Mapping, error) {
+func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID string, upstreamCategoryID, categoryID uint, slug string, autoCreateCategory bool, catMap map[uint]upstream.UpstreamCategory) (*mappingdomain.Mapping, error) {
 	// 检查是否已存在映射
 	existing, err := s.mappings.GetByConnectionAndUpstreamID(connectionID, upstreamProductID)
 	if err != nil {
@@ -82,7 +82,10 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID str
 		return nil, mappingcontract.ErrUpstreamProductNotFound
 	}
 
-	if autoCreateCategory && categoryID == 0 && upProduct.CategoryID > 0 {
+	if upProduct.CategoryID > 0 {
+		upstreamCategoryID = upProduct.CategoryID
+	}
+	if autoCreateCategory && categoryID == 0 && upstreamCategoryID > 0 {
 		if catMap == nil {
 			fetched, fetchErr := s.fetchUpstreamCategoryMap(ctx, adapter)
 			if fetchErr != nil {
@@ -90,7 +93,7 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID str
 			}
 			catMap = fetched
 		}
-		category, createErr := s.findOrCreateCategoryFromUpstream(upProduct.CategoryID, catMap)
+		category, createErr := s.findOrCreateCategoryFromUpstream(upstreamCategoryID, catMap)
 		if createErr != nil {
 			return nil, fmt.Errorf("auto create category: %w", createErr)
 		}

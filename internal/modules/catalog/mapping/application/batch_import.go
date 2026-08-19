@@ -30,6 +30,7 @@ type BatchUpstreamProductImportOutcome struct {
 func (s *Service) BatchImportUpstreamProducts(
 	connectionID uint,
 	upstreamProductIDs []string,
+	upstreamCategoryIDs map[string]uint,
 	categoryID uint,
 	autoCreateCategory bool,
 ) ([]BatchUpstreamProductImportOutcome, error) {
@@ -61,7 +62,7 @@ func (s *Service) BatchImportUpstreamProducts(
 
 	outcomes := make([]BatchUpstreamProductImportOutcome, 0, len(upstreamProductIDs))
 	for _, id := range upstreamProductIDs {
-		mapping, importErr := s.importUpstreamProduct(connectionID, id, categoryID, "", autoCreateCategory, catMap)
+		mapping, importErr := s.importUpstreamProduct(connectionID, id, upstreamCategoryIDs[id], categoryID, "", autoCreateCategory, catMap)
 		outcomes = append(outcomes, BatchUpstreamProductImportOutcome{
 			UpstreamProductID: id,
 			Mapping:           mapping,

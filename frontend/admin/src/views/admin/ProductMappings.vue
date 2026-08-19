@@ -608,6 +608,15 @@ watch(importConnectionId, (value) => {
 
 const BATCH_SIZE = 3
 
+const buildUpstreamCategoryHints = (ids: string[]) => {
+  const selected = new Set(ids)
+  return Object.fromEntries(
+    upstreamProducts.value
+      .filter((product) => selected.has(product.id) && Number(product.category_id) > 0)
+      .map((product) => [product.id, Number(product.category_id)]),
+  )
+}
+
 const handleBatchImport = async () => {
   const ids = Array.from(selectedProductIds.value)
   if (ids.length === 0) return
@@ -625,6 +634,7 @@ const handleBatchImport = async () => {
         const res = await adminAPI.batchImportUpstreamProducts({
           connection_id: Number(importConnectionId.value),
           upstream_product_ids: batchIds,
+          upstream_category_ids: buildUpstreamCategoryHints(batchIds),
           category_id: categoryId || undefined,
           auto_create_category: autoCreateCategory.value,
         })
@@ -640,6 +650,7 @@ const handleBatchImport = async () => {
               await adminAPI.importUpstreamProduct({
                 connection_id: Number(importConnectionId.value),
                 upstream_product_id: id,
+                upstream_category_id: buildUpstreamCategoryHints([id])[id],
                 category_id: categoryId || undefined,
                 auto_create_category: autoCreateCategory.value,
               })
