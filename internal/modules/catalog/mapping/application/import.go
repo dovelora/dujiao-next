@@ -96,6 +96,9 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID str
 		}
 		categoryID = category.ID
 	}
+	if categoryID == 0 {
+		return nil, productcontract.ErrProductCategoryInvalid
+	}
 	if err := productdomain.ValidateCategoryAssignment(s.categories, categoryID, 0, productcontract.ErrProductCategoryInvalid); err != nil {
 		return nil, err
 	}
