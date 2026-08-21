@@ -611,7 +611,9 @@ func buildSharedStockProduct(item sharedStockItem, categoryID uint) (UpstreamPro
 	if code == "" {
 		return UpstreamProduct{}, errors.New("SharedStock 商品缺少对接码")
 	}
-	basePrice := sharedStockPreferredPrice(item.FactoryPrice, item.UserPrice, item.Price)
+	// SharedStock 的实时 valuation 与 user_price/price 一致；部分站点的
+	// factory_price 是内部供货成本，并不是当前商户实际下单价。
+	basePrice := sharedStockPreferredPrice(item.UserPrice, item.Price, item.FactoryPrice)
 	if basePrice == "" {
 		basePrice = "0"
 	}

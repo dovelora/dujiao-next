@@ -29,8 +29,11 @@ func TestSharedStockSignMatchesPHPVector(t *testing.T) {
 }
 
 func TestSharedStockPreferredPriceSkipsZeroFactoryPrice(t *testing.T) {
-	if got := sharedStockPreferredPrice("0", "700", "700"); got != "700" {
+	if got := sharedStockPreferredPrice("700", "700", "0"); got != "700" {
 		t.Fatalf("preferred price = %q, want 700", got)
+	}
+	if got := sharedStockPreferredPrice("1.3", "1.3", "0.8"); got != "1.3" {
+		t.Fatalf("merchant price = %q, want 1.3 instead of factory cost", got)
 	}
 	if got := sharedStockPreferredPrice("0", "0.00", "0"); got != "0" {
 		t.Fatalf("all-zero preferred price = %q, want first zero", got)
