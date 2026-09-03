@@ -562,7 +562,8 @@
         "order_pay_recovery": "Late-payment balance recovery",
         "gift_card_redeem": "Gift card redeem",
         "admin_adjust": "Admin adjustment",
-        "admin_refund": "Admin refund"
+        "admin_refund": "Admin refund",
+        "order_underpaid_credit": "Underpaid order credit"
       },
       "errors": {
         "loadFailed": "Failed to load wallet data, please try again later",

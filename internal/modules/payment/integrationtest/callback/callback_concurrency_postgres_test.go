@@ -1,7 +1,6 @@
 package paymentcallback_test
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -218,11 +217,8 @@ func newPostgresCallbackFixture(t *testing.T, walletAmount decimal.Decimal) *pos
 		FeeAmount:       money.FromDecimal(decimal.Zero),
 		Currency:        "CNY",
 		Status:          constants.PaymentStatusPending,
-		ProviderPayload: jsonmap.JSON{
-			paymentcontract.GatewayPayloadWalletPaidAmount: walletAmount.StringFixed(2),
-		},
-		CreatedAt: now,
-		UpdatedAt: now,
+		CreatedAt:       now,
+		UpdatedAt:       now,
 	}
 	if err := db.Create(payment).Error; err != nil {
 		t.Fatalf("create payment failed: %v", err)
@@ -346,15 +342,37 @@ func TestConcurrentSuccessCallbacksApplyBusinessEffectsOnceOnPostgres(t *testing
 	fixture.assertPaidOnce(t)
 }
 
-func TestSuccessExpiredInterleavingsPreserveMixedWalletFundsOnPostgres(t *testing.T) {
+func TestSuccessExpiredInterleavingsPreserveFundsOnPostgres(t *testing.T) {
 	for _, test := range []struct {
-		name         string
-		firstStatus  string
-		secondStatus string
-		wantRecovery bool
+		name              string
+		firstStatus       string
+		secondStatus      string
+		wantOrderStatus   string
+		wantWalletBalance decimal.Decimal
+		wantWalletPaid    decimal.Decimal
+		wantOnlinePaid    decimal.Decimal
+		wantException     string
+		wantStockSold     int
+		wantStockLocked   int
+		wantNotifications int32
 	}{
-		{name: "expired wins lock before success", firstStatus: constants.PaymentStatusExpired, secondStatus: constants.PaymentStatusSuccess, wantRecovery: true},
-		{name: "success wins lock before expired", firstStatus: constants.PaymentStatusSuccess, secondStatus: constants.PaymentStatusExpired, wantRecovery: false},
+		{
+			name:        "expired before success credits the underpaid gateway amount",
+			firstStatus: constants.PaymentStatusExpired, secondStatus: constants.PaymentStatusSuccess,
+			wantOrderStatus:   constants.OrderStatusPendingPayment,
+			wantWalletBalance: decimal.NewFromInt(170),
+			wantWalletPaid:    decimal.Zero, wantOnlinePaid: decimal.NewFromInt(100),
+			wantException: constants.PaymentExceptionUnderpaidSucceeded,
+			wantStockSold: 0, wantStockLocked: 1, wantNotifications: 0,
+		},
+		{
+			name:        "success before expiry fulfills the original mixed payment",
+			firstStatus: constants.PaymentStatusSuccess, secondStatus: constants.PaymentStatusExpired,
+			wantOrderStatus:   constants.OrderStatusPaid,
+			wantWalletBalance: decimal.NewFromInt(70),
+			wantWalletPaid:    decimal.NewFromInt(30), wantOnlinePaid: decimal.NewFromInt(70),
+			wantStockSold: 1, wantStockLocked: 0, wantNotifications: 1,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			fixture := newPostgresCallbackFixture(t, decimal.NewFromInt(30))
@@ -364,35 +382,49 @@ func TestSuccessExpiredInterleavingsPreserveMixedWalletFundsOnPostgres(t *testin
 			if _, err := fixture.service.HandleCallback(fixture.callbackInput(test.secondStatus)); err != nil {
 				t.Fatalf("second callback %s failed: %v", test.secondStatus, err)
 			}
-			fixture.assertPaidOnce(t)
-
+			payment, err := fixture.paymentRepo.GetByID(fixture.payment.ID)
+			if err != nil || payment == nil {
+				t.Fatalf("reload payment failed: payment=%v err=%v", payment, err)
+			}
+			if payment.Status != constants.PaymentStatusSuccess || payment.ExceptionCode != test.wantException {
+				t.Fatalf("payment status=%s exception=%s, want success/%s", payment.Status, payment.ExceptionCode, test.wantException)
+			}
 			account, err := fixture.walletRepo.GetAccountByUserID(fixture.order.UserID)
 			if err != nil || account == nil {
 				t.Fatalf("reload wallet account failed: account=%v err=%v", account, err)
 			}
-			if !account.Balance.Decimal.Equal(decimal.NewFromInt(70)) {
-				t.Fatalf("wallet balance = %s, want 70", account.Balance.String())
+			if !account.Balance.Decimal.Equal(test.wantWalletBalance) {
+				t.Fatalf("wallet balance = %s, want %s", account.Balance.String(), test.wantWalletBalance.String())
 			}
 			order, err := fixture.orderRepo.GetByID(fixture.order.ID)
 			if err != nil || order == nil {
 				t.Fatalf("reload mixed order failed: order=%v err=%v", order, err)
 			}
-			if !order.WalletPaidAmount.Decimal.Equal(decimal.NewFromInt(30)) || !order.OnlinePaidAmount.Decimal.Equal(decimal.NewFromInt(70)) {
-				t.Fatalf("mixed allocation changed: wallet=%s online=%s", order.WalletPaidAmount.String(), order.OnlinePaidAmount.String())
+			if order.Status != test.wantOrderStatus ||
+				!order.WalletPaidAmount.Decimal.Equal(test.wantWalletPaid) ||
+				!order.OnlinePaidAmount.Decimal.Equal(test.wantOnlinePaid) {
+				t.Fatalf("order status=%s wallet=%s online=%s, want %s/%s/%s",
+					order.Status, order.WalletPaidAmount.String(), order.OnlinePaidAmount.String(),
+					test.wantOrderStatus, test.wantWalletPaid.String(), test.wantOnlinePaid.String())
 			}
-
-			var recoveryCount int64
-			if err := fixture.db.Model(&walletdomain.Transaction{}).
-				Where("order_id = ? AND type = ?", fixture.order.ID, constants.WalletTxnTypeOrderPayRecovery).
-				Count(&recoveryCount).Error; err != nil {
-				t.Fatalf("count recovery transactions failed: %v", err)
+			var sku productdomain.ProductSKU
+			if err := fixture.db.First(&sku, fixture.sku.ID).Error; err != nil {
+				t.Fatalf("reload sku failed: %v", err)
 			}
-			wantRecoveryCount := int64(0)
-			if test.wantRecovery {
-				wantRecoveryCount = 1
+			if sku.ManualStockSold != test.wantStockSold || sku.ManualStockLocked != test.wantStockLocked {
+				t.Fatalf("stock sold=%d locked=%d, want %d/%d", sku.ManualStockSold, sku.ManualStockLocked, test.wantStockSold, test.wantStockLocked)
 			}
-			if recoveryCount != wantRecoveryCount {
-				t.Fatalf("recovery transaction count = %d, want %d", recoveryCount, wantRecoveryCount)
+			if got := fixture.notifications.count.Load(); got != test.wantNotifications {
+				t.Fatalf("notification count = %d, want %d", got, test.wantNotifications)
+			}
+			if test.wantException == constants.PaymentExceptionUnderpaidSucceeded {
+				transaction, err := fixture.walletRepo.GetTransactionByReference(fmt.Sprintf("payment:%d:underpaid_credit", fixture.payment.ID))
+				if err != nil || transaction == nil {
+					t.Fatalf("reload underpaid credit failed: transaction=%v err=%v", transaction, err)
+				}
+				if !transaction.Amount.Decimal.Equal(decimal.NewFromInt(70)) || transaction.Direction != constants.WalletTxnDirectionIn {
+					t.Fatalf("unexpected underpaid credit: %+v", transaction)
+				}
 			}
 		})
 	}
@@ -409,16 +441,15 @@ func TestLateSuccessDoesNotDeliverWhenReleasedWalletFundsWereSpentOnPostgres(t *
 		t.Fatalf("simulate spending released funds failed: %v", err)
 	}
 
-	_, err := fixture.service.HandleCallback(fixture.callbackInput(constants.PaymentStatusSuccess))
-	if !errors.Is(err, walletcontract.ErrInsufficientBalance) {
-		t.Fatalf("late success error = %v, want insufficient balance", err)
+	if _, err := fixture.service.HandleCallback(fixture.callbackInput(constants.PaymentStatusSuccess)); err != nil {
+		t.Fatalf("late success failed: %v", err)
 	}
 	payment, reloadErr := fixture.paymentRepo.GetByID(fixture.payment.ID)
 	if reloadErr != nil || payment == nil {
 		t.Fatalf("reload payment failed: payment=%v err=%v", payment, reloadErr)
 	}
-	if payment.Status != constants.PaymentStatusExpired {
-		t.Fatalf("payment status = %s, want expired after rollback", payment.Status)
+	if payment.Status != constants.PaymentStatusSuccess || payment.ExceptionCode != constants.PaymentExceptionUnderpaidSucceeded {
+		t.Fatalf("payment status=%s exception=%s, want success/%s", payment.Status, payment.ExceptionCode, constants.PaymentExceptionUnderpaidSucceeded)
 	}
 	order, reloadErr := fixture.orderRepo.GetByID(fixture.order.ID)
 	if reloadErr != nil || order == nil {
@@ -426,6 +457,13 @@ func TestLateSuccessDoesNotDeliverWhenReleasedWalletFundsWereSpentOnPostgres(t *
 	}
 	if order.Status != constants.OrderStatusPendingPayment || order.WalletPaidAmount.Decimal.IsPositive() {
 		t.Fatalf("underfunded order was advanced: status=%s wallet=%s", order.Status, order.WalletPaidAmount.String())
+	}
+	account, reloadErr := fixture.walletRepo.GetAccountByUserID(fixture.order.UserID)
+	if reloadErr != nil || account == nil {
+		t.Fatalf("reload wallet account failed: account=%v err=%v", account, reloadErr)
+	}
+	if !account.Balance.Decimal.Equal(decimal.NewFromInt(90)) {
+		t.Fatalf("wallet balance = %s, want 90", account.Balance.String())
 	}
 	var sku productdomain.ProductSKU
 	if err := fixture.db.First(&sku, fixture.sku.ID).Error; err != nil {
@@ -458,11 +496,8 @@ func TestFullOnlinePaymentAfterWalletReleaseDoesNotReclaimOldAllocationOnPostgre
 		FeeAmount:       money.FromDecimal(decimal.Zero),
 		Currency:        fixture.payment.Currency,
 		Status:          constants.PaymentStatusPending,
-		ProviderPayload: jsonmap.JSON{
-			paymentcontract.GatewayPayloadWalletPaidAmount: "0.00",
-		},
-		CreatedAt: now,
-		UpdatedAt: now,
+		CreatedAt:       now,
+		UpdatedAt:       now,
 	}
 	if err := fixture.paymentRepo.Create(fullPayment); err != nil {
 		t.Fatalf("create full online payment failed: %v", err)
@@ -486,36 +521,5 @@ func TestFullOnlinePaymentAfterWalletReleaseDoesNotReclaimOldAllocationOnPostgre
 	}
 	if order.WalletPaidAmount.Decimal.IsPositive() || !order.OnlinePaidAmount.Decimal.Equal(decimal.NewFromInt(100)) {
 		t.Fatalf("unexpected full online allocation wallet=%s online=%s", order.WalletPaidAmount.String(), order.OnlinePaidAmount.String())
-	}
-}
-
-func TestLegacyMixedPaymentWithoutSnapshotRequiresReconciliationOnPostgres(t *testing.T) {
-	fixture := newPostgresCallbackFixture(t, decimal.NewFromInt(30))
-	if _, err := fixture.service.HandleCallback(fixture.callbackInput(constants.PaymentStatusExpired)); err != nil {
-		t.Fatalf("expire legacy mixed payment failed: %v", err)
-	}
-	if err := fixture.db.Model(&paymentdomain.Payment{}).
-		Where("id = ?", fixture.payment.ID).
-		Update("provider_payload", jsonmap.JSON{}).Error; err != nil {
-		t.Fatalf("remove wallet allocation snapshot failed: %v", err)
-	}
-
-	_, err := fixture.service.HandleCallback(fixture.callbackInput(constants.PaymentStatusSuccess))
-	if !errors.Is(err, walletcontract.ErrBalanceRecoveryRequired) {
-		t.Fatalf("legacy late success error = %v, want manual reconciliation", err)
-	}
-	payment, reloadErr := fixture.paymentRepo.GetByID(fixture.payment.ID)
-	if reloadErr != nil || payment == nil {
-		t.Fatalf("reload legacy payment failed: payment=%v err=%v", payment, reloadErr)
-	}
-	if payment.Status != constants.PaymentStatusExpired {
-		t.Fatalf("legacy payment status = %s, want expired after rollback", payment.Status)
-	}
-	order, reloadErr := fixture.orderRepo.GetByID(fixture.order.ID)
-	if reloadErr != nil || order == nil {
-		t.Fatalf("reload legacy order failed: order=%v err=%v", order, reloadErr)
-	}
-	if order.Status != constants.OrderStatusPendingPayment || order.WalletPaidAmount.Decimal.IsPositive() {
-		t.Fatalf("legacy underfunded order was advanced: status=%s wallet=%s", order.Status, order.WalletPaidAmount.String())
 	}
 }

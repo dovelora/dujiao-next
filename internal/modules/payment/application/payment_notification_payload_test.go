@@ -204,12 +204,12 @@ func TestMergeProviderPayloadPreservesDisplayChannelType(t *testing.T) {
 	existing := jsonmap.JSON{
 		"display_channel_type": "usdt.arbitrum",
 		"data":                 map[string]interface{}{"trade_id": "CREATE-1"},
-		paymentcontract.GatewayPayloadWalletPaidAmount: "30.00",
+		paymentcontract.GatewayPayloadFiatCurrencySent: "USD",
 	}
 	incoming := jsonmap.JSON{
 		"trade_id": "CALLBACK-1",
 		"status":   float64(2),
-		paymentcontract.GatewayPayloadWalletPaidAmount: "0.00",
+		paymentcontract.GatewayPayloadFiatCurrencySent: "CNY",
 	}
 
 	merged := mergeProviderPayload(existing, incoming)
@@ -219,8 +219,8 @@ func TestMergeProviderPayloadPreservesDisplayChannelType(t *testing.T) {
 	if got := notificationPayloadString(merged, "trade_id"); got != "CALLBACK-1" {
 		t.Fatalf("callback trade_id = %q, want CALLBACK-1", got)
 	}
-	if got := notificationPayloadString(merged, paymentcontract.GatewayPayloadWalletPaidAmount); got != "30.00" {
-		t.Fatalf("wallet allocation snapshot = %q, want 30.00", got)
+	if got := notificationPayloadString(merged, paymentcontract.GatewayPayloadFiatCurrencySent); got != "USD" {
+		t.Fatalf("fiat currency snapshot = %q, want USD", got)
 	}
 	if _, ok := existing["trade_id"]; ok {
 		t.Fatal("mergeProviderPayload must not mutate existing payload")

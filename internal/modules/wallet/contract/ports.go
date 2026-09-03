@@ -19,6 +19,7 @@ type Repository interface {
 
 	CreateTransaction(transaction *walletdomain.Transaction) error
 	GetTransactionByReference(reference string) (*walletdomain.Transaction, error)
+	CountOrderTransactionsByType(orderID uint, transactionType string) (int64, error)
 	ListTransactions(filter TransactionListFilter) ([]walletdomain.Transaction, int64, error)
 
 	CreateRechargeOrder(order *walletdomain.RechargeOrder) error
@@ -58,7 +59,6 @@ type UseCase interface {
 	ApplyRechargePayment(tx Transaction, recharge *walletdomain.RechargeOrder) (*walletdomain.Transaction, error)
 	ApplyOrderBalance(tx Transaction, input OrderBalanceInput) (money.Amount, error)
 	ReleaseOrderBalance(tx Transaction, input OrderReleaseInput, claim ReleaseClaim) (money.Amount, error)
-	RecoverReleasedOrderBalance(tx Transaction, input OrderBalanceRecoveryInput) (money.Amount, error)
 }
 
 // ReleaseClaim atomically clears the order-side wallet allocation before the
