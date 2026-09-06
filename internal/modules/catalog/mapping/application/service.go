@@ -127,6 +127,6 @@ func (s *Service) GetSKUMappings(mappingID uint) ([]mappingdomain.SKUMapping, er
 }
 
 // GetMappedUpstreamIDs 获取指定连接下所有已映射的上游商品 ID
-func (s *Service) GetMappedUpstreamIDs(connectionID uint) ([]uint, error) {
+func (s *Service) GetMappedUpstreamIDs(connectionID uint) ([]string, error) {
 	return s.mappings.ListUpstreamIDsByConnection(connectionID)
 }

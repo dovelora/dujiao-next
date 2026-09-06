@@ -75,14 +75,15 @@ func TestHandleCallbackOwnership(t *testing.T) {
 	cases := []struct {
 		name         string
 		connectionID uint
-		upstreamID   uint
+		upstreamID   string
 		payloadID    uint
 		wantHandled  bool
 	}{
-		{name: "同连接同上游单号放行", connectionID: 1, upstreamID: 88, payloadID: 88, wantHandled: true},
-		{name: "上游单号未落库时只校验连接", connectionID: 1, upstreamID: 0, payloadID: 88, wantHandled: true},
-		{name: "其它连接冒用本地订单号", connectionID: 2, upstreamID: 88, payloadID: 88, wantHandled: false},
-		{name: "上游订单号不匹配", connectionID: 1, upstreamID: 88, payloadID: 99, wantHandled: false},
+		{name: "同连接同上游单号放行", connectionID: 1, upstreamID: "88", payloadID: 88, wantHandled: true},
+		{name: "上游单号未落库时只校验连接", connectionID: 1, upstreamID: "", payloadID: 88, wantHandled: true},
+		{name: "历史零值上游单号只校验连接", connectionID: 1, upstreamID: "0", payloadID: 88, wantHandled: true},
+		{name: "其它连接冒用本地订单号", connectionID: 2, upstreamID: "88", payloadID: 88, wantHandled: false},
+		{name: "上游订单号不匹配", connectionID: 1, upstreamID: "88", payloadID: 99, wantHandled: false},
 	}
 
 	for _, tc := range cases {

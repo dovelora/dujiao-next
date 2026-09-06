@@ -19,7 +19,7 @@ import (
 
 // BatchUpstreamProductImportOutcome 单个商品批量导入结果（供 handler 组装响应）
 type BatchUpstreamProductImportOutcome struct {
-	UpstreamProductID uint
+	UpstreamProductID string
 	Mapping           *mappingdomain.Mapping
 	Err               error
 }
@@ -29,7 +29,8 @@ type BatchUpstreamProductImportOutcome struct {
 // 避免逐个商品都触发一次 ListCategories（N+1）。
 func (s *Service) BatchImportUpstreamProducts(
 	connectionID uint,
-	upstreamProductIDs []uint,
+	upstreamProductIDs []string,
+	upstreamCategoryIDs map[string]uint,
 	categoryID uint,
 	autoCreateCategory bool,
 ) ([]BatchUpstreamProductImportOutcome, error) {
@@ -61,7 +62,7 @@ func (s *Service) BatchImportUpstreamProducts(
 
 	outcomes := make([]BatchUpstreamProductImportOutcome, 0, len(upstreamProductIDs))
 	for _, id := range upstreamProductIDs {
-		mapping, importErr := s.importUpstreamProduct(connectionID, id, categoryID, "", autoCreateCategory, catMap)
+		mapping, importErr := s.importUpstreamProduct(connectionID, id, upstreamCategoryIDs[id], categoryID, "", autoCreateCategory, catMap)
 		outcomes = append(outcomes, BatchUpstreamProductImportOutcome{
 			UpstreamProductID: id,
 			Mapping:           mapping,
@@ -78,7 +79,7 @@ type BatchImportByCategoryResult struct {
 	CategoryID   uint   `json:"category_id"`
 	CategoryName string `json:"category_name,omitempty"`
 	Errors       []struct {
-		UpstreamProductID uint   `json:"upstream_product_id"`
+		UpstreamProductID string `json:"upstream_product_id"`
 		Error             string `json:"error"`
 	} `json:"errors,omitempty"`
 }
@@ -167,17 +168,17 @@ func (s *Service) BatchImportByCategory(
 		CategoryName: categoryName,
 	}
 	for _, p := range targetProducts {
-		_, importErr := s.ImportUpstreamProduct(connectionID, p.ID, categoryID, "")
+		_, importErr := s.ImportUpstreamProduct(connectionID, p.ID.String(), categoryID, "")
 		if importErr != nil {
 			if errors.Is(importErr, mappingcontract.ErrMappingAlreadyExists) {
 				result.SuccessCount++ // 已映射的算成功
 				continue
 			}
 			result.Errors = append(result.Errors, struct {
-				UpstreamProductID uint   `json:"upstream_product_id"`
+				UpstreamProductID string `json:"upstream_product_id"`
 				Error             string `json:"error"`
 			}{
-				UpstreamProductID: p.ID,
+				UpstreamProductID: p.ID.String(),
 				Error:             importErr.Error(),
 			})
 		} else {

@@ -28,7 +28,7 @@ type Fulfillment struct {
 }
 
 type CreateOrderRequest struct {
-	SKUID             uint
+	SKUID             string
 	Quantity          int
 	ManualFormData    jsonmap.JSON
 	DownstreamOrderNo string
@@ -38,17 +38,18 @@ type CreateOrderRequest struct {
 
 type CreateOrderResult struct {
 	OK           bool
-	OrderID      uint
+	OrderID      string
 	OrderNo      string
 	Status       string
 	Amount       string
 	Currency     string
 	ErrorCode    string
 	ErrorMessage string
+	Fulfillment  *Fulfillment
 }
 
 type UpstreamOrder struct {
-	OrderID        uint
+	OrderID        string
 	OrderNo        string
 	Status         string
 	Amount         string
@@ -63,8 +64,8 @@ type UpstreamConnection interface {
 	RetryMax() int
 	RetryIntervals() string
 	CreateOrder(ctx context.Context, request CreateOrderRequest) (*CreateOrderResult, error)
-	GetOrder(ctx context.Context, orderID uint) (*UpstreamOrder, error)
-	CancelOrder(ctx context.Context, orderID uint) error
+	GetOrder(ctx context.Context, orderID string) (*UpstreamOrder, error)
+	CancelOrder(ctx context.Context, orderID string) error
 }
 
 // UseCase 是支付、HTTP、上游回调与 Worker 共享的正式采购应用契约。

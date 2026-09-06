@@ -1,6 +1,6 @@
 {
   "common": {
-    "siteName": "Dujiao-Next",
+    "siteName": "Dovelora",
     "loading": "加载中...",
     "error": "错误",
     "success": "成功",
@@ -112,7 +112,7 @@
   },
   "home": {
     "hero": {
-      "title": "Dujiao-Next · D&N",
+      "title": "Dovelora",
       "subtitle": "专业的产品与服务提供商",
       "cta": "浏览商品",
       "badge": "新一代数字商店"
@@ -212,8 +212,8 @@
   },
   "about": {
     "title": "关于我们",
-    "subtitle": "了解Dujiao-Next",
-    "introduction": "Dujiao-Next（D&N）是一家专业的在线工作室，致力于为客户提供优质的产品和服务。我们以创新、专业、高效为核心价值观，不断追求卓越，为客户创造价值。",
+    "subtitle": "了解 Dovelora",
+    "introduction": "Dovelora 致力于提供优质的数字商品与服务，以专业、高效的交付体验为客户创造价值。",
     "ourServices": "我们的服务",
     "service1": "优质商品推荐与销售",
     "service2": "专业的售前咨询服务",
@@ -512,6 +512,7 @@
         "recharge": "余额充值",
         "order_pay": "订单支付",
         "order_refund": "订单退款",
+        "order_pay_recovery": "迟到支付余额扣回",
         "gift_card_redeem": "礼品卡兑换",
         "admin_adjust": "管理员调账",
         "admin_refund": "管理员退款",
@@ -1114,7 +1115,7 @@
     "guestPurchase": "游客购买",
     "memberPurchase": "登录会员购买",
     "guestEmailPlaceholder": "邮箱（用于查询订单）",
-    "guestPasswordPlaceholder": "订单密码",
+    "guestPasswordPlaceholder": "订单密码（至少 12 个字符）",
     "guestInstructions": {
       "title": "填写说明：",
       "email": "邮箱：请填写一个可接收邮件的邮箱，您在付款后我们可通过该邮箱向您发送商品信息并可通过该邮箱联系您",
@@ -1156,6 +1157,7 @@
     "errors": {
       "emptyCart": "购物车为空",
       "missingGuest": "请输入邮箱与订单密码",
+      "guestPasswordTooShort": "订单密码至少需要 {count} 个字符",
       "loginOrGuest": "请先登录或使用游客购买",
       "submitFailed": "提交失败，请稍后重试",
       "manualFormInvalid": "请完善交付信息后再提交",

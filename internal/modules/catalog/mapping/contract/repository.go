@@ -20,7 +20,7 @@ type ListFilter struct {
 type MappingRepository interface {
 	GetByID(id uint) (*mappingdomain.Mapping, error)
 	GetByLocalProductID(productID uint) (*mappingdomain.Mapping, error)
-	GetByConnectionAndUpstreamID(connectionID, upstreamProductID uint) (*mappingdomain.Mapping, error)
+	GetByConnectionAndUpstreamID(connectionID uint, upstreamProductID string) (*mappingdomain.Mapping, error)
 	Create(mapping *mappingdomain.Mapping) error
 	Update(mapping *mappingdomain.Mapping) error
 	Delete(id uint) error
@@ -29,7 +29,7 @@ type MappingRepository interface {
 	ListByLocalProductIDs(productIDs []uint) ([]mappingdomain.Mapping, error)
 	ListActiveByConnection(connectionID uint) ([]mappingdomain.Mapping, error)
 	ListAllActive() ([]mappingdomain.Mapping, error)
-	ListUpstreamIDsByConnection(connectionID uint) ([]uint, error)
+	ListUpstreamIDsByConnection(connectionID uint) ([]string, error)
 }
 
 // SKUMappingRepository 是 SKU 映射持久化端口。

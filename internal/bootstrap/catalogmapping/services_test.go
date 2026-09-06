@@ -2,8 +2,10 @@ package catalogmappingbootstrap
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -130,7 +132,7 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"ok": true,
 			"product": upstream.UpstreamProduct{
-				ID:              101,
+				ID:              "101",
 				Title:           jsonmap.JSON{"zh-CN": "映射测试商品"},
 				Description:     jsonmap.JSON{"zh-CN": "描述"},
 				Content:         jsonmap.JSON{"zh-CN": "内容"},
@@ -142,7 +144,7 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 				IsActive:        true,
 				SKUs: []upstream.UpstreamSKU{
 					{
-						ID:          201,
+						ID:          "201",
 						SKUCode:     "SKU-A",
 						SpecValues:  jsonmap.JSON{"name": "A"},
 						PriceAmount: "10.00",
@@ -179,7 +181,7 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 		t.Fatalf("create product mapping service: %v", err)
 	}
 
-	if _, err := svc.ImportUpstreamProduct(conn.ID, 101, 1, "rollback-slug"); err == nil {
+	if _, err := svc.ImportUpstreamProduct(conn.ID, "101", 1, "rollback-slug"); err == nil {
 		t.Fatalf("expected import upstream product to fail")
 	}
 
@@ -269,7 +271,7 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 	mapping := &mappingdomain.Mapping{
 		ConnectionID:      conn.ID,
 		LocalProductID:    product.ID,
-		UpstreamProductID: 101,
+		UpstreamProductID: "101",
 		IsActive:          true,
 		UpstreamStatus:    mappingdomain.UpstreamStatusActive,
 	}
@@ -279,7 +281,7 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 	if err := skuMappingRepo.Create(&mappingdomain.SKUMapping{
 		ProductMappingID: mapping.ID,
 		LocalSKUID:       sku.ID,
-		UpstreamSKUID:    201,
+		UpstreamSKUID:    "201",
 		UpstreamIsActive: true,
 		UpstreamStock:    100,
 	}); err != nil {
@@ -348,10 +350,10 @@ func TestSyncProductMarksInactiveWhenUpstreamReturnsInactive(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ok": true,
 				"product": upstream.UpstreamProduct{
-					ID:       101,
+					ID:       "101",
 					IsActive: false, // 上游下架
 					SKUs: []upstream.UpstreamSKU{
-						{ID: 201, SKUCode: "SKU-A", PriceAmount: "10.00", IsActive: false},
+						{ID: "201", SKUCode: "SKU-A", PriceAmount: "10.00", IsActive: false},
 					},
 				},
 			})
@@ -391,14 +393,14 @@ func TestSyncProductKeepsLocalWholesalePricesWhenUpstreamOmitsWholesalePrices(t 
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ok": true,
 				"product": upstream.UpstreamProduct{
-					ID:              101,
+					ID:              "101",
 					Title:           jsonmap.JSON{"zh-CN": "测试"},
 					PriceAmount:     "10.00",
 					Currency:        "CNY",
 					FulfillmentType: constants.FulfillmentTypeAuto,
 					IsActive:        true,
 					SKUs: []upstream.UpstreamSKU{
-						{ID: 201, SKUCode: "SKU-A", PriceAmount: "10.00", IsActive: true, StockQuantity: 100},
+						{ID: "201", SKUCode: "SKU-A", PriceAmount: "10.00", IsActive: true, StockQuantity: 100},
 					},
 				},
 			})
@@ -439,14 +441,14 @@ func TestSyncProductRemapsUpstreamWholesaleSKUID(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ok": true,
 				"product": upstream.UpstreamProduct{
-					ID:              101,
+					ID:              "101",
 					Title:           jsonmap.JSON{"zh-CN": "测试"},
 					PriceAmount:     "10.00",
 					Currency:        "CNY",
 					FulfillmentType: constants.FulfillmentTypeAuto,
 					IsActive:        true,
 					SKUs: []upstream.UpstreamSKU{
-						{ID: 201, SKUCode: "SKU-A", PriceAmount: "10.00", IsActive: true, StockQuantity: 100},
+						{ID: "201", SKUCode: "SKU-A", PriceAmount: "10.00", IsActive: true, StockQuantity: 100},
 					},
 					WholesalePrices: productdomain.WholesalePriceTiers{
 						{SKUID: 201, MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(8))},
@@ -575,7 +577,7 @@ func TestSyncConnectionStockKeepsMappingWhenFullSyncIncomplete(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ok": true,
 				"items": []upstream.UpstreamProduct{
-					{ID: 999, Title: jsonmap.JSON{"zh-CN": "其他商品"}, PriceAmount: "1.00", IsActive: true},
+					{ID: "999", Title: jsonmap.JSON{"zh-CN": "其他商品"}, PriceAmount: "1.00", IsActive: true},
 				},
 				"total":             10,
 				"page":              1,
@@ -668,14 +670,14 @@ func TestEnsureUpstreamStockRejectsWhenUpstreamReportsZero(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"ok": true,
 			"product": upstream.UpstreamProduct{
-				ID:              101,
+				ID:              "101",
 				Title:           jsonmap.JSON{"zh-CN": "测试"},
 				PriceAmount:     "10.00",
 				Currency:        "CNY",
 				FulfillmentType: constants.FulfillmentTypeAuto,
 				IsActive:        true,
 				SKUs: []upstream.UpstreamSKU{
-					{ID: 201, SKUCode: "SKU-A", PriceAmount: "10.00", IsActive: true, StockQuantity: 0},
+					{ID: "201", SKUCode: "SKU-A", PriceAmount: "10.00", IsActive: true, StockQuantity: 0},
 				},
 			},
 		})
@@ -738,14 +740,14 @@ func TestSyncProductRestoresStatusWhenUpstreamRecovers(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ok": true,
 				"product": upstream.UpstreamProduct{
-					ID:              101,
+					ID:              "101",
 					Title:           jsonmap.JSON{"zh-CN": "P"},
 					PriceAmount:     "10.00",
 					Currency:        "CNY",
 					FulfillmentType: constants.FulfillmentTypeAuto,
 					IsActive:        true,
 					SKUs: []upstream.UpstreamSKU{
-						{ID: 201, SKUCode: "SKU-A", PriceAmount: "10.00", IsActive: true, StockQuantity: 50},
+						{ID: "201", SKUCode: "SKU-A", PriceAmount: "10.00", IsActive: true, StockQuantity: 50},
 					},
 				},
 			})
@@ -800,7 +802,7 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"ok": true,
 			"product": upstream.UpstreamProduct{
-				ID:          202,
+				ID:          "202",
 				Title:       jsonmap.JSON{"zh-CN": "已下架商品"},
 				PriceAmount: "10.00",
 				IsActive:    false,
@@ -831,7 +833,7 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 		t.Fatalf("create product mapping service: %v", err)
 	}
 
-	_, importErr := svc.ImportUpstreamProduct(conn.ID, 202, 1, "")
+	_, importErr := svc.ImportUpstreamProduct(conn.ID, "202", 1, "")
 	if !errors.Is(importErr, mappingcontract.ErrUpstreamProductNotFound) {
 		t.Fatalf("expected ErrUpstreamProductNotFound for inactive upstream product, got %v", importErr)
 	}
@@ -842,5 +844,67 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 	}
 	if productCount != 0 {
 		t.Fatalf("expected no local product created when import rejected, got %d", productCount)
+	}
+}
+
+func TestSyncConnectionStockSharedStockUsesMerchantSKUData(t *testing.T) {
+	for _, test := range []struct {
+		name, price  string
+		quoteFailure bool
+	}{
+		{name: "live SKU inventory and merchant price", price: "12.50"},
+		{name: "quote error preserves local data", quoteFailure: true},
+		{name: "zero quote preserves local data", price: "0"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			svc, db, mapping, closeServer := setupMappingWithUpstreamHandler(t, fmt.Sprintf("file:shared-sync-%s?mode=memory&cache=shared", test.name), func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				switch r.URL.Path {
+				case "/shared/commodity/item":
+					_, _ = w.Write([]byte(`{"code":200,"data":{"code":"101","stock":20,"price":"12","config":{"category":{"basic":"12"},"category_factory":{"basic":"5"}}}}`))
+				case "/shared/commodity/stock":
+					_, _ = w.Write([]byte(`{"code":200,"data":{"stock":0}}`))
+				case "/shared/commodity/valuation":
+					if test.quoteFailure {
+						w.WriteHeader(http.StatusServiceUnavailable)
+						return
+					}
+					_ = json.NewEncoder(w).Encode(map[string]interface{}{"code": 200, "data": map[string]string{"price": test.price}})
+				case "/shared/commodity/items":
+					_, _ = w.Write([]byte(`{"code":200,"data":[{"id":1,"children":[{"code":"101","stock":20,"config":{"category":{"basic":"12"},"category_factory":{"basic":"5"}}}]}]}`))
+				default:
+					t.Errorf("unexpected request %s", r.URL.Path)
+					w.WriteHeader(http.StatusNotFound)
+				}
+			})
+			defer closeServer()
+			if err := db.Model(&siteconnectiondomain.Connection{}).Where("id = ?", mapping.ConnectionID).Updates(map[string]interface{}{"protocol": constants.ConnectionProtocolSharedStock, "auto_sync_price": true}).Error; err != nil {
+				t.Fatal(err)
+			}
+			ref := "ss1_" + base64.RawURLEncoding.EncodeToString([]byte(`{"v":1,"code":"101","race":"basic"}`))
+			if err := db.Model(&mappingdomain.SKUMapping{}).Where("product_mapping_id = ?", mapping.ID).Update("upstream_sku_id", ref).Error; err != nil {
+				t.Fatal(err)
+			}
+			err := svc.SyncConnectionStock(mapping.ConnectionID, []mappingdomain.Mapping{*mapping}, 100, 200)
+			wantErr := test.quoteFailure || test.price == "0"
+			if (err != nil) != wantErr {
+				t.Fatalf("sync error = %v, want error %v", err, wantErr)
+			}
+			var synced mappingdomain.SKUMapping
+			if err := db.Where("product_mapping_id = ?", mapping.ID).First(&synced).Error; err != nil {
+				t.Fatal(err)
+			}
+			var sku productdomain.ProductSKU
+			if err := db.First(&sku, synced.LocalSKUID).Error; err != nil {
+				t.Fatal(err)
+			}
+			stock, price := 0, "12.50"
+			if wantErr {
+				stock, price = 100, "10"
+			}
+			if synced.UpstreamStock != stock || !sku.PriceAmount.Decimal.Equal(decimal.RequireFromString(price)) {
+				t.Fatalf("incorrect sync result: stock=%d price=%s, want %d/%s", synced.UpstreamStock, sku.PriceAmount.Decimal, stock, price)
+			}
+		})
 	}
 }

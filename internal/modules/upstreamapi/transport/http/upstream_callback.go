@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -124,8 +125,10 @@ func (h *Handler) HandleCallback(c *gin.Context) {
 	// 归属校验：采购单必须属于本次认证的连接，且上游订单号需与登记值一致，
 	// 防止任意已认证连接凭本地订单号提交他人订单的状态。
 	// upstream_order_id 为 0 时说明下单响应尚未落库（回调抢跑），此时只校验连接归属。
+	registeredUpstreamOrderID := strings.TrimSpace(procOrder.UpstreamOrderID)
+	payloadUpstreamOrderID := strconv.FormatUint(uint64(payload.OrderID), 10)
 	if procOrder.ConnectionID != conn.ID ||
-		(procOrder.UpstreamOrderID != 0 && payload.OrderID != procOrder.UpstreamOrderID) {
+		(registeredUpstreamOrderID != "" && registeredUpstreamOrderID != "0" && payloadUpstreamOrderID != registeredUpstreamOrderID) {
 		logger.Warnw("upstream_callback_ownership_mismatch",
 			"api_key", apiKey,
 			"connection_id", conn.ID,

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/dujiao-next/internal/constants"
 	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
@@ -37,7 +38,7 @@ func (r *Store) GetByID(id uint) (*siteconnectiondomain.Connection, error) {
 // GetByApiKey 根据 ApiKey 获取连接
 func (r *Store) GetByApiKey(apiKey string) (*siteconnectiondomain.Connection, error) {
 	var conn siteconnectiondomain.Connection
-	if err := r.db.Where("deleted_at IS NULL AND api_key = ?", apiKey).First(&conn).Error; err != nil {
+	if err := r.db.Where("deleted_at IS NULL AND protocol = ? AND api_key = ?", constants.ConnectionProtocolDujiaoNext, apiKey).First(&conn).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}

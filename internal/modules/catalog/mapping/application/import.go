@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,18 +26,18 @@ import (
 )
 
 // ImportUpstreamProduct 从上游导入商品（克隆为本地商品 + 建立映射）
-func (s *Service) ImportUpstreamProduct(connectionID uint, upstreamProductID uint, categoryID uint, slug string) (*mappingdomain.Mapping, error) {
-	return s.importUpstreamProduct(connectionID, upstreamProductID, categoryID, slug, false, nil)
+func (s *Service) ImportUpstreamProduct(connectionID uint, upstreamProductID string, categoryID uint, slug string) (*mappingdomain.Mapping, error) {
+	return s.importUpstreamProduct(connectionID, upstreamProductID, 0, categoryID, slug, false, nil)
 }
 
 // ImportUpstreamProductWithAutoCategory 从上游导入商品，并按上游分类自动创建/匹配本地分类。
-func (s *Service) ImportUpstreamProductWithAutoCategory(connectionID uint, upstreamProductID uint, categoryID uint, slug string, autoCreateCategory bool) (*mappingdomain.Mapping, error) {
-	return s.importUpstreamProduct(connectionID, upstreamProductID, categoryID, slug, autoCreateCategory, nil)
+func (s *Service) ImportUpstreamProductWithAutoCategory(connectionID uint, upstreamProductID string, upstreamCategoryID, categoryID uint, slug string, autoCreateCategory bool) (*mappingdomain.Mapping, error) {
+	return s.importUpstreamProduct(connectionID, upstreamProductID, upstreamCategoryID, categoryID, slug, autoCreateCategory, nil)
 }
 
 // importUpstreamProduct 内部导入实现。catMap 可由批量入口预先注入以避免 N+1 的上游 ListCategories 调用；
 // 为 nil 时在需要时单次拉取。
-func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uint, categoryID uint, slug string, autoCreateCategory bool, catMap map[uint]upstream.UpstreamCategory) (*mappingdomain.Mapping, error) {
+func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID string, upstreamCategoryID, categoryID uint, slug string, autoCreateCategory bool, catMap map[uint]upstream.UpstreamCategory) (*mappingdomain.Mapping, error) {
 	// 检查是否已存在映射
 	existing, err := s.mappings.GetByConnectionAndUpstreamID(connectionID, upstreamProductID)
 	if err != nil {
@@ -65,7 +66,7 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	upProduct, err := adapter.GetProduct(ctx, upstreamProductID)
+	upProduct, err := adapter.GetProduct(ctx, upstream.Reference(upstreamProductID))
 	if err != nil {
 		// 上游已删除或已下架（旧上游兜底）→ 不允许导入
 		if errors.Is(err, upstream.ErrUpstreamProductDeleted) || errors.Is(err, upstream.ErrUpstreamProductUnavailable) {
@@ -81,7 +82,10 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 		return nil, mappingcontract.ErrUpstreamProductNotFound
 	}
 
-	if autoCreateCategory && categoryID == 0 && upProduct.CategoryID > 0 {
+	if upProduct.CategoryID > 0 {
+		upstreamCategoryID = upProduct.CategoryID
+	}
+	if autoCreateCategory && categoryID == 0 && upstreamCategoryID > 0 {
 		if catMap == nil {
 			fetched, fetchErr := s.fetchUpstreamCategoryMap(ctx, adapter)
 			if fetchErr != nil {
@@ -89,11 +93,14 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 			}
 			catMap = fetched
 		}
-		category, createErr := s.findOrCreateCategoryFromUpstream(upProduct.CategoryID, catMap)
+		category, createErr := s.findOrCreateCategoryFromUpstream(upstreamCategoryID, catMap)
 		if createErr != nil {
 			return nil, fmt.Errorf("auto create category: %w", createErr)
 		}
 		categoryID = category.ID
+	}
+	if categoryID == 0 {
+		return nil, productcontract.ErrProductCategoryInvalid
 	}
 	if err := productdomain.ValidateCategoryAssignment(s.categories, categoryID, 0, productcontract.ErrProductCategoryInvalid); err != nil {
 		return nil, err
@@ -138,7 +145,7 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 
 	// 自动生成 slug（如果未提供）
 	if slug == "" {
-		slug = fmt.Sprintf("upstream-%d-%d-%d", connectionID, upstreamProductID, time.Now().UnixMilli())
+		slug = fmt.Sprintf("upstream-%d-%d", connectionID, time.Now().UnixMilli())
 	}
 
 	// 创建本地商品
@@ -310,7 +317,7 @@ func createSKUMappings(
 		skuMapping := &mappingdomain.SKUMapping{
 			ProductMappingID: mappingID,
 			LocalSKUID:       localSKU.ID,
-			UpstreamSKUID:    upSKU.ID,
+			UpstreamSKUID:    upSKU.ID.String(),
 			UpstreamPrice:    money.FromDecimal(upPrice.Round(2)),
 			UpstreamIsActive: upSKU.IsActive,
 			UpstreamStock:    upSKU.StockQuantity,
@@ -330,13 +337,13 @@ type upstreamWholesaleSKURef struct {
 }
 
 type upstreamWholesaleSKUIndex struct {
-	byUpstreamID map[uint]upstreamWholesaleSKURef
+	byUpstreamID map[string]upstreamWholesaleSKURef
 	byCode       map[string]upstreamWholesaleSKURef
 }
 
 func buildUpstreamWholesaleSKUIndex(localSKUs []productdomain.ProductSKU, upstreamSKUs []upstream.UpstreamSKU, skuMappings []mappingdomain.SKUMapping) upstreamWholesaleSKUIndex {
 	index := upstreamWholesaleSKUIndex{
-		byUpstreamID: map[uint]upstreamWholesaleSKURef{},
+		byUpstreamID: map[string]upstreamWholesaleSKURef{},
 		byCode:       map[string]upstreamWholesaleSKURef{},
 	}
 	localByID := make(map[uint]productdomain.ProductSKU, len(localSKUs))
@@ -364,16 +371,16 @@ func buildUpstreamWholesaleSKUIndex(localSKUs []productdomain.ProductSKU, upstre
 	}
 
 	for _, upSKU := range upstreamSKUs {
-		if _, ok := index.byUpstreamID[upSKU.ID]; ok {
+		if _, ok := index.byUpstreamID[upSKU.ID.String()]; ok {
 			continue
 		}
 		if localSKU, ok := localByCode[strings.ToLower(strings.TrimSpace(upSKU.SKUCode))]; ok {
-			index.byUpstreamID[upSKU.ID] = upstreamWholesaleSKURef{ID: localSKU.ID, SKUCode: strings.TrimSpace(localSKU.SKUCode)}
+			index.byUpstreamID[upSKU.ID.String()] = upstreamWholesaleSKURef{ID: localSKU.ID, SKUCode: strings.TrimSpace(localSKU.SKUCode)}
 			continue
 		}
 		if len(localSKUs) == 1 && len(upstreamSKUs) == 1 {
 			localSKU := localSKUs[0]
-			index.byUpstreamID[upSKU.ID] = upstreamWholesaleSKURef{ID: localSKU.ID, SKUCode: strings.TrimSpace(localSKU.SKUCode)}
+			index.byUpstreamID[upSKU.ID.String()] = upstreamWholesaleSKURef{ID: localSKU.ID, SKUCode: strings.TrimSpace(localSKU.SKUCode)}
 		}
 	}
 	return index
@@ -454,7 +461,7 @@ func resolveUpstreamWholesaleTierScope(tier productdomain.WholesalePriceTier, in
 	if skuCode != "" {
 		if ref, ok := index.byCode[strings.ToLower(skuCode)]; ok {
 			if tier.SKUID > 0 {
-				if idRef, idOK := index.byUpstreamID[tier.SKUID]; idOK && idRef.ID != ref.ID {
+				if idRef, idOK := index.byUpstreamID[strconv.FormatUint(uint64(tier.SKUID), 10)]; idOK && idRef.ID != ref.ID {
 					return 0, "", false
 				}
 			}
@@ -466,7 +473,7 @@ func resolveUpstreamWholesaleTierScope(tier productdomain.WholesalePriceTier, in
 		return 0, skuCode, true
 	}
 	if tier.SKUID > 0 {
-		if ref, ok := index.byUpstreamID[tier.SKUID]; ok {
+		if ref, ok := index.byUpstreamID[strconv.FormatUint(uint64(tier.SKUID), 10)]; ok {
 			return ref.ID, strings.TrimSpace(ref.SKUCode), true
 		}
 		return 0, "", false

@@ -66,10 +66,10 @@ func (s *upstreamProviderStub) Open(uint) (reconciliationcontract.UpstreamOrderR
 
 type upstreamReaderStub struct {
 	calls   int
-	details map[uint]reconciliationcontract.UpstreamOrder
+	details map[string]reconciliationcontract.UpstreamOrder
 }
 
-func (s *upstreamReaderStub) Get(_ context.Context, orderID uint) (*reconciliationcontract.UpstreamOrder, error) {
+func (s *upstreamReaderStub) Get(_ context.Context, orderID string) (*reconciliationcontract.UpstreamOrder, error) {
 	s.calls++
 	detail := s.details[orderID]
 	return &detail, nil
@@ -112,9 +112,9 @@ func TestExecuteOpensUpstreamOnceAndPersistsMismatch(t *testing.T) {
 		Status: constants.ReconciliationJobStatusPending,
 	}}
 	items := &itemRepositoryStub{}
-	upstreamOrders := &upstreamReaderStub{details: map[uint]reconciliationcontract.UpstreamOrder{
-		11: {Status: "completed", Amount: "10.00"},
-		12: {Status: "failed", Amount: "12.00"},
+	upstreamOrders := &upstreamReaderStub{details: map[string]reconciliationcontract.UpstreamOrder{
+		"11": {Status: "completed", Amount: "10.00"},
+		"12": {Status: "failed", Amount: "12.00"},
 	}}
 	upstreamProvider := &upstreamProviderStub{reader: upstreamOrders}
 	notifier := &notifierStub{}
@@ -122,8 +122,8 @@ func TestExecuteOpensUpstreamOnceAndPersistsMismatch(t *testing.T) {
 		Jobs:  jobs,
 		Items: items,
 		Procurements: procurementReaderStub{orders: []reconciliationcontract.ProcurementOrder{
-			{ID: 21, UpstreamOrderID: 11, Status: constants.ProcurementStatusCompleted, UpstreamAmount: money.FromDecimal(decimal.NewFromInt(10))},
-			{ID: 22, UpstreamOrderID: 12, Status: constants.ProcurementStatusCompleted, UpstreamAmount: money.FromDecimal(decimal.NewFromInt(10))},
+			{ID: 21, UpstreamOrderID: "11", Status: constants.ProcurementStatusCompleted, UpstreamAmount: money.FromDecimal(decimal.NewFromInt(10))},
+			{ID: 22, UpstreamOrderID: "12", Status: constants.ProcurementStatusCompleted, UpstreamAmount: money.FromDecimal(decimal.NewFromInt(10))},
 		}},
 		Upstream: upstreamProvider, Notifications: notifier,
 	})

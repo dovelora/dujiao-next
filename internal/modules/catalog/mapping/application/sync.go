@@ -52,7 +52,7 @@ func (s *Service) SyncProduct(mappingID uint) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	upProduct, err := adapter.GetProduct(ctx, mapping.UpstreamProductID)
+	upProduct, err := adapter.GetProduct(ctx, upstream.Reference(mapping.UpstreamProductID))
 	if err != nil {
 		// 上游软删除 → 标记本地为 deleted，自动停用映射
 		if errors.Is(err, upstream.ErrUpstreamProductDeleted) {
@@ -98,13 +98,13 @@ func (s *Service) SyncProduct(mappingID uint) error {
 	}
 
 	// 构建上游 SKU 查找表
-	upstreamSKUMap := make(map[uint]upstream.UpstreamSKU, len(upProduct.SKUs))
+	upstreamSKUMap := make(map[string]upstream.UpstreamSKU, len(upProduct.SKUs))
 	for _, us := range upProduct.SKUs {
-		upstreamSKUMap[us.ID] = us
+		upstreamSKUMap[us.ID.String()] = us
 	}
 
 	// 构建已有映射查找表（按上游 SKU ID）
-	existingByUpstreamID := make(map[uint]*mappingdomain.SKUMapping, len(skuMappings))
+	existingByUpstreamID := make(map[string]*mappingdomain.SKUMapping, len(skuMappings))
 	for i := range skuMappings {
 		existingByUpstreamID[skuMappings[i].UpstreamSKUID] = &skuMappings[i]
 	}
@@ -154,7 +154,7 @@ func (s *Service) SyncProduct(mappingID uint) error {
 
 	// 2b. 上游新增的 SKU → 创建本地 SKU + 映射
 	for _, upSKU := range upProduct.SKUs {
-		if _, exists := existingByUpstreamID[upSKU.ID]; exists {
+		if _, exists := existingByUpstreamID[upSKU.ID.String()]; exists {
 			continue
 		}
 
@@ -176,7 +176,7 @@ func (s *Service) SyncProduct(mappingID uint) error {
 		newMapping := &mappingdomain.SKUMapping{
 			ProductMappingID: mappingID,
 			LocalSKUID:       newLocalSKU.ID,
-			UpstreamSKUID:    upSKU.ID,
+			UpstreamSKUID:    upSKU.ID.String(),
 			UpstreamPrice:    money.FromDecimal(skuPrice.Round(2)),
 			UpstreamIsActive: upSKU.IsActive,
 			UpstreamStock:    upSKU.StockQuantity,
@@ -453,6 +453,18 @@ func (s *Service) SyncConnectionStock(connectionID uint, connMappings []mappingd
 		return fmt.Errorf("get connection %d: %w", connectionID, err)
 	}
 
+	// SharedStock 列表只有商品总库存和配置价格，不能覆盖 SKU 的实时库存/商户价。
+	// 仅查询已映射商品，复用单品同步的独立超时和不可用商品处理。
+	if conn.Protocol == constants.ConnectionProtocolSharedStock {
+		var syncErrors []error
+		for _, mapping := range connMappings {
+			if err := s.SyncProduct(mapping.ID); err != nil {
+				syncErrors = append(syncErrors, fmt.Errorf("sync mapping %d: %w", mapping.ID, err))
+			}
+		}
+		return errors.Join(syncErrors...)
+	}
+
 	adapter, err := s.connections.GetAdapter(conn)
 	if err != nil {
 		return fmt.Errorf("get adapter for connection %d: %w", connectionID, err)
@@ -494,7 +506,7 @@ func (s *Service) SyncConnectionStock(connectionID uint, connMappings []mappingd
 	// 下游凭此识别"上游已下架"和"上游已删除"两种状态。
 	// fetchComplete 表示是否拉满了 result.Total —— 只有完整拉取才允许根据 missing 推断"上游已删除"，
 	// 否则上游分页限流/截断/缓存抖动等会导致大量 mapping 被误标为 deleted。
-	upstreamProducts := make(map[uint]upstream.UpstreamProduct)
+	upstreamProducts := make(map[string]upstream.UpstreamProduct)
 	includesInactive := false
 	fetchComplete := false
 	expectedTotal := 0
@@ -514,7 +526,7 @@ func (s *Service) SyncConnectionStock(connectionID uint, connMappings []mappingd
 				logger.Warnw("sync_incremental_failed_fallback_full", "connection_id", connectionID, "error", err)
 				updatedAfter = nil
 				page = 1
-				upstreamProducts = make(map[uint]upstream.UpstreamProduct)
+				upstreamProducts = make(map[string]upstream.UpstreamProduct)
 				expectedTotal = 0
 				continue
 			}
@@ -528,7 +540,7 @@ func (s *Service) SyncConnectionStock(connectionID uint, connMappings []mappingd
 		}
 
 		for _, p := range result.Items {
-			upstreamProducts[p.ID] = p
+			upstreamProducts[p.ID.String()] = p
 		}
 
 		if len(upstreamProducts) >= result.Total {
@@ -638,12 +650,12 @@ func (s *Service) syncProductFromData(mapping *mappingdomain.Mapping, conn *site
 		return
 	}
 
-	upstreamSKUMap := make(map[uint]upstream.UpstreamSKU, len(upProduct.SKUs))
+	upstreamSKUMap := make(map[string]upstream.UpstreamSKU, len(upProduct.SKUs))
 	for _, us := range upProduct.SKUs {
-		upstreamSKUMap[us.ID] = us
+		upstreamSKUMap[us.ID.String()] = us
 	}
 
-	existingByUpstreamID := make(map[uint]*mappingdomain.SKUMapping, len(skuMappings))
+	existingByUpstreamID := make(map[string]*mappingdomain.SKUMapping, len(skuMappings))
 	for i := range skuMappings {
 		existingByUpstreamID[skuMappings[i].UpstreamSKUID] = &skuMappings[i]
 	}
@@ -699,7 +711,7 @@ func (s *Service) syncProductFromData(mapping *mappingdomain.Mapping, conn *site
 
 	// 上游新增 SKU
 	for _, upSKU := range upProduct.SKUs {
-		if _, exists := existingByUpstreamID[upSKU.ID]; exists {
+		if _, exists := existingByUpstreamID[upSKU.ID.String()]; exists {
 			continue
 		}
 		skuPrice, priceErr := decimal.NewFromString(upSKU.PriceAmount)
@@ -727,7 +739,7 @@ func (s *Service) syncProductFromData(mapping *mappingdomain.Mapping, conn *site
 		newSKUMapping := &mappingdomain.SKUMapping{
 			ProductMappingID: mapping.ID,
 			LocalSKUID:       newLocalSKU.ID,
-			UpstreamSKUID:    upSKU.ID,
+			UpstreamSKUID:    upSKU.ID.String(),
 			UpstreamPrice:    money.FromDecimal(skuPrice.Round(2)),
 			UpstreamIsActive: upSKU.IsActive,
 			UpstreamStock:    upSKU.StockQuantity,

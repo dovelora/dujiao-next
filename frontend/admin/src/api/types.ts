@@ -540,14 +540,30 @@ export interface AdminUserLoginLog {
 }
 
 // --- SiteConnection ---
+export type SiteConnectionProtocol = 'dujiao-next' | 'shared-stock'
+
+export interface SiteConnectionPayload {
+  name: string
+  base_url: string
+  api_key: string
+  api_secret: string
+  protocol: SiteConnectionProtocol
+  callback_url: string
+  retry_max: number
+  retry_intervals: string
+  exchange_rate: number
+  price_markup_percent: number
+  price_rounding_mode: string
+  auto_sync_price: boolean
+}
+
 export interface AdminSiteConnection {
   id: number
   name: string
   type: string
   base_url: string
   api_key: string
-  api_secret?: string
-  protocol?: string
+  protocol?: SiteConnectionProtocol
   callback_url?: string
   retry_max?: number
   retry_intervals?: string
@@ -570,8 +586,8 @@ export interface AdminProductMapping {
   id: number
   connection_id: number
   local_product_id: number
-  upstream_product_id: number
-  upstream_sku_id: number
+  upstream_product_id: string
+  upstream_sku_id: string
   upstream_product_name: string
   upstream_sku_name: string
   upstream_price: number

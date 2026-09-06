@@ -120,7 +120,7 @@ func (s *Service) SyncAcceptedOrders() {
 
 	for i := range orders {
 		procOrder := &orders[i]
-		if procOrder.UpstreamOrderID == 0 {
+		if upstreamOrderID := strings.TrimSpace(procOrder.UpstreamOrderID); upstreamOrderID == "" || upstreamOrderID == "0" {
 			continue
 		}
 

@@ -160,8 +160,7 @@ func TestBatchImportUpstreamProductsAutoCreatesCategory(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ok": true,
 				"product": upstream.UpstreamProduct{
-					ID:              101,
-					CategoryID:      9,
+					ID:              "101",
 					Title:           jsonmap.JSON{"zh-CN": "上游商品"},
 					Description:     jsonmap.JSON{"zh-CN": "描述"},
 					Content:         jsonmap.JSON{"zh-CN": "内容"},
@@ -172,7 +171,7 @@ func TestBatchImportUpstreamProductsAutoCreatesCategory(t *testing.T) {
 					FulfillmentType: constants.FulfillmentTypeAuto,
 					IsActive:        true,
 					SKUs: []upstream.UpstreamSKU{
-						{ID: 201, SKUCode: "SKU-A", SpecValues: jsonmap.JSON{"name": "A"}, PriceAmount: "10.00", IsActive: true},
+						{ID: "201", SKUCode: "SKU-A", SpecValues: jsonmap.JSON{"name": "A"}, PriceAmount: "10.00", IsActive: true},
 					},
 				},
 			})
@@ -182,7 +181,7 @@ func TestBatchImportUpstreamProductsAutoCreatesCategory(t *testing.T) {
 	})
 	defer cleanup()
 
-	body := fmt.Sprintf(`{"connection_id":%d,"upstream_product_ids":[101],"auto_create_category":true}`, connID)
+	body := fmt.Sprintf(`{"connection_id":%d,"upstream_product_ids":["101"],"upstream_category_ids":{"101":9},"auto_create_category":true}`, connID)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/product-mappings/batch-import", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -227,7 +226,7 @@ func TestBatchImportUpstreamProductsRestoresSoftDeletedAutoCategory(t *testing.T
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ok": true,
 				"product": upstream.UpstreamProduct{
-					ID:              101,
+					ID:              "101",
 					CategoryID:      9,
 					Title:           jsonmap.JSON{"zh-CN": "上游商品"},
 					PriceAmount:     "10.00",
@@ -235,7 +234,7 @@ func TestBatchImportUpstreamProductsRestoresSoftDeletedAutoCategory(t *testing.T
 					FulfillmentType: constants.FulfillmentTypeAuto,
 					IsActive:        true,
 					SKUs: []upstream.UpstreamSKU{
-						{ID: 201, SKUCode: "SKU-A", SpecValues: jsonmap.JSON{"name": "A"}, PriceAmount: "10.00", IsActive: true},
+						{ID: "201", SKUCode: "SKU-A", SpecValues: jsonmap.JSON{"name": "A"}, PriceAmount: "10.00", IsActive: true},
 					},
 				},
 			})
@@ -257,7 +256,7 @@ func TestBatchImportUpstreamProductsRestoresSoftDeletedAutoCategory(t *testing.T
 		t.Fatalf("soft delete category failed: %v", err)
 	}
 
-	body := fmt.Sprintf(`{"connection_id":%d,"upstream_product_ids":[101],"auto_create_category":true}`, connID)
+	body := fmt.Sprintf(`{"connection_id":%d,"upstream_product_ids":["101"],"auto_create_category":true}`, connID)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/product-mappings/batch-import", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

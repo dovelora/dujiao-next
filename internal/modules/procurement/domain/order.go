@@ -17,7 +17,7 @@ type Order struct {
 	ConnectionID             uint         `gorm:"index;not null" json:"connection_id"`
 	LocalOrderID             uint         `gorm:"index;not null" json:"local_order_id"`
 	LocalOrderNo             string       `gorm:"type:varchar(64);index" json:"local_order_no"`
-	UpstreamOrderID          uint         `json:"-"`
+	UpstreamOrderID          string       `gorm:"type:varchar(512)" json:"-"`
 	UpstreamOrderNo          string       `gorm:"type:varchar(64);index" json:"upstream_order_no,omitempty"`
 	Status                   string       `gorm:"type:varchar(20);not null;default:'pending';index" json:"status"`
 	UpstreamAmount           money.Amount `gorm:"type:decimal(20,2);not null;default:0" json:"upstream_amount"`

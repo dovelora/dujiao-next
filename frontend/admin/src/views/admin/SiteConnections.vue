@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
-import type { AdminSiteConnection } from '@/api/types'
+import type { AdminSiteConnection, SiteConnectionPayload } from '@/api/types'
 import IdCell from '@/components/IdCell.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,6 +44,7 @@ const form = reactive({
   auto_sync_price: 'false',
 })
 const reapplyingId = ref<number | null>(null)
+const isSharedStock = computed(() => form.protocol === 'shared-stock')
 
 const siteConnectionSchema = {
   name: [rules.required()],
@@ -119,7 +120,7 @@ const openEditModal = (conn: AdminSiteConnection) => {
     name: conn.name || '',
     base_url: conn.base_url || '',
     api_key: conn.api_key || '',
-    api_secret: conn.api_secret || '',
+    api_secret: '',
     protocol: conn.protocol || 'dujiao-next',
     callback_url: conn.callback_url || '',
     retry_max: conn.retry_max ?? 3,
@@ -148,18 +149,18 @@ const closeModal = () => {
   clearErrors()
 }
 
-const buildPayload = () => {
+const buildPayload = (): SiteConnectionPayload => {
   const intervals = form.retry_intervals
     .split(',')
     .map((s: string) => Number(s.trim()))
     .filter((n: number) => !Number.isNaN(n) && n > 0)
   return {
-    name: form.name,
-    base_url: form.base_url,
-    api_key: form.api_key,
+    name: form.name.trim(),
+    base_url: form.base_url.trim(),
+    api_key: form.api_key.trim(),
     api_secret: form.api_secret,
-    protocol: form.protocol,
-    callback_url: form.callback_url,
+    protocol: form.protocol as SiteConnectionPayload['protocol'],
+    callback_url: isSharedStock.value ? '' : form.callback_url.trim(),
     retry_max: Number(form.retry_max) || 3,
     retry_intervals: JSON.stringify(intervals),
     exchange_rate: Number(form.exchange_rate) || 1,
@@ -171,6 +172,10 @@ const buildPayload = () => {
 
 const handleSubmit = async () => {
   if (!validate({ ...form } as Record<string, unknown>)) return
+  if (!isEditing.value && !form.api_secret.trim()) {
+    notifyError(t('siteConnections.form.secretRequired'))
+    return
+  }
   try {
     const payload = buildPayload()
     if (isEditing.value && editingId.value) {
@@ -261,6 +266,12 @@ const statusLabel = (status?: string) => {
   return translated !== key ? translated : status
 }
 
+const protocolLabel = (protocol?: string) => {
+  const key = `siteConnections.protocols.${protocol || 'dujiao-next'}`
+  const translated = t(key)
+  return translated !== key ? translated : protocol
+}
+
 const formatTime = (raw?: string) => {
   if (!raw) return '-'
   const d = new Date(raw)
@@ -309,7 +320,7 @@ onMounted(() => {
             </TableCell>
             <TableCell class="min-w-[160px] px-6 py-4 font-medium text-foreground break-words">{{ conn.name }}</TableCell>
             <TableCell class="min-w-[200px] px-6 py-4 text-xs text-muted-foreground font-mono break-all">{{ conn.base_url }}</TableCell>
-            <TableCell class="min-w-[80px] px-6 py-4 text-xs text-muted-foreground break-words">{{ conn.protocol }}</TableCell>
+            <TableCell class="min-w-[80px] px-6 py-4 text-xs text-muted-foreground break-words">{{ protocolLabel(conn.protocol) }}</TableCell>
             <TableCell class="min-w-[80px] px-6 py-4 text-xs text-muted-foreground">
               <span v-if="conn.price_markup_percent && Number(conn.price_markup_percent) !== 0" class="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
                 +{{ conn.price_markup_percent }}%
@@ -381,30 +392,32 @@ onMounted(() => {
             </div>
             <div class="md:col-span-2">
               <label class="mb-1.5 block text-xs font-medium text-muted-foreground">{{ t('siteConnections.form.baseUrl') }}</label>
-              <Input v-model="form.base_url" required :placeholder="t('siteConnections.form.baseUrlPlaceholder')" />
+              <Input v-model="form.base_url" required :placeholder="isSharedStock ? t('siteConnections.form.sharedStockBaseUrlPlaceholder') : t('siteConnections.form.baseUrlPlaceholder')" />
               <p v-if="errors.base_url" class="text-xs text-destructive mt-1">{{ errors.base_url }}</p>
+              <p v-if="isSharedStock" class="mt-1 text-xs text-muted-foreground">{{ t('siteConnections.form.sharedStockHint') }}</p>
             </div>
             <div>
-              <label class="mb-1.5 block text-xs font-medium text-muted-foreground">{{ t('siteConnections.form.apiKey') }}</label>
-              <Input v-model="form.api_key" :placeholder="t('siteConnections.form.apiKeyPlaceholder')" />
+              <label class="mb-1.5 block text-xs font-medium text-muted-foreground">{{ isSharedStock ? t('siteConnections.form.merchantId') : t('siteConnections.form.apiKey') }}</label>
+              <Input v-model="form.api_key" :placeholder="isSharedStock ? t('siteConnections.form.merchantIdPlaceholder') : t('siteConnections.form.apiKeyPlaceholder')" />
               <p v-if="errors.api_key" class="text-xs text-destructive mt-1">{{ errors.api_key }}</p>
             </div>
             <div>
-              <label class="mb-1.5 block text-xs font-medium text-muted-foreground">{{ t('siteConnections.form.apiSecret') }}</label>
-              <Input v-model="form.api_secret" type="password" :placeholder="t('siteConnections.form.apiSecretPlaceholder')" />
+              <label class="mb-1.5 block text-xs font-medium text-muted-foreground">{{ isSharedStock ? t('siteConnections.form.merchantSecret') : t('siteConnections.form.apiSecret') }}</label>
+              <Input v-model="form.api_secret" type="password" :placeholder="isEditing ? t('siteConnections.form.secretKeepPlaceholder') : (isSharedStock ? t('siteConnections.form.merchantSecretPlaceholder') : t('siteConnections.form.apiSecretPlaceholder'))" />
             </div>
             <div>
               <label class="mb-1.5 block text-xs font-medium text-muted-foreground">{{ t('siteConnections.form.protocol') }}</label>
-              <Select v-model="form.protocol">
+              <Select v-model="form.protocol" :disabled="isEditing">
                 <SelectTrigger class="h-9 w-full">
                   <SelectValue :placeholder="t('siteConnections.form.protocolPlaceholder')" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="dujiao-next">dujiao-next</SelectItem>
+                  <SelectItem value="dujiao-next">{{ t('siteConnections.protocols.dujiao-next') }}</SelectItem>
+                  <SelectItem value="shared-stock">{{ t('siteConnections.protocols.shared-stock') }}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div>
+            <div v-if="!isSharedStock">
               <label class="mb-1.5 block text-xs font-medium text-muted-foreground">{{ t('siteConnections.form.callbackUrl') }}</label>
               <Input v-model="form.callback_url" :placeholder="t('siteConnections.form.callbackUrlPlaceholder')" />
             </div>

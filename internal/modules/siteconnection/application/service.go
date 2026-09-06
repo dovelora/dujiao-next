@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"net/url"
 	"strings"
 	"time"
 
@@ -45,7 +46,7 @@ func (s *Service) SetMarkupReapplier(r MarkupReapplier) {
 
 // Create 创建连接
 func (s *Service) Create(input CreateInput) (*siteconnectiondomain.Connection, error) {
-	if strings.TrimSpace(input.Name) == "" || strings.TrimSpace(input.BaseURL) == "" {
+	if strings.TrimSpace(input.Name) == "" || !validConnectionBaseURL(input.BaseURL) {
 		return nil, siteconnectioncontract.ErrInvalid
 	}
 	if strings.TrimSpace(input.ApiKey) == "" || strings.TrimSpace(input.ApiSecret) == "" {
@@ -55,6 +56,9 @@ func (s *Service) Create(input CreateInput) (*siteconnectiondomain.Connection, e
 	protocol := strings.TrimSpace(input.Protocol)
 	if protocol == "" {
 		protocol = constants.ConnectionProtocolDujiaoNext
+	}
+	if !validConnectionProtocol(protocol) {
+		return nil, siteconnectioncontract.ErrInvalid
 	}
 
 	encryptedSecret, err := crypto.Encrypt(s.encryptKey, input.ApiSecret)
@@ -117,6 +121,9 @@ func (s *Service) Update(id uint, input UpdateInput) (*siteconnectiondomain.Conn
 		conn.Name = strings.TrimSpace(input.Name)
 	}
 	if strings.TrimSpace(input.BaseURL) != "" {
+		if !validConnectionBaseURL(input.BaseURL) {
+			return nil, siteconnectioncontract.ErrInvalid
+		}
 		conn.BaseURL = strings.TrimRight(strings.TrimSpace(input.BaseURL), "/")
 	}
 	if strings.TrimSpace(input.ApiKey) != "" {
@@ -130,7 +137,10 @@ func (s *Service) Update(id uint, input UpdateInput) (*siteconnectiondomain.Conn
 		conn.ApiSecret = encrypted
 	}
 	if strings.TrimSpace(input.Protocol) != "" {
-		conn.Protocol = strings.TrimSpace(input.Protocol)
+		protocol := strings.TrimSpace(input.Protocol)
+		if !validConnectionProtocol(protocol) || protocol != conn.Protocol {
+			return nil, siteconnectioncontract.ErrInvalid
+		}
 	}
 	if input.CallbackURL != "" {
 		conn.CallbackURL = strings.TrimSpace(input.CallbackURL)
@@ -300,4 +310,21 @@ func (s *Service) normalizeExchangeRate(rate float64) decimal.Decimal {
 		return decimal.NewFromInt(1)
 	}
 	return decimal.NewFromFloat(rate)
+}
+
+func validConnectionProtocol(protocol string) bool {
+	switch strings.TrimSpace(protocol) {
+	case constants.ConnectionProtocolDujiaoNext, constants.ConnectionProtocolSharedStock:
+		return true
+	default:
+		return false
+	}
+}
+
+func validConnectionBaseURL(raw string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || parsed.Host == "" || parsed.User != nil {
+		return false
+	}
+	return parsed.Scheme == "http" || parsed.Scheme == "https"
 }

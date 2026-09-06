@@ -277,7 +277,6 @@ func (s *PaymentService) applyPaymentUpdate(payment *paymentdomain.Payment, orde
 			_, err := updateCallbackMetaWithRepo(paymentRepo, lockedPayment, status, input)
 			return err
 		}
-
 		orderOpen := lockedOrder.Status == constants.OrderStatusPendingPayment && lockedOrder.PaidAt == nil
 
 		// 金额守恒：一笔支付只有覆盖订单当前的在线应付额才允许履约。
@@ -414,6 +413,9 @@ func mergeProviderPayload(existing jsonmap.JSON, incoming jsonmap.JSON) jsonmap.
 		merged[key] = value
 	}
 	for key, value := range incoming {
+		if _, exists := existing[key]; exists && strings.HasPrefix(key, "_dujiao_next_") {
+			continue
+		}
 		merged[key] = value
 	}
 	return merged

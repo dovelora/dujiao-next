@@ -41,7 +41,7 @@ const detailLoading = ref(false)
 
 interface SkuMapping {
   local_sku_id: number
-  upstream_sku_id: number
+  upstream_sku_id: string
   upstream_price: number
   upstream_stock: number
   upstream_is_active: boolean
@@ -53,7 +53,7 @@ interface MappingDetail {
 }
 
 interface UpstreamSku {
-  id: number
+  id: string
   sku_code?: string
   spec_values?: Record<string, string>
   price_amount: number | string
@@ -62,7 +62,7 @@ interface UpstreamSku {
 }
 
 interface UpstreamProduct {
-  id: number
+  id: string
   title: Record<string, string>
   price_amount: number | string
   currency?: string
@@ -87,14 +87,14 @@ const showImportModal = ref(false)
 const importConnectionId = ref('')
 const importCategoryId = ref('__none__')
 const upstreamProducts = ref<UpstreamProduct[]>([])
-const mappedUpstreamIds = ref<Set<number>>(new Set())
+const mappedUpstreamIds = ref<Set<string>>(new Set())
 const loadingUpstream = ref(false)
 const loadingMoreUpstream = ref(false)
 const upstreamPage = ref(1)
 const upstreamTotal = ref(0)
 const upstreamPageSize = 50
-const selectedProductIds = ref<Set<number>>(new Set())
-const importExpandedIds = ref<Set<number>>(new Set())
+const selectedProductIds = ref<Set<string>>(new Set())
+const importExpandedIds = ref<Set<string>>(new Set())
 const importing = ref(false)
 const importProgress = ref({ done: 0, total: 0, success: 0 })
 
@@ -375,14 +375,14 @@ const toggleSelectAll = () => {
     : new Set(selectableProducts.value.map((p) => p.id))
 }
 
-const toggleProduct = (id: number) => {
+const toggleProduct = (id: string) => {
   if (mappedUpstreamIds.value.has(id)) return
   const next = new Set(selectedProductIds.value)
   next.has(id) ? next.delete(id) : next.add(id)
   selectedProductIds.value = next
 }
 
-const toggleImportExpand = (id: number) => {
+const toggleImportExpand = (id: string) => {
   const next = new Set(importExpandedIds.value)
   next.has(id) ? next.delete(id) : next.add(id)
   importExpandedIds.value = next
@@ -434,10 +434,20 @@ const closeImportModal = () => { showImportModal.value = false }
 
 const hasMoreUpstream = computed(() => upstreamProducts.value.length < upstreamTotal.value)
 
-const parseUpstreamResult = (res: any): { items: UpstreamProduct[]; total: number; mappedIds?: number[] } => {
+const normalizeUpstreamProducts = (items: UpstreamProduct[]): UpstreamProduct[] => items.map((item) => ({
+  ...item,
+  id: String(item.id),
+  skus: item.skus?.map((sku) => ({ ...sku, id: String(sku.id) })),
+}))
+
+const parseUpstreamResult = (res: any): { items: UpstreamProduct[]; total: number; mappedIds?: string[] } => {
   const data = res.data.data
-  if (Array.isArray(data)) return { items: data, total: data.length }
-  return { items: data?.items || [], total: data?.total || 0, mappedIds: data?.mapped_ids }
+  if (Array.isArray(data)) return { items: normalizeUpstreamProducts(data), total: data.length }
+  return {
+    items: normalizeUpstreamProducts(data?.items || []),
+    total: data?.total || 0,
+    mappedIds: Array.isArray(data?.mapped_ids) ? data.mapped_ids.map(String) : undefined,
+  }
 }
 
 const fetchUpstreamProducts = async (connectionId: string) => {
@@ -598,13 +608,22 @@ watch(importConnectionId, (value) => {
 
 const BATCH_SIZE = 3
 
+const buildUpstreamCategoryHints = (ids: string[]) => {
+  const selected = new Set(ids)
+  return Object.fromEntries(
+    upstreamProducts.value
+      .filter((product) => selected.has(product.id) && Number(product.category_id) > 0)
+      .map((product) => [product.id, Number(product.category_id)]),
+  )
+}
+
 const handleBatchImport = async () => {
   const ids = Array.from(selectedProductIds.value)
   if (ids.length === 0) return
   importing.value = true
   importProgress.value = { done: 0, total: ids.length, success: 0 }
   const categoryId = importCategoryId.value !== '__none__' ? Number(importCategoryId.value) : 0
-  const allResults: { upstream_product_id: number; success: boolean; error?: string }[] = []
+  const allResults: { upstream_product_id: string; success: boolean; error?: string }[] = []
   let successCount = 0
 
   try {
@@ -615,7 +634,9 @@ const handleBatchImport = async () => {
         const res = await adminAPI.batchImportUpstreamProducts({
           connection_id: Number(importConnectionId.value),
           upstream_product_ids: batchIds,
+          upstream_category_ids: buildUpstreamCategoryHints(batchIds),
           category_id: categoryId || undefined,
+          auto_create_category: autoCreateCategory.value,
         })
         const result = res.data.data as { results?: typeof allResults; success_count?: number } | null
         const batchResults = result?.results || []
@@ -626,7 +647,13 @@ const handleBatchImport = async () => {
           // 后端不支持批量接口，逐条导入
           for (const id of batchIds) {
             try {
-              await adminAPI.importUpstreamProduct({ connection_id: Number(importConnectionId.value), upstream_product_id: id, category_id: categoryId || undefined })
+              await adminAPI.importUpstreamProduct({
+                connection_id: Number(importConnectionId.value),
+                upstream_product_id: id,
+                upstream_category_id: buildUpstreamCategoryHints([id])[id],
+                category_id: categoryId || undefined,
+                auto_create_category: autoCreateCategory.value,
+              })
               allResults.push({ upstream_product_id: id, success: true }); successCount++
             } catch (singleErr: any) {
               allResults.push({ upstream_product_id: id, success: false, error: singleErr?.response?.data?.message || singleErr?.message })

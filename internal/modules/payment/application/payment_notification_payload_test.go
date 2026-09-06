@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
 	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
 
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
@@ -203,10 +204,12 @@ func TestMergeProviderPayloadPreservesDisplayChannelType(t *testing.T) {
 	existing := jsonmap.JSON{
 		"display_channel_type": "usdt.arbitrum",
 		"data":                 map[string]interface{}{"trade_id": "CREATE-1"},
+		paymentcontract.GatewayPayloadFiatCurrencySent: "USD",
 	}
 	incoming := jsonmap.JSON{
 		"trade_id": "CALLBACK-1",
 		"status":   float64(2),
+		paymentcontract.GatewayPayloadFiatCurrencySent: "CNY",
 	}
 
 	merged := mergeProviderPayload(existing, incoming)
@@ -215,6 +218,9 @@ func TestMergeProviderPayloadPreservesDisplayChannelType(t *testing.T) {
 	}
 	if got := notificationPayloadString(merged, "trade_id"); got != "CALLBACK-1" {
 		t.Fatalf("callback trade_id = %q, want CALLBACK-1", got)
+	}
+	if got := notificationPayloadString(merged, paymentcontract.GatewayPayloadFiatCurrencySent); got != "USD" {
+		t.Fatalf("fiat currency snapshot = %q, want USD", got)
 	}
 	if _, ok := existing["trade_id"]; ok {
 		t.Fatal("mergeProviderPayload must not mutate existing payload")

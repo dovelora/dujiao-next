@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
@@ -28,7 +29,7 @@ func (s *Service) execute(ctx context.Context, job *reconciliationdomain.Job) er
 	skippedCount, errorCount := 0, 0
 	for index := range orders {
 		order := &orders[index]
-		if order.UpstreamOrderID == 0 {
+		if value := strings.TrimSpace(order.UpstreamOrderID); value == "" || value == "0" {
 			skippedCount++
 			continue
 		}

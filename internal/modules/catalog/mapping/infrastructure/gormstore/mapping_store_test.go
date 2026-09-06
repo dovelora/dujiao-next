@@ -75,7 +75,7 @@ func createMapping(t *testing.T, store *MappingStore, connectionID, localProduct
 	mapping := &mappingdomain.Mapping{
 		ConnectionID:      connectionID,
 		LocalProductID:    localProductID,
-		UpstreamProductID: upstreamProductID,
+		UpstreamProductID: fmt.Sprint(upstreamProductID),
 		UpstreamStatus:    upstreamStatus,
 		IsActive:          true,
 	}
@@ -146,7 +146,7 @@ func TestMappingStoreDeleteByLocalProductRemovesSKUMappings(t *testing.T) {
 		if err := skuStore.Create(&mappingdomain.SKUMapping{
 			ProductMappingID: mappingID,
 			LocalSKUID:       uint(100 + i),
-			UpstreamSKUID:    uint(200 + i),
+			UpstreamSKUID:    fmt.Sprint(200 + i),
 		}); err != nil {
 			t.Fatalf("create sku mapping failed: %v", err)
 		}
