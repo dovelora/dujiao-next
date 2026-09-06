@@ -24,6 +24,11 @@ func (s *Service) SubmitToUpstream(procurementOrderID uint) error {
 		return procurementcontract.ErrNotFound
 	}
 
+	// 已采购成功后的重试只恢复本地交付，不能再次向上游下单。
+	if procOrder.Status == constants.ProcurementStatusAccepted {
+		return s.PollUpstreamStatus(procOrder.ID)
+	}
+
 	// 校验状态
 	if procOrder.Status != "pending" && procOrder.Status != "failed" {
 		return procurementcontract.ErrStatusInvalid

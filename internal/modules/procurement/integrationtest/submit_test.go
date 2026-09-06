@@ -5,10 +5,14 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
+
+	"gorm.io/gorm"
 
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
@@ -303,5 +307,81 @@ func TestHandleSubmitFailure_MaxRetriesExhausted(t *testing.T) {
 	db.First(&updatedOrder, order.ID)
 	if updatedOrder.Status != constants.OrderStatusPaid {
 		t.Errorf("expected order status %q, got %q", constants.OrderStatusPaid, updatedOrder.Status)
+	}
+}
+
+func TestSubmitToSharedStock_RetriesLocalDeliveryWithoutRepurchase(t *testing.T) {
+	db := setupProcurementTestDB(t)
+	order := createProcTestOrder(t, db, "PROC-DELIVERY-RETRY", constants.OrderStatusPaid, constants.FulfillmentTypeUpstream)
+	mapping := &mappingdomain.Mapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: "P1", IsActive: true}
+	if err := db.Create(mapping).Error; err != nil {
+		t.Fatal(err)
+	}
+	ref := "ss1_" + base64.RawURLEncoding.EncodeToString([]byte(`{"v":1,"code":"P1"}`))
+	if err := db.Create(&mappingdomain.SKUMapping{ProductMappingID: mapping.ID, LocalSKUID: 1, UpstreamSKUID: ref, UpstreamIsActive: true}).Error; err != nil {
+		t.Fatal(err)
+	}
+	var trades atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/shared/commodity/inventoryState":
+			_, _ = w.Write([]byte(`{"code":200,"data":[]}`))
+		case "/shared/commodity/trade":
+			trades.Add(1)
+			_, _ = w.Write([]byte(`{"code":200,"data":{"amount":"10","tradeNo":"UP1","secret":"delivered-card"}}`))
+		case "/shared/commodity/query":
+			_, _ = w.Write([]byte(`{"code":200,"data":{"status":1,"secret":"delivered-card"}}`))
+		default:
+			t.Errorf("unexpected upstream request: %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
+	conn, err := connSvc.Create(siteconnectionapp.CreateInput{Name: "shared", BaseURL: server.URL, ApiKey: "merchant", ApiSecret: "secret", Protocol: constants.ConnectionProtocolSharedStock})
+	if err != nil {
+		t.Fatal(err)
+	}
+	proc := createTestProcurementOrder(t, db, conn.ID, order.ID, order.OrderNo, constants.ProcurementStatusPending)
+	svc := newTestProcurementService(db, connSvc)
+	injected := errors.New("transient local fulfillment write failure")
+	failed := false
+	if err := db.Callback().Create().Before("gorm:create").Register("test:fail_fulfillment_once", func(tx *gorm.DB) {
+		if tx.Statement.Table == "fulfillments" && !failed {
+			failed = true
+			tx.AddError(injected)
+		}
+	}); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Callback().Create().Remove("test:fail_fulfillment_once") })
+	if err := svc.SubmitToUpstream(proc.ID); !errors.Is(err, injected) {
+		t.Fatalf("expected local write error, got %v", err)
+	}
+	var pending ProcurementOrder
+	if err := db.First(&pending, proc.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if pending.Status != constants.ProcurementStatusAccepted {
+		t.Fatalf("failed delivery must remain recoverable, got %s", pending.Status)
+	}
+	if err := svc.SubmitToUpstream(proc.ID); err != nil {
+		t.Fatalf("worker retry failed: %v", err)
+	}
+	var completed ProcurementOrder
+	if err := db.First(&completed, proc.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	var delivered orderdomain.Order
+	if err := db.First(&delivered, order.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	var count int64
+	if err := db.Table("fulfillments").Where("order_id = ? AND payload = ?", order.ID, "delivered-card").Count(&count).Error; err != nil {
+		t.Fatal(err)
+	}
+	if completed.Status != constants.ProcurementStatusFulfilled || delivered.Status != constants.OrderStatusDelivered || count != 1 || trades.Load() != 1 {
+		t.Fatalf("delivery did not recover exactly once: procurement=%s local=%s fulfillments=%d trades=%d", completed.Status, delivered.Status, count, trades.Load())
 	}
 }

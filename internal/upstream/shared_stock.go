@@ -278,20 +278,25 @@ func (a *SharedStockAdapter) GetProduct(ctx context.Context, productID Reference
 		return nil, err
 	}
 	for index := range product.SKUs {
-		ref, decodeErr := decodeSharedStockSKURef(product.SKUs[index].ID)
-		if decodeErr != nil {
-			return nil, decodeErr
+		ref, err := decodeSharedStockSKURef(product.SKUs[index].ID)
+		if err != nil {
+			return nil, err
 		}
-		stock, stockErr := a.getStock(ctx, ref)
-		if stockErr != nil {
-			return nil, stockErr
+		stock, err := a.getStock(ctx, ref)
+		if err != nil {
+			return nil, fmt.Errorf("query SharedStock SKU stock: %w", err)
+		}
+		price, err := a.getValuation(ctx, ref, 1)
+		if err != nil {
+			return nil, fmt.Errorf("query SharedStock merchant price: %w", err)
+		}
+		amount, err := decimal.NewFromString(price)
+		if err != nil || !amount.GreaterThan(decimal.Zero) {
+			return nil, errors.New("SharedStock merchant price is invalid")
 		}
 		product.SKUs[index].StockQuantity = stock
 		product.SKUs[index].StockStatus = sharedStockStatus(stock)
-		price, priceErr := a.getValuation(ctx, ref, 1)
-		if priceErr == nil && price != "" && price != "0" {
-			product.SKUs[index].PriceAmount = price
-		}
+		product.SKUs[index].PriceAmount = price
 	}
 	product.PriceAmount = lowestSharedStockPrice(product.SKUs, product.PriceAmount)
 	return &product, nil

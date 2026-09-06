@@ -25,17 +25,6 @@ func (s *Service) HandleUpstreamCallback(procurementOrderID uint, upstreamStatus
 
 	switch upstreamStatus {
 	case "delivered", "completed", "fulfilled":
-		// 更新采购单状态
-		updates := map[string]interface{}{
-			"updated_at": now,
-		}
-		if fulfillment != nil {
-			updates["upstream_payload"] = fulfillment.Payload
-		}
-		if err := s.procRepo.UpdateStatus(procOrder.ID, "fulfilled", updates); err != nil {
-			return fmt.Errorf("update procurement status: %w", err)
-		}
-
 		// 在本地订单上创建交付记录
 		if fulfillment != nil && s.orderLifecycle != nil {
 			if err := s.createUpstreamFulfillment(procOrder.LocalOrderID, fulfillment, now); err != nil {
@@ -48,10 +37,23 @@ func (s *Service) HandleUpstreamCallback(procurementOrderID uint, upstreamStatus
 			}
 		}
 
-		// 更新本地订单状态
-		_ = s.orderRepo.UpdateStatus(procOrder.LocalOrderID, constants.OrderStatusDelivered, map[string]interface{}{
+		// 本地交付和订单状态成功后才结束采购，失败时保留 accepted 供重试。
+		if err := s.orderRepo.UpdateStatus(procOrder.LocalOrderID, constants.OrderStatusDelivered, map[string]interface{}{
 			"updated_at": now,
-		})
+		}); err != nil {
+			return fmt.Errorf("update delivered order status: %w", err)
+		}
+
+		// 更新采购单状态
+		updates := map[string]interface{}{
+			"updated_at": now,
+		}
+		if fulfillment != nil {
+			updates["upstream_payload"] = fulfillment.Payload
+		}
+		if err := s.procRepo.UpdateStatus(procOrder.ID, "fulfilled", updates); err != nil {
+			return fmt.Errorf("update procurement status: %w", err)
+		}
 
 		// 如果有父订单，同步父订单状态
 		localOrder, _ := s.orderRepo.GetByID(procOrder.LocalOrderID)
