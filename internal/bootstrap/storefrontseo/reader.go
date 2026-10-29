@@ -1,6 +1,7 @@
 package storefrontseo
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -12,6 +13,8 @@ import (
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productpresenter "github.com/dujiao-next/internal/modules/catalog/product/transport/presenter"
+	contentapp "github.com/dujiao-next/internal/modules/content/application"
+	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/web"
@@ -29,18 +32,24 @@ type Settings interface {
 type Catalog interface {
 	PublicSnapshot(string, string, int, int) ([]productpresenter.Product, int64, error)
 }
+type Posts interface {
+	ListPublic(context.Context, contentapp.PublicPostQuery) ([]contentdomain.Post, int64, error)
+	GetPublicBySlug(context.Context, string) (*contentdomain.Post, error)
+}
+
 type Reader struct {
+	posts      Posts
 	products   Catalog
 	categories Categories
 	settings   Settings
 }
 
-func New(products Catalog, categories Categories, settings Settings) *Reader {
-	return &Reader{products: products, categories: categories, settings: settings}
+func New(products Catalog, categories Categories, settings Settings, posts Posts) *Reader {
+	return &Reader{products: products, categories: categories, settings: settings, posts: posts}
 }
 
 func (r *Reader) ReadPage(req *http.Request) (*web.Page, error) {
-	if (req.URL.Path == "/" || req.URL.Path == "/products" || strings.HasPrefix(req.URL.Path, "/categories/")) && strings.TrimSpace(req.URL.Query().Get("q")) != "" {
+	if (req.URL.Path == "/" || req.URL.Path == "/products" || req.URL.Path == "/blog" || strings.HasPrefix(req.URL.Path, "/categories/")) && strings.TrimSpace(req.URL.Query().Get("q")) != "" {
 		return nil, nil
 	}
 	brand, err := r.settings.GetSiteBrand()
@@ -69,7 +78,7 @@ func (r *Reader) ReadPage(req *http.Request) (*web.Page, error) {
 	page := &web.Page{Title: title, Heading: title, Description: description, Canonical: strings.TrimRight(base.String(), "/") + req.URL.EscapedPath()}
 	path := req.URL.Path
 	number := 1
-	if v := req.URL.Query().Get("page"); v != "" && !strings.HasPrefix(path, "/products/") {
+	if v := req.URL.Query().Get("page"); v != "" && !strings.HasPrefix(path, "/products/") && !strings.HasPrefix(path, "/blog/") {
 		number, err = strconv.Atoi(v)
 		if err != nil || number < 1 || number > 100000 {
 			return notFound(), nil
@@ -83,6 +92,12 @@ func (r *Reader) ReadPage(req *http.Request) (*web.Page, error) {
 	if err != nil {
 		return nil, err
 	}
+	for _, c := range categories {
+		page.Categories = append(page.Categories, web.PageLink{URL: "/categories/" + url.PathEscape(c.Slug), Title: localized(c.NameJSON)})
+	}
+	if path == "/blog" || strings.HasPrefix(path, "/blog/") {
+		return r.readBlog(req, page, base, title, number)
+	}
 	categoryID, slug := "", ""
 	switch {
 	case path == "/":
@@ -94,6 +109,9 @@ func (r *Reader) ReadPage(req *http.Request) (*web.Page, error) {
 			if c.Slug == categorySlug {
 				categoryID = strconv.FormatUint(uint64(c.ID), 10)
 				page.Heading = localized(c.NameJSON)
+				if intro := plain(localized(c.DescriptionJSON)); intro != "" {
+					page.Description = intro
+				}
 				break
 			}
 		}
@@ -108,9 +126,6 @@ func (r *Reader) ReadPage(req *http.Request) (*web.Page, error) {
 		page.ProductDetail = true
 	default:
 		return nil, nil
-	}
-	for _, c := range categories {
-		page.Categories = append(page.Categories, web.PageLink{URL: "/categories/" + url.PathEscape(c.Slug), Title: localized(c.NameJSON)})
 	}
 	pageSize := 12
 	if path == "/" || config["template_mode"] == "list" {

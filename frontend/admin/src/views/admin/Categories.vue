@@ -7,6 +7,7 @@ import type { AdminCategory, LocalizedText } from '@/api/types'
 import IdCell from '@/components/IdCell.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogScrollContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -38,6 +39,7 @@ const form = reactive({
   id: 0,
   parent_id: 0,
   name: { 'zh-CN': '', 'zh-TW': '', 'en-US': '' } as LocalizedText,
+  description: { 'zh-CN': '', 'zh-TW': '', 'en-US': '' } as LocalizedText,
   slug: '',
   icon: '',
   sort_order: 0,
@@ -105,6 +107,7 @@ const openCreateModal = () => {
     id: 0,
     parent_id: 0,
     name: { 'zh-CN': '', 'zh-TW': '', 'en-US': '' },
+    description: { 'zh-CN': '', 'zh-TW': '', 'en-US': '' },
     slug: '',
     icon: '',
     sort_order: 0,
@@ -123,6 +126,7 @@ const openEditModal = (category: AdminCategory) => {
     id: category.id,
     parent_id: category.parent_id || 0,
     name,
+    description: { ...defaultName, ...(category.description || {}) },
     slug: category.slug,
     icon: category.icon || '',
     sort_order: category.sort_order,
@@ -307,6 +311,11 @@ watch(
             <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.categories.form.name', { lang: getCurrentLangName() }) }}</label>
             <Input v-model="form.name[currentLang]" :placeholder="t('admin.categories.form.namePlaceholder')" />
             <p v-if="errors.name" class="text-xs text-destructive mt-1">{{ errors.name }}</p>
+          </div>
+
+          <div>
+            <label for="category-description" class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.categories.form.description', { lang: getCurrentLangName() }) }}</label>
+            <Textarea id="category-description" v-model="form.description[currentLang]" :maxlength="4000" :rows="4" :placeholder="t('admin.categories.form.descriptionPlaceholder')" />
           </div>
 
           <div>

@@ -75,3 +75,23 @@ func TestRenderPageRejectsMissingMarkers(t *testing.T) {
 		}
 	}
 }
+
+func TestGuidePageRendersEscapedArticleAndInternalLinks(t *testing.T) {
+	page := &Page{Title: "指南", Heading: "指南", Text: `<script>alert(1)</script>`, Posts: []PagePost{{URL: "/blog/guide", Title: "阅读指南", Summary: "购买说明"}}, Links: []PageLink{{URL: "/categories/example", Title: `<img onerror=alert(1)>`}}}
+	body, err := renderPage([]byte(seoTestIndex), page)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rendered := string(body)
+	for _, wanted := range []string{`href="/blog"`, `href="/blog/guide"`, `href="/categories/example"`, `&lt;script&gt;`} {
+		if !strings.Contains(rendered, wanted) {
+			t.Fatalf("missing %s in rendered article", wanted)
+		}
+	}
+	if strings.Contains(rendered, "<script>alert") || strings.Contains(rendered, "<img onerror") {
+		t.Fatal("article markup not escaped")
+	}
+	if !seoPath("/blog") || !seoPath("/blog/guide") {
+		t.Fatal("blog routes must receive server HTML")
+	}
+}

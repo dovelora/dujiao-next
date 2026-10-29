@@ -3,11 +3,13 @@
     <div class="container mx-auto px-4">
       <!-- Page Header -->
       <div class="mb-12 mt-12 text-center">
-        <h1 class="text-4xl md:text-5xl font-black mb-4 tracking-tight text-foreground">{{ t('nav.products') }}</h1>
+        <h1 class="text-4xl md:text-5xl font-black mb-4 tracking-tight text-foreground">{{ seoCategoryName || t('nav.products') }}</h1>
         <p class="text-muted-foreground max-w-2xl mx-auto text-lg border-b pb-8">
           {{ t('products.subtitle') }}
         </p>
       </div>
+
+      <CategoryIntroduction :description="categoryDescription" />
 
       <div class="flex flex-col lg:flex-row gap-8">
         <CategorySidebar
@@ -99,6 +101,7 @@
 </template>
 
 <script setup lang="ts">
+import CategoryIntroduction from '../components/CategoryIntroduction.vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -142,7 +145,9 @@ const seoCategoryName = computed(() => {
   const cat = categoryMap.value.get(selectedCategory.value)
   return cat ? getLocalizedText(cat.name) : ''
 })
+const categoryDescription = computed(() => getLocalizedText(categoryMap.value.get(selectedCategory.value || 0)?.description))
 usePageSeo({
+  description: () => categoryDescription.value,
   canonicalPath: () => route.path,
   title: () => {
     if (route.name === 'category-products') {

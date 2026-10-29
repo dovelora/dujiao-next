@@ -19,6 +19,7 @@ export interface AdminCategory {
   parent_id: number
   slug: string
   name: LocalizedText
+  description?: LocalizedText
   icon: string
   sort_order: number
   is_active: boolean
