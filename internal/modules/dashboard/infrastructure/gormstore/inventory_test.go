@@ -150,7 +150,7 @@ func TestGetInventoryAlertItemsIncludesUpstreamProducts(t *testing.T) {
 	skuMapping := &mappingdomain.SKUMapping{
 		ProductMappingID: productMapping.ID,
 		LocalSKUID:       upstreamSKU.ID,
-		UpstreamSKUID:    999,
+		UpstreamSKUID:    "999",
 		UpstreamStock:    2,
 		UpstreamIsActive: true,
 	}

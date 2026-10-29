@@ -100,11 +100,15 @@ func (s *Service) SubmitToUpstream(procurementOrderID uint) error {
 		if errors.Is(err, procurementcontract.ErrOrderOutcomeUnknown) {
 			message := fmt.Sprintf("上游可能已经扣款，但本次请求未收到可确认的结果；已停止自动重试，请到上游核对。%v", err)
 			now := time.Now()
-			if updateErr := s.procRepo.UpdateStatus(procOrder.ID, constants.ProcurementStatusReviewRequired, map[string]interface{}{
+			marked, updateErr := s.procRepo.UpdateStatus(procOrder.ID, procOrder.Status, constants.ProcurementStatusReviewRequired, map[string]interface{}{
 				"error_message": message,
 				"updated_at":    now,
-			}); updateErr != nil {
+			})
+			if updateErr != nil {
 				return fmt.Errorf("mark ambiguous upstream outcome: %w", updateErr)
+			}
+			if !marked {
+				return nil
 			}
 			s.notifyProcurementFailure(procOrder, message)
 			logger.Errorw("procurement_order_outcome_unknown",
