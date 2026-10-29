@@ -1,4 +1,5 @@
 import { computed } from 'vue'
+import { useHead } from '@unhead/vue'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '../stores/app'
 
@@ -7,6 +8,7 @@ import { useAppStore } from '../stores/app'
  * 完整保留原 views/NotFound.vue 的行为，仅抽离为 composable。
  */
 export function useNotFound() {
+  useHead({ meta: [{ name: 'robots', content: 'noindex, follow' }] })
   const router = useRouter()
   const appStore = useAppStore()
 
