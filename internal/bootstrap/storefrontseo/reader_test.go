@@ -123,3 +123,11 @@ func TestProductIgnoresPaginationQuery(t *testing.T) {
 		t.Fatalf("product pagination polluted canonical or status: %+v %v", page, err)
 	}
 }
+
+func TestProductSearchQueryCannotBypassNotFound(t *testing.T) {
+	reader := New(&catalogStub{err: productcontract.ErrNotFound}, categoryStub{}, settingsStub{})
+	page, err := reader.ReadPage(httptest.NewRequest("GET", "https://shop.example/products/missing?q=anything", nil))
+	if err != nil || page == nil || page.Status != 404 {
+		t.Fatalf("detail query bypassed not found: page=%+v err=%v", page, err)
+	}
+}

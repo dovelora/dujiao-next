@@ -40,7 +40,7 @@ func New(products Catalog, categories Categories, settings Settings) *Reader {
 }
 
 func (r *Reader) ReadPage(req *http.Request) (*web.Page, error) {
-	if strings.TrimSpace(req.URL.Query().Get("q")) != "" {
+	if (req.URL.Path == "/" || req.URL.Path == "/products" || strings.HasPrefix(req.URL.Path, "/categories/")) && strings.TrimSpace(req.URL.Query().Get("q")) != "" {
 		return nil, nil
 	}
 	brand, err := r.settings.GetSiteBrand()
