@@ -1,7 +1,7 @@
 <template>
   <RouterLink
     :to="`/products/${product.slug}`"
-    class="group grid grid-cols-[40px_minmax(0,1fr)] items-start gap-x-2.5 gap-y-2 rounded-lg border bg-card p-3 transition hover:border-hairline-strong hover:shadow-[var(--shadow-sm)] sm:flex sm:items-center sm:gap-3.5"
+    class="product-list-item group grid grid-cols-[40px_minmax(0,1fr)] items-start gap-x-2.5 gap-y-2 rounded-lg border bg-card p-3 transition hover:border-hairline-strong hover:shadow-[var(--shadow-sm)] sm:flex sm:items-center sm:gap-3.5"
     :class="{ 'sm:opacity-[0.74]': soldOut }"
   >
     <!-- Thumbnail -->
@@ -19,9 +19,9 @@
       <div class="col-start-2 row-start-1 flex min-w-0 items-center gap-1.5">
         <span v-if="categoryName" class="hidden max-w-[88px] flex-none truncate text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:inline">{{ categoryName }}</span>
         <span v-if="categoryName" class="hidden flex-none text-muted-foreground/40 sm:inline">·</span>
-        <h3 class="line-clamp-2 min-w-0 break-words text-sm font-bold leading-[21px] text-foreground sm:line-clamp-none sm:truncate sm:leading-5">{{ title }}</h3>
+        <h3 class="product-title line-clamp-2 min-w-0 break-words text-sm font-bold leading-[21px] text-foreground sm:line-clamp-none sm:truncate sm:leading-5">{{ title }}</h3>
       </div>
-      <div class="col-span-2 row-start-2 flex flex-wrap items-center gap-1.5">
+      <div class="product-tags col-span-2 row-start-2 flex flex-wrap items-center gap-1.5">
         <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="stockPill.tone">
           <component :is="stockPill.icon" class="h-3 w-3" />
           {{ stockPill.label }}
@@ -45,13 +45,13 @@
     <div class="col-span-2 row-start-3 flex items-center justify-between gap-2 sm:flex-none sm:justify-start sm:gap-3">
       <div class="text-left sm:text-right">
         <template v-if="promo">
-          <span class="block text-[17px] font-extrabold tabular-nums text-primary sm:text-base">
+          <span class="product-price block text-[17px] font-extrabold tabular-nums text-primary sm:text-base">
             <span class="sm:hidden">{{ formatPrice(getPromotionPriceAmount(product), '') }} <small class="text-xs font-medium text-muted-foreground">{{ siteCurrency }}</small></span>
             <span class="hidden sm:inline">{{ formatPrice(getPromotionPriceAmount(product), siteCurrency) }}</span>
           </span>
           <span class="block text-[11px] font-semibold text-muted-foreground line-through">{{ formatPrice(product.price_amount, siteCurrency) }}</span>
         </template>
-        <span v-else class="block text-[17px] font-extrabold tabular-nums text-foreground sm:text-base">
+        <span v-else class="product-price block text-[17px] font-extrabold tabular-nums text-foreground sm:text-base">
             <span class="sm:hidden">{{ formatPrice(product.price_amount, '') }} <small class="text-xs font-medium text-muted-foreground">{{ siteCurrency }}</small></span>
             <span class="hidden sm:inline">{{ formatPrice(product.price_amount, siteCurrency) }}</span>
           </span>
@@ -59,14 +59,14 @@
       <button
         v-if="!soldOut"
         type="button"
-        class="inline-flex h-11 flex-none items-center justify-center rounded-full bg-primary px-4 text-[13px] font-semibold text-white transition hover:bg-primary/90 sm:grid sm:h-9 sm:w-9 sm:place-items-center sm:p-0"
+        class="product-action inline-flex h-11 flex-none items-center justify-center rounded-full bg-primary px-4 text-[13px] font-semibold text-white transition hover:bg-primary/90 sm:grid sm:h-9 sm:w-9 sm:place-items-center sm:p-0"
         :aria-label="t('products.quickBuyAria')"
         @click.prevent.stop="$emit('quickBuy', product)"
       >
         <span class="sm:hidden">{{ t('products.quickBuyAria') }}</span>
         <ShoppingCart class="hidden h-4 w-4 sm:block" />
       </button>
-      <button v-else type="button" disabled class="h-11 flex-none rounded-full bg-secondary px-4 text-[13px] font-semibold text-muted-foreground sm:hidden">
+      <button v-else type="button" disabled class="product-action h-11 flex-none rounded-full bg-secondary px-4 text-[13px] font-semibold text-muted-foreground sm:hidden">
         {{ t('products.stockStatus.outOfStock') }}
       </button>
       <ChevronRight class="hidden h-4 w-4 flex-none text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-foreground sm:block" />
@@ -133,3 +133,44 @@ const priceSignal = computed<{ tone: string; label: string } | null>(() => {
   return null
 })
 </script>
+
+<style scoped>
+@media (width < 640px) {
+  .product-list-item {
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+  }
+
+  .product-title {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 23px;
+    letter-spacing: 0.005em;
+  }
+
+  .product-price {
+    font-family: "Rubik", Arial, sans-serif;
+    font-size: 21px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+  }
+
+  .product-price small {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+  }
+
+  .product-tags > span {
+    padding-block: 0;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 20px;
+  }
+
+  .product-action {
+    letter-spacing: 0.025em;
+  }
+}
+</style>

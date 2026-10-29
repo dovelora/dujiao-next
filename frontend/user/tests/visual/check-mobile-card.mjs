@@ -36,9 +36,16 @@ try {
       const box = await card.boundingBox()
       assert.ok(box && box.x >= 0 && box.x + box.width <= width, `${slug} card overflows at ${width}`)
       const title = card.locator('h3')
-      const metrics = await title.evaluate((element) => ({ height: element.getBoundingClientRect().height, line: parseFloat(getComputedStyle(element).lineHeight), clamp: getComputedStyle(element).webkitLineClamp }))
+      const metrics = await title.evaluate((element) => ({ height: element.getBoundingClientRect().height, line: parseFloat(getComputedStyle(element).lineHeight), clamp: getComputedStyle(element).webkitLineClamp, size: getComputedStyle(element).fontSize, weight: getComputedStyle(element).fontWeight, family: getComputedStyle(element).fontFamily }))
       if (width < 640) {
         assert.equal(metrics.clamp, '2', 'mobile title must clamp at two lines')
+        assert.equal(metrics.size, '15px', 'mobile title type size changed')
+        assert.equal(metrics.weight, '600', 'mobile title weight changed')
+        assert.equal(metrics.line, 23, 'mobile title leading changed')
+        assert.match(metrics.family, /PingFang SC/, 'mobile title must use the approved Chinese-first stack')
+        const price = await card.locator('.product-price').evaluate((element) => ({ size: getComputedStyle(element).fontSize, weight: getComputedStyle(element).fontWeight }))
+        assert.equal(price.size, '21px', 'mobile price hierarchy changed')
+        assert.equal(price.weight, '700', 'mobile price weight changed')
         assert.ok(metrics.height <= metrics.line * 2 + 1, 'mobile title exceeds two lines')
       }
     }
