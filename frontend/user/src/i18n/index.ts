@@ -16,18 +16,6 @@ export function detectLocale(): string {
     const saved = localStorage.getItem('locale')
     if (saved && supportedLocales.includes(saved)) return saved
 
-    const browserLang = navigator.language || ''
-    if (supportedLocales.includes(browserLang)) return browserLang
-
-    const langPrefix = browserLang.split('-')[0]
-    if (langPrefix === 'zh') {
-        if (browserLang.includes('TW') || browserLang.includes('HK') || browserLang.includes('Hant')) {
-            return 'zh-TW'
-        }
-        return 'zh-CN'
-    }
-    if (langPrefix === 'en') return 'en-US'
-
     return 'zh-CN'
 }
 

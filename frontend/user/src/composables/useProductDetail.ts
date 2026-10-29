@@ -629,7 +629,7 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
       const title = getLocalizedText(product.value.title)
       const seoMeta = product.value.seo_meta || {}
       const description = getLocalizedText(seoMeta.description) || (typeof seoMeta.description === 'string' ? seoMeta.description : '')
-      const priceAmount = product.value.price_amount || '0'
+      const priceAmount = product.value.promotion_price_amount ?? product.value.price_amount ?? '0'
       const currency = siteCurrency.value || 'CNY'
 
       const jsonLd: Record<string, any> = {
@@ -641,7 +641,7 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
           '@type': 'Offer',
           price: priceAmount,
           priceCurrency: currency,
-          availability: product.value.stock_status === 'out_of_stock'
+          availability: product.value.is_sold_out || product.value.stock_status === 'out_of_stock'
             ? 'https://schema.org/OutOfStock'
             : 'https://schema.org/InStock',
         },

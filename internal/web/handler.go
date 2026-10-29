@@ -160,7 +160,7 @@ func RegisterAdmin(r *gin.Engine, prefix string, fsys fs.FS) error {
 //
 // 由于 NoRoute 在所有显式路由（API、uploads、health、admin）之后才匹配，
 // 这里不需要做路径前缀剥离；命中真实文件返回文件，否则 fallback 到 index.html。
-func RegisterUser(r *gin.Engine, fsys fs.FS) error {
+func RegisterUser(r *gin.Engine, fsys fs.FS, readers ...PageReader) error {
 	if r == nil {
 		return errors.New("nil gin engine")
 	}
@@ -182,6 +182,33 @@ func RegisterUser(r *gin.Engine, fsys fs.FS) error {
 		if isReservedPath(c.Request.URL.Path) {
 			c.String(http.StatusNotFound, "404 page not found")
 			return
+		}
+
+		if len(readers) > 0 && readers[0] != nil && seoPath(c.Request.URL.Path) && (c.Request.Method == http.MethodGet || c.Request.Method == http.MethodHead) {
+			page, err := readers[0].ReadPage(c.Request)
+			if err != nil {
+				c.Header("Cache-Control", "no-store")
+				c.Header("X-Robots-Tag", "noindex")
+				c.String(http.StatusServiceUnavailable, "Service temporarily unavailable")
+				return
+			}
+			if page != nil {
+				body, err := renderPage(indexCached, page)
+				if err != nil {
+					c.Status(http.StatusInternalServerError)
+					return
+				}
+				status := page.Status
+				if status == 0 {
+					status = http.StatusOK
+				}
+				c.Header("Cache-Control", indexCacheControl)
+				if page.NoIndex {
+					c.Header("X-Robots-Tag", "noindex, follow")
+				}
+				c.Data(status, "text/html; charset=utf-8", body)
+				return
+			}
 		}
 
 		fp := strings.TrimPrefix(c.Request.URL.Path, "/")
