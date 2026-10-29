@@ -7,8 +7,7 @@ import (
 
 // Category 是生成 Sitemap 所需的分类投影。
 type Category struct {
-	Slug      string
-	CreatedAt time.Time
+	Slug string
 }
 
 // Product 是生成 Sitemap 所需的商品投影。
@@ -19,9 +18,7 @@ type Product struct {
 
 // PublishedPost 是生成 Sitemap 所需的已发布文章投影。
 type PublishedPost struct {
-	Slug        string
-	CreatedAt   time.Time
-	PublishedAt *time.Time
+	Slug string
 }
 
 // CatalogReader 提供 Sitemap 所需的可索引商品和分类。
