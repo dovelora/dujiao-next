@@ -90,7 +90,11 @@ func (s *session) GetOrder(ctx context.Context, orderID string) (*procurementcon
 }
 
 func (s *session) CancelOrder(ctx context.Context, orderID string) error {
-	return s.adapter.CancelOrder(ctx, upstream.Reference(orderID))
+	err := s.adapter.CancelOrder(ctx, upstream.Reference(orderID))
+	if errors.Is(err, upstream.ErrUpstreamCancelNotAllowed) {
+		return fmt.Errorf("%w: %v", procurementcontract.ErrUpstreamCancelRefused, err)
+	}
+	return err
 }
 
 func fromUpstreamFulfillment(value *upstream.UpstreamFulfillment) *procurementcontract.Fulfillment {

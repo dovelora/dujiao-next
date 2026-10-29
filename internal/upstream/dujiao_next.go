@@ -154,6 +154,12 @@ func (a *DujiaoNextAdapter) CreateOrder(ctx context.Context, req CreateUpstreamO
 	}
 	var result CreateUpstreamOrderResp
 	if err := a.doRequest(ctx, http.MethodPost, "/api/v1/upstream/orders", wireReq, &result); err != nil {
+		// 上游明确拒绝（非 200 且带错误码，如 insufficient_balance）按业务失败返回，
+		// 由调用方按错误码决定是否重试；网络/超时等无错误码的错误仍按错误返回。
+		var ue *upstreamHTTPError
+		if errors.As(err, &ue) && ue.Code != "" {
+			return &CreateUpstreamOrderResp{OK: false, ErrorCode: ue.Code, ErrorMessage: ue.Message}, nil
+		}
 		return nil, err
 	}
 	return &result, nil
@@ -176,6 +182,10 @@ func (a *DujiaoNextAdapter) CancelOrder(ctx context.Context, orderID Reference) 
 		OK bool `json:"ok"`
 	}
 	if err := a.doRequest(ctx, http.MethodPost, path, nil, &result); err != nil {
+		var ue *upstreamHTTPError
+		if errors.As(err, &ue) && ue.Code == "cancel_not_allowed" {
+			return fmt.Errorf("%w: %s", ErrUpstreamCancelNotAllowed, ue.Message)
+		}
 		return err
 	}
 	if !result.OK {
@@ -184,7 +194,7 @@ func (a *DujiaoNextAdapter) CancelOrder(ctx context.Context, orderID Reference) 
 	return nil
 }
 
-// DownloadImage 下载图片到本地
+// DownloadImage downloads validated images through the shared SSRF-safe downloader.
 func (a *DujiaoNextAdapter) DownloadImage(ctx context.Context, imageURL string) (string, error) {
 	return downloadUpstreamImage(ctx, a.baseURL, imageURL, a.uploadsDir)
 }

@@ -25,6 +25,8 @@ var (
 	// ErrOrderOutcomeUnknown 表示请求可能已在上游生效，但客户端未拿到可确认的响应。
 	// 调用方不得自动重试，否则可能重复扣款。
 	ErrOrderOutcomeUnknown = errors.New("upstream order outcome unknown")
+	// ErrUpstreamCancelNotAllowed 上游拒绝取消订单（如订单已付款），重试也不会成功
+	ErrUpstreamCancelNotAllowed = errors.New("upstream order cannot be canceled")
 )
 
 // PingResult 连接测试结果
@@ -57,6 +59,7 @@ type ProductListResult struct {
 // UpstreamProduct 上游商品信息
 type UpstreamProduct struct {
 	ID               Reference                         `json:"id"`
+	Slug             string                            `json:"slug"`
 	SeoMeta          jsonmap.JSON                      `json:"seo_meta"`
 	Title            jsonmap.JSON                      `json:"title"`
 	Description      jsonmap.JSON                      `json:"description"`
