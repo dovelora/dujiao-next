@@ -2,8 +2,10 @@ package catalogmappingbootstrap
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -883,7 +885,7 @@ func TestImportUpstreamProductPrefersUpstreamSlug(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"ok": true,
 			"product": upstream.UpstreamProduct{
-				ID:          uint(id),
+				ID:          upstream.Reference(strconv.Itoa(id)),
 				Slug:        upstreamSlugs[r.URL.Path],
 				Title:       jsonmap.JSON{"zh-CN": "P"},
 				PriceAmount: "10.00",
@@ -925,7 +927,7 @@ func TestImportUpstreamProductPrefersUpstreamSlug(t *testing.T) {
 		{4, ""}, // 未提供 slug → 回退自动生成
 	}
 	for _, tc := range cases {
-		mapping, err := svc.ImportUpstreamProduct(conn.ID, tc.upstreamID, 1, "")
+		mapping, err := svc.ImportUpstreamProduct(conn.ID, strconv.FormatUint(uint64(tc.upstreamID), 10), 1, "")
 		if err != nil {
 			t.Fatalf("import upstream %d failed: %v", tc.upstreamID, err)
 		}
@@ -939,5 +941,67 @@ func TestImportUpstreamProductPrefersUpstreamSlug(t *testing.T) {
 		if tc.want == "" && !strings.HasPrefix(product.Slug, "upstream-") {
 			t.Fatalf("upstream %d: expected fallback slug, got %q", tc.upstreamID, product.Slug)
 		}
+	}
+}
+
+func TestSyncConnectionStockSharedStockUsesMerchantSKUData(t *testing.T) {
+	for _, test := range []struct {
+		name, price  string
+		quoteFailure bool
+	}{
+		{name: "live SKU inventory and merchant price", price: "12.50"},
+		{name: "quote error preserves local data", quoteFailure: true},
+		{name: "zero quote preserves local data", price: "0"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			svc, db, mapping, closeServer := setupMappingWithUpstreamHandler(t, fmt.Sprintf("file:shared-sync-%s?mode=memory&cache=shared", test.name), func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				switch r.URL.Path {
+				case "/shared/commodity/item":
+					_, _ = w.Write([]byte(`{"code":200,"data":{"code":"101","stock":20,"price":"12","config":{"category":{"basic":"12"},"category_factory":{"basic":"5"}}}}`))
+				case "/shared/commodity/stock":
+					_, _ = w.Write([]byte(`{"code":200,"data":{"stock":0}}`))
+				case "/shared/commodity/valuation":
+					if test.quoteFailure {
+						w.WriteHeader(http.StatusServiceUnavailable)
+						return
+					}
+					_ = json.NewEncoder(w).Encode(map[string]interface{}{"code": 200, "data": map[string]string{"price": test.price}})
+				case "/shared/commodity/items":
+					_, _ = w.Write([]byte(`{"code":200,"data":[{"id":1,"children":[{"code":"101","stock":20,"config":{"category":{"basic":"12"},"category_factory":{"basic":"5"}}}]}]}`))
+				default:
+					t.Errorf("unexpected request %s", r.URL.Path)
+					w.WriteHeader(http.StatusNotFound)
+				}
+			})
+			defer closeServer()
+			if err := db.Model(&siteconnectiondomain.Connection{}).Where("id = ?", mapping.ConnectionID).Updates(map[string]interface{}{"protocol": constants.ConnectionProtocolSharedStock, "auto_sync_price": true}).Error; err != nil {
+				t.Fatal(err)
+			}
+			ref := "ss1_" + base64.RawURLEncoding.EncodeToString([]byte(`{"v":1,"code":"101","race":"basic"}`))
+			if err := db.Model(&mappingdomain.SKUMapping{}).Where("product_mapping_id = ?", mapping.ID).Update("upstream_sku_id", ref).Error; err != nil {
+				t.Fatal(err)
+			}
+			err := svc.SyncConnectionStock(mapping.ConnectionID, []mappingdomain.Mapping{*mapping}, 100, 200)
+			wantErr := test.quoteFailure || test.price == "0"
+			if (err != nil) != wantErr {
+				t.Fatalf("sync error = %v, want error %v", err, wantErr)
+			}
+			var synced mappingdomain.SKUMapping
+			if err := db.Where("product_mapping_id = ?", mapping.ID).First(&synced).Error; err != nil {
+				t.Fatal(err)
+			}
+			var sku productdomain.ProductSKU
+			if err := db.First(&sku, synced.LocalSKUID).Error; err != nil {
+				t.Fatal(err)
+			}
+			stock, price := 0, "12.50"
+			if wantErr {
+				stock, price = 100, "10"
+			}
+			if synced.UpstreamStock != stock || !sku.PriceAmount.Decimal.Equal(decimal.RequireFromString(price)) {
+				t.Fatalf("incorrect sync result: stock=%d price=%s, want %d/%s", synced.UpstreamStock, sku.PriceAmount.Decimal, stock, price)
+			}
+		})
 	}
 }

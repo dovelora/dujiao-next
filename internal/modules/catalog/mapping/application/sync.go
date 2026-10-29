@@ -453,6 +453,18 @@ func (s *Service) SyncConnectionStock(connectionID uint, connMappings []mappingd
 		return fmt.Errorf("get connection %d: %w", connectionID, err)
 	}
 
+	// SharedStock 列表只有商品总库存和配置价格，不能覆盖 SKU 的实时库存/商户价。
+	// 仅查询已映射商品，复用单品同步的独立超时和不可用商品处理。
+	if conn.Protocol == constants.ConnectionProtocolSharedStock {
+		var syncErrors []error
+		for _, mapping := range connMappings {
+			if err := s.SyncProduct(mapping.ID); err != nil {
+				syncErrors = append(syncErrors, fmt.Errorf("sync mapping %d: %w", mapping.ID, err))
+			}
+		}
+		return errors.Join(syncErrors...)
+	}
+
 	adapter, err := s.connections.GetAdapter(conn)
 	if err != nil {
 		return fmt.Errorf("get adapter for connection %d: %w", connectionID, err)

@@ -47,6 +47,13 @@ func (s *Service) HandleUpstreamCallback(procurementOrderID uint, upstreamStatus
 			}
 		}
 
+		// 本地交付和订单状态成功后才结束采购，失败时保留 accepted 供重试。
+		if err := s.orderRepo.UpdateStatus(procOrder.LocalOrderID, constants.OrderStatusDelivered, map[string]interface{}{
+			"updated_at": now,
+		}); err != nil {
+			return fmt.Errorf("update delivered order status: %w", err)
+		}
+
 		// 更新采购单状态
 		updates := map[string]interface{}{
 			"updated_at": now,
@@ -62,11 +69,6 @@ func (s *Service) HandleUpstreamCallback(procurementOrderID uint, upstreamStatus
 			// 回调与轮询/巡检并发：已由另一路径完成交付，避免重复通知
 			return nil
 		}
-
-		// 更新本地订单状态
-		_ = s.orderRepo.UpdateStatus(procOrder.LocalOrderID, constants.OrderStatusDelivered, map[string]interface{}{
-			"updated_at": now,
-		})
 
 		// 如果有父订单，同步父订单状态
 		localOrder, _ := s.orderRepo.GetByID(procOrder.LocalOrderID)

@@ -6,8 +6,11 @@ Do not rebuild or recreate the storefront manually during normal development.
 ## Triggers
 
 - A push to `main`.
-- A push to `agent/ghcr-production-deploy` while that branch is the production integration branch.
 - A manual `workflow_dispatch` run in GitHub Actions.
+
+Pull request branches run CI without deploying. Merge a verified pull request into
+`main` to release it; pushing updates to the former production integration branch
+no longer changes the production storefront.
 
 ## Deployment contract
 
