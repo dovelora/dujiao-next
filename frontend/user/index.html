@@ -1,17 +1,36 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/png" href="/site-icon.png" />
-  <title></title>
+  <title>Dovelora</title>
+  <!--storefront-head-->
   <style>
     html,
     body,
     #app {
       min-height: 100%;
       margin: 0;
+    }
+
+    .storefront-initial-content {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px;
+      font: 16px/1.6 system-ui, sans-serif;
+    }
+
+    .storefront-initial-content article {
+      margin: 24px 0;
+      padding: 16px 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .storefront-initial-content img {
+      max-width: 100%;
+      height: auto;
     }
 
     .initial-loading {
@@ -77,11 +96,13 @@
 
 <body>
   <div id="app">
+    <!--storefront-content-start-->
     <div class="initial-loading" role="status" aria-live="polite" aria-label="Dovelora loading">
       <img src="/site-icon.png" alt="" />
       <span>DOVELORA</span>
       <div class="initial-loading-bar"></div>
     </div>
+    <!--storefront-content-end-->
   </div>
   <script type="module" data-cfasync="false" src="/src/main.ts"></script>
 </body>

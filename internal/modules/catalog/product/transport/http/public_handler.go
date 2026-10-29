@@ -225,3 +225,40 @@ func (h *PublicHandler) loadRelatedPostCards(ctx context.Context, productID uint
 	}
 	return result, nil
 }
+
+// PublicSnapshot supplies the same anonymous main-store prices and inventory as the public API.
+// Callers must verify the request belongs to the configured main storefront.
+func (h *PublicHandler) PublicSnapshot(categoryID, slug string, page, pageSize int) ([]productpresenter.Product, int64, error) {
+	tenant := reseller.MainTenantContext("")
+	var products []productdomain.Product
+	var total int64
+	if slug != "" {
+		product, err := h.products.GetPublicBySlugForTenant(tenant, slug)
+		if err != nil {
+			return nil, 0, err
+		}
+		if product == nil {
+			return nil, 0, productcontract.ErrNotFound
+		}
+		products = []productdomain.Product{*product}
+		total = 1
+	} else {
+		var err error
+		products, total, err = h.products.ListPublicForTenant(tenant, categoryID, "", page, pageSize)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+	if err := h.products.ApplyAutoStockCounts(products); err != nil {
+		return nil, 0, err
+	}
+	result := make([]productpresenter.Product, 0, len(products))
+	for i := range products {
+		item, err := h.decoratePublicProductForTenant(&products[i], h.promotions, tenant, nil)
+		if err != nil {
+			return nil, 0, err
+		}
+		result = append(result, item)
+	}
+	return result, total, nil
+}

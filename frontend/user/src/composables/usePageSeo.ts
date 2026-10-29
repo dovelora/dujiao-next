@@ -1,4 +1,6 @@
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { catalogCanonicalPath, isCatalogPath } from '../utils/catalogSeo'
 import { useHead } from '@unhead/vue'
 import { useAppStore } from '../stores/app'
 import { getImageUrl } from '../utils/image'
@@ -33,6 +35,7 @@ const resolveImage = (raw: string, baseUrl: string): string => {
 
 export function usePageSeo(options: PageSeoOptions = {}) {
   const appStore = useAppStore()
+  const route = useRoute()
 
   const baseUrl = computed(() => {
     const fromConfig = trimSlashEnd(String(appStore.config?.brand?.site_url || '').trim())
@@ -85,6 +88,7 @@ export function usePageSeo(options: PageSeoOptions = {}) {
     if (!path && typeof window !== 'undefined') path = window.location.pathname
     if (!path) path = '/'
     if (!path.startsWith('/')) path = '/' + path
+    path = catalogCanonicalPath(path, route.query)
     if (!baseUrl.value) return path
     return baseUrl.value + path
   })
@@ -109,8 +113,8 @@ export function usePageSeo(options: PageSeoOptions = {}) {
     meta: () => {
       const tags: Array<{ name?: string; property?: string; content: string }> = []
 
-      if (options.noindex?.()) {
-        tags.push({ name: 'robots', content: 'noindex, nofollow' })
+      if (options.noindex?.() || (isCatalogPath(route.path) && Boolean(route.query.q))) {
+        tags.push({ name: 'robots', content: 'noindex, follow' })
       }
 
       if (fullDescription.value) {

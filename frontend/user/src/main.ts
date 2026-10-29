@@ -12,7 +12,14 @@ import { initTemplateOverride } from './templates/registry'
 initTemplateOverride()
 
 const app = createApp(App)
-const head = createHead()
+const head = createHead({
+  hooks: {
+    'dom:beforeRender': () => {
+      // 服务端首屏标签由客户端 head 接管，避免导航后残留上一页的元信息。
+      document.head.querySelectorAll('[data-storefront-seo]').forEach((tag) => tag.remove())
+    },
+  },
+})
 const pinia = createPinia()
 
 app.use(pinia)
@@ -22,6 +29,7 @@ app.use(i18n)
 
 // 非默认语言的语言包为懒加载 chunk，挂载前并行加载，避免首屏文案闪现兜底语言
 Promise.all([
+  router.isReady(),
   useTelegramMiniAppStore(pinia).init(),
   setI18nLocale(detectLocale()),
 ]).then(() => {
