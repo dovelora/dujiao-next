@@ -114,7 +114,8 @@ jobs:
 
   fullstack:
     name: Verify fullstack build
-    runs-on: ubuntu-latest
+    # Keep the visual-test OS stable and supported by the pinned browser version.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
 
     steps:
@@ -150,6 +151,45 @@ jobs:
         run: |
           (cd frontend/admin && pnpm run build:fullstack)
           (cd frontend/user  && pnpm run build)
+
+      - name: Build mobile card fixture
+        working-directory: frontend/user
+        env:
+          MOBILE_CARD_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          baseline=src/templates/vault/components/VaultProductListItemBefore.vue
+          trap 'rm -f "${baseline}"' EXIT
+          if [ -n "${MOBILE_CARD_BASE_SHA}" ]; then
+            git fetch --no-tags --depth=1 origin "${MOBILE_CARD_BASE_SHA}"
+            git show "${MOBILE_CARD_BASE_SHA}:frontend/user/src/templates/vault/components/VaultProductListItem.vue" > "${baseline}"
+          fi
+          pnpm exec vite build --config tests/visual/vite.config.ts
+
+      - name: Verify mobile cards in Chromium
+        working-directory: frontend/user
+        env:
+          MOBILE_CARD_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MOBILE_CARD_BROWSER_DIR: ${{ runner.temp }}/mobile-card-browser
+          MOBILE_CARD_ARTIFACT_DIR: ${{ runner.temp }}/mobile-card-artifacts
+        run: |
+          mkdir -p "${MOBILE_CARD_BROWSER_DIR}"
+          (
+            cd "${MOBILE_CARD_BROWSER_DIR}"
+            printf '%s\n' '{"private":true,"packageManager":"pnpm@10.34.3"}' > package.json
+            pnpm add --save-exact playwright@1.56.1
+            pnpm exec playwright install --with-deps chromium
+          )
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+          node tests/visual/check-mobile-card.mjs
+
+      - name: Upload mobile card screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-card-screenshots
+          path: ${{ runner.temp }}/mobile-card-artifacts
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Embed frontend assets
         run: |
