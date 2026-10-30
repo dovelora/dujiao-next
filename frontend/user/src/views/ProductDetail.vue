@@ -210,37 +210,6 @@
                   </ul>
                 </div>
 
-                <div v-if="activeSkus.length" class="mb-8">
-                  <h2 class="mb-3 text-sm font-bold uppercase tracking-widest text-muted-foreground">
-                    {{ t('productDetail.skuTitle') }}
-                  </h2>
-                  <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <button
-                      v-for="sku in activeSkus"
-                      :key="sku.id"
-                      type="button"
-                      class="flex flex-col items-start rounded-xl border px-3 py-2 text-sm transition-all min-h-[44px]"
-                      :class="[
-                        normalizeSkuId(sku.id) === selectedSkuId ? 'border-primary/40 bg-primary/10 ring-1 ring-primary/30' : 'border bg-secondary text-foreground',
-                        isSkuPurchasable(sku) ? 'hover:-translate-y-0.5' : 'cursor-not-allowed opacity-55 border-dashed',
-                      ]"
-                      :disabled="!isSkuPurchasable(sku)"
-                      @click="selectedSkuId = normalizeSkuId(sku.id)"
-                    >
-                      <span class="font-semibold leading-tight">{{ skuDisplayText(sku) }}</span>
-                      <span
-                        class="mt-1 rounded-full border px-2 py-0.5 text-[11px]"
-                        :class="skuStockBadgeClass(sku)"
-                      >
-                        {{ skuStockText(sku) }}
-                      </span>
-                    </button>
-                  </div>
-                  <p v-if="requiresSKUSelection" class="mt-2 text-xs text-amber-500">
-                    {{ t('productDetail.skuRequired') }}
-                  </p>
-                </div>
-
                 <div class="mb-8">
                   <h2 class="mb-3 text-sm font-bold uppercase tracking-widest text-muted-foreground">
                     {{ t('productDetail.description') }}
@@ -250,39 +219,6 @@
                   </p>
                 </div>
               </div>
-
-              <!-- Quantity Selector -->
-                <div class="mb-8">
-                  <h2 class="mb-3 text-sm font-bold uppercase tracking-widest text-muted-foreground">
-                    {{ t('productDetail.quantity') }}
-                  </h2>
-                  <div class="flex items-center rounded-lg border overflow-hidden w-fit">
-                    <button
-                      type="button"
-                      class="w-10 h-10 flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors disabled:opacity-30"
-                      :disabled="quantity <= quantityEffectiveMin"
-                      @click="quantity = Math.max(quantityEffectiveMin, quantity - 1)"
-                    >
-                      <Minus class="w-4 h-4" :stroke-width="2.5" />
-                    </button>
-                    <input
-                      type="text"
-                      inputmode="numeric"
-                      class="w-14 h-10 text-center text-sm font-semibold text-foreground border-x bg-transparent outline-none tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      :value="quantity"
-                      @change="handleQuantityInput($event)"
-                      @keydown.enter.prevent="($event.target as HTMLInputElement)?.blur()"
-                    />
-                    <button
-                      type="button"
-                      class="w-10 h-10 flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors disabled:opacity-30"
-                      :disabled="quantityEffectiveLimit !== null && quantity >= quantityEffectiveLimit"
-                      @click="quantity = quantity + 1"
-                    >
-                      <Plus class="w-4 h-4" :stroke-width="2.5" />
-                    </button>
-                  </div>
-                </div>
 
               <!-- Purchase Actions (Desktop + original position) -->
               <div ref="purchaseActionsRef" class="mt-auto space-y-6">
@@ -403,7 +339,7 @@
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, Minus, Pencil, Plus, RotateCw, Tag, Zap } from 'lucide-vue-next'
+import { ArrowLeft, Pencil, RotateCw, Tag, Zap } from 'lucide-vue-next'
 import { getImageUrl } from '../utils/image'
 import { processHtmlForDisplay } from '../utils/content'
 import { getProductDescriptionText } from '../utils/productDescription'
@@ -445,17 +381,15 @@ const {
   hasPromotionPrice, getPromotionPriceAmount, getPromotionSaveAmount,
   hasSkuPromotionPrice, getSkuPromotionSaveAmount,
   hasPromotionRules, getPromotionRules,
-  formatPromotionRule, formatWholesaleTier, formatRelatedPostDate, normalizeSkuId,
-  loading, product, relatedPosts, currentImage, selectedSkuId, quantity, purchaseWarning,
-  activeSkus, selectedSku,
+  formatPromotionRule, formatWholesaleTier, formatRelatedPostDate,
+  loading, product, relatedPosts, currentImage, purchaseWarning,
+  selectedSku,
   selectedSkuMemberPrice, hasMemberPrice,
   hasSelectedSkuWholesalePrice, selectedSkuWholesaleFinalIsMember, selectedSkuWholesaleFinalPrice,
   selectedSkuWholesaleRules,
   selectedSkuPromotionPrice, selectedSkuPromotionFinalIsMember, selectedSkuPromotionFinalPrice,
   showSelectedSkuMemberBadge,
-  isSkuPurchasable, skuDisplayText, skuStockText, skuStockBadgeClass,
-  quantityEffectiveLimit, quantityEffectiveMin, handleQuantityInput,
-  requiresSKUSelection, canPurchase, cannotPurchaseReason,
+  canPurchase, cannotPurchaseReason,
   categoryName, images,
   backToListTo,
   buyNow, loadProduct,

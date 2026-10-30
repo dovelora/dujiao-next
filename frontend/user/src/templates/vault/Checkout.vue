@@ -30,19 +30,30 @@
           </RouterLink>
           <div class="min-w-0">
             <RouterLink :to="`/products/${item.slug}`" class="line-clamp-2 break-words text-[15px] font-semibold leading-[23px] hover:text-primary lg:text-base lg:leading-6">{{ getLocalizedText(item.title) }}</RouterLink>
-            <p v-if="itemSkuDisplay(item)" class="mt-1 text-xs leading-5 text-muted-foreground lg:text-[13px]">{{ t('checkout.skuLabel') }}：{{ itemSkuDisplay(item) }}</p>
+            <p v-if="selectedPurchaseSku && itemSkuDisplay(item)" class="mt-1 text-xs leading-5 text-muted-foreground lg:text-[13px]">{{ t('checkout.skuLabel') }}：{{ itemSkuDisplay(item) }}</p>
             <p v-if="itemStockHint(item)" class="mt-1 text-xs leading-5" :class="itemStockExceeded(item) ? 'text-warning' : 'text-muted-foreground'">{{ itemStockHint(item) }}</p>
+          </div>
+          <div class="col-span-2 border-t pt-3">
+            <p class="mb-2 text-sm font-semibold">{{ t('productDetail.selectSku') }}</p>
+            <div v-if="activePurchaseSkus.length" class="flex flex-wrap gap-2" role="group" :aria-label="t('productDetail.selectSku')">
+              <button v-for="sku in activePurchaseSkus" :key="sku.id" type="button" class="min-h-11 rounded-lg border px-3 py-2 text-left text-sm disabled:opacity-40" :class="selectedPurchaseSku?.id === sku.id ? 'border-primary bg-primary/5 text-primary' : 'border-border'" :disabled="!isPurchaseSkuAvailable(sku) || syncingStock" :aria-pressed="selectedPurchaseSku?.id === sku.id" @click="selectPurchaseSku(sku)">
+                <span class="block font-semibold">{{ skuDisplayText(sku) }}</span><span class="block text-xs">{{ skuStockText(sku) }}</span>
+              </button>
+            </div>
+            <p v-if="skuSelectionRequired" class="mt-2 text-xs text-warning">{{ t('productDetail.skuRequired') }}</p>
+            <p v-else-if="!syncingStock && purchaseProduct && !activePurchaseSkus.length" class="mt-2 text-xs text-warning">{{ t('checkout.stockOut') }}</p>
+            <div v-if="!syncingStock && !purchaseProduct" class="mt-2 text-sm text-destructive">{{ t('checkout.productLoadFailed') }} <button type="button" class="ml-2 underline" @click="retryProduct">{{ t('common.retry') }}</button></div>
           </div>
           <div class="col-span-2 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
             <div class="inline-flex items-center overflow-hidden rounded-lg border border-hairline-strong">
-              <button type="button" class="grid h-11 w-11 place-items-center disabled:opacity-35" :aria-label="t('checkout.decreaseQuantity')" :disabled="item.quantity <= itemPurchaseMin(item)" @click="updateQuantity(item, item.quantity - 1)"><Minus class="h-4 w-4" /></button>
-              <input type="number" :aria-label="t('checkout.quantityLabel')" class="h-11 w-10 border-x bg-transparent text-center font-semibold tabular-nums outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" :value="item.quantity" :min="itemPurchaseMin(item)" :max="itemMaxQuantity(item)" @change="handleQuantityChange(item, $event)" />
-              <button type="button" class="grid h-11 w-11 place-items-center disabled:opacity-35" :aria-label="t('checkout.increaseQuantity')" :disabled="item.quantity >= itemMaxQuantity(item)" @click="updateQuantity(item, item.quantity + 1)"><Plus class="h-4 w-4" /></button>
+              <button type="button" class="grid h-11 w-11 place-items-center disabled:opacity-35" :aria-label="t('checkout.decreaseQuantity')" :disabled="!skuSelectionValid || item.quantity <= itemPurchaseMin(item)" @click="updateQuantity(item, item.quantity - 1)"><Minus class="h-4 w-4" /></button>
+              <input type="number" :disabled="!skuSelectionValid" :aria-label="t('checkout.quantityLabel')" class="h-11 w-10 border-x bg-transparent text-center font-semibold tabular-nums outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" :value="item.quantity" :min="itemPurchaseMin(item)" :max="itemMaxQuantity(item)" @change="handleQuantityChange(item, $event)" />
+              <button type="button" class="grid h-11 w-11 place-items-center disabled:opacity-35" :aria-label="t('checkout.increaseQuantity')" :disabled="!skuSelectionValid || item.quantity >= itemMaxQuantity(item)" @click="updateQuantity(item, item.quantity + 1)"><Plus class="h-4 w-4" /></button>
             </div>
             <div class="min-w-0 text-right">
               <span class="block text-xs text-muted-foreground">{{ t('checkout.totalPriceLabel') }}</span>
-              <strong class="checkout-total break-words text-lg font-semibold" :class="checkoutItemHasPriceDiscount(item) ? 'text-primary' : 'text-foreground'">{{ checkoutItemPriceParts(item).integer }}{{ checkoutItemPriceParts(item).decimal }} {{ checkoutItemCurrency }}</strong>
-              <span v-if="checkoutItemHasPriceDiscount(item)" class="block text-xs text-muted-foreground line-through">{{ checkoutItemOriginalPriceParts(item).integer }}{{ checkoutItemOriginalPriceParts(item).decimal }} {{ checkoutItemCurrency }}</span>
+              <strong class="checkout-total break-words text-lg font-semibold" :class="checkoutItemHasPriceDiscount(item) ? 'text-primary' : 'text-foreground'">{{ skuSelectionValid ? `${checkoutItemPriceParts(item).integer}${checkoutItemPriceParts(item).decimal} ${checkoutItemCurrency}` : '—' }}</strong>
+              <span v-if="skuSelectionValid && checkoutItemHasPriceDiscount(item)" class="block text-xs text-muted-foreground line-through">{{ checkoutItemOriginalPriceParts(item).integer }}{{ checkoutItemOriginalPriceParts(item).decimal }} {{ checkoutItemCurrency }}</span>
             </div>
           </div>
         </article>
@@ -196,7 +207,7 @@
           <div ref="payBar" class="checkout-paybar fixed inset-x-0 bottom-0 z-40 grid grid-cols-[minmax(0,1fr)_132px] items-center gap-5 border-t bg-card px-4 pt-3 pb-[calc(12px+env(safe-area-inset-bottom,0px))] shadow-[0_-4px_20px_rgb(0_0_0/0.05)] lg:static lg:mt-4 lg:bg-transparent lg:px-0 lg:pb-0 lg:pt-4 lg:shadow-none">
             <div class="min-w-0">
               <p class="text-xs text-muted-foreground">{{ t('checkout.previewTotal') }}</p>
-              <p class="checkout-total break-all text-[22px] font-semibold leading-8 text-primary">{{ formatPrice(previewTotal, previewCurrency) }}</p>
+              <p class="checkout-total break-all text-[22px] font-semibold leading-8 text-primary">{{ skuSelectionValid ? formatPrice(previewTotal, previewCurrency) : '—' }}</p>
             </div>
             <Button class="h-11 w-full rounded-full font-semibold" :disabled="submitting" :class="{ 'opacity-50': !canSubmit }" @click="handlePayClick">
               {{ submitting ? t('checkout.submitting') : t('checkout.payNow') }}
@@ -235,6 +246,7 @@ const { height: payBarHeight } = useElementSize(payBar, { width: 0, height: 84 }
 
 const {
   userAuthStore, getLocalizedText, formatPrice, getImageUrl,
+  activePurchaseSkus, selectedPurchaseSku, skuSelectionValid, skuSelectionRequired, isPurchaseSkuAvailable, skuDisplayText, skuStockText, selectPurchaseSku, syncingStock, purchaseProduct, retryProduct,
   purchaseItems, purchaseDetails, purchaseItemKey, checkoutItemImage, itemSkuDisplay,
   itemStockExceeded, itemStockHint, itemPurchaseMin, itemMaxQuantity, updateQuantity, handleQuantityChange,
   checkoutItemCurrency, checkoutItemPriceParts, checkoutItemOriginalPriceParts, checkoutItemHasPriceDiscount,

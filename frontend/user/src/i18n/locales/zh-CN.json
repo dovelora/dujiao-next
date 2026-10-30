@@ -1095,6 +1095,7 @@
     }
   },
   "checkout": {
+    "productLoadFailed": "商品信息加载失败，请重试",
     "detailsEmpty": "暂无详细信息",
     "itemsCount": "商品数量",
     "decreaseQuantity": "减少数量",

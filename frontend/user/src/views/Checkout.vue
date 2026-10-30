@@ -21,6 +21,18 @@
 
       <div v-else class="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
+          <section class="rounded-2xl border bg-card p-6">
+            <h2 class="mb-3 text-base font-semibold">{{ t('productDetail.selectSku') }}</h2>
+            <div class="flex flex-wrap gap-2" role="group" :aria-label="t('productDetail.selectSku')">
+              <button v-for="sku in activePurchaseSkus" :key="sku.id" type="button" class="min-h-11 rounded-lg border px-3 py-2 text-left text-sm disabled:opacity-40" :class="selectedPurchaseSku?.id === sku.id ? 'border-primary bg-primary/10 text-primary' : 'border-border'" :disabled="!isPurchaseSkuAvailable(sku) || syncingStock" :aria-pressed="selectedPurchaseSku?.id === sku.id" @click="selectPurchaseSku(sku)">
+                <span class="block font-semibold">{{ skuDisplayText(sku) }}</span><span class="block text-xs">{{ skuStockText(sku) }}</span>
+              </button>
+            </div>
+            <p v-if="skuSelectionRequired" class="mt-2 text-sm text-warning">{{ t('productDetail.skuRequired') }}</p>
+            <p v-else-if="!syncingStock && purchaseProduct && !activePurchaseSkus.length" class="mt-2 text-sm text-warning">{{ t('checkout.stockOut') }}</p>
+            <div v-if="!syncingStock && !purchaseProduct" class="mt-2 text-sm text-destructive">{{ t('checkout.productLoadFailed') }} <button type="button" class="ml-2 underline" @click="retryProduct">{{ t('common.retry') }}</button></div>
+          </section>
+
           <div class="rounded-2xl border bg-card text-card-foreground p-6">
             <h2 class="mb-4 text-lg font-bold text-foreground">{{ t('checkout.itemsTitle') }}</h2>
             <div class="space-y-4">
@@ -47,8 +59,10 @@
                     >
                       {{ getLocalizedText(item.title) }}
                     </router-link>
-                    <div class="mt-1 text-xs text-muted-foreground">{{ t('checkout.quantityLabel') }}：{{ item.quantity }}</div>
-                    <div v-if="itemSkuDisplay(item)" class="mt-1 text-xs text-muted-foreground">{{ t('checkout.skuLabel') }}：{{ itemSkuDisplay(item) }}</div>
+                    <label class="mt-1 flex items-center gap-2 text-xs text-muted-foreground">{{ t('checkout.quantityLabel') }}
+                      <input type="number" class="w-16 rounded border bg-background px-2 py-1 text-foreground" :disabled="!skuSelectionValid" :value="item.quantity" :min="itemPurchaseMin(item)" :max="itemMaxQuantity(item)" @change="handleQuantityChange(item, $event)" />
+                    </label>
+                    <div v-if="selectedPurchaseSku && itemSkuDisplay(item)" class="mt-1 text-xs text-muted-foreground">{{ t('checkout.skuLabel') }}：{{ itemSkuDisplay(item) }}</div>
                     <div
                       v-if="itemStockHint(item)"
                       class="mt-1 text-xs"
@@ -58,7 +72,7 @@
                     >
                       {{ itemStockHint(item) }}
                     </div>
-                    <div class="mt-2 flex flex-wrap items-baseline gap-3">
+                    <div v-if="skuSelectionValid" class="mt-2 flex flex-wrap items-baseline gap-3">
                       <span
                         class="inline-flex items-baseline whitespace-nowrap"
                         :class="checkoutItemHasPriceDiscount(item) ? 'text-rose-600 dark:text-rose-300' : 'text-foreground'"
@@ -79,6 +93,7 @@
                         <span class="ml-1">{{ checkoutItemCurrency }}</span>
                       </span>
                     </div>
+                    <div v-else class="mt-2">—</div>
                   </div>
                 </div>
               </div>
@@ -220,7 +235,7 @@
             </div>
             <div class="flex items-center justify-between border-t pt-3 text-foreground">
               <span class="font-semibold">{{ t('checkout.previewTotal') }}</span>
-              <span class="font-mono text-lg font-bold">{{ formatPrice(previewTotal, previewCurrency) }}</span>
+              <span class="font-mono text-lg font-bold">{{ skuSelectionValid ? formatPrice(previewTotal, previewCurrency) : '—' }}</span>
             </div>
           </div>
 
@@ -331,7 +346,8 @@ const { t } = useI18n()
 
 const {
   userAuthStore, getLocalizedText, formatPrice, getImageUrl,
-  purchaseItems, totalItems, purchaseItemKey, checkoutItemImage, itemSkuDisplay,
+  activePurchaseSkus, selectedPurchaseSku, skuSelectionValid, skuSelectionRequired, isPurchaseSkuAvailable, skuDisplayText, skuStockText, selectPurchaseSku, syncingStock, purchaseProduct, retryProduct,
+  purchaseItems, totalItems, purchaseItemKey, checkoutItemImage, itemSkuDisplay, itemPurchaseMin, itemMaxQuantity, handleQuantityChange,
   itemStockExceeded, itemStockHint,
   checkoutItemCurrency, checkoutItemPriceParts, checkoutItemOriginalPriceParts, checkoutItemHasPriceDiscount,
   manualFormProducts, manualFormData, submitAttempted, getManualFieldLabel, getManualFieldPlaceholder, manualFieldError,

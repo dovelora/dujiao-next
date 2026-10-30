@@ -1132,6 +1132,7 @@
     }
   },
   "checkout": {
+    "productLoadFailed": "商品資訊載入失敗，請重試",
     "detailsEmpty": "暫無詳細資訊",
     "itemsCount": "商品數量",
     "decreaseQuantity": "減少數量",

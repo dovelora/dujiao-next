@@ -152,13 +152,6 @@
       </section>
     </template>
 
-    <ProductQuickBuy
-      v-if="quickBuyProduct"
-      :product="quickBuyProduct"
-      :visible="quickBuyVisible"
-      @update:visible="quickBuyVisible = $event"
-    />
-
     <AnnouncementModal
       v-if="activeAnnouncement"
       :announcement="activeAnnouncement"
@@ -186,7 +179,7 @@ import { useAppStore } from '../../stores/app'
 import VaultProductCard from './components/VaultProductCard.vue'
 import VaultProductListItem from './components/VaultProductListItem.vue'
 import VaultCategorySidebar from './components/VaultCategorySidebar.vue'
-import ProductQuickBuy from '../../components/ProductQuickBuy.vue'
+import { useDirectPurchase } from '../../composables/useDirectPurchase'
 import AnnouncementModal from '../../components/AnnouncementModal.vue'
 import { useAnnouncement, type HomeAnnouncement } from '../../composables/useAnnouncement'
 
@@ -198,12 +191,7 @@ const appStore = useAppStore()
 const isListMode = computed(() => appStore.config?.template_mode === 'list')
 
 // ==================== 快速购买 ====================
-const quickBuyProduct = ref<any>(null)
-const quickBuyVisible = ref(false)
-const openQuickBuy = (product: any) => {
-  quickBuyProduct.value = product
-  quickBuyVisible.value = true
-}
+const { startPurchase: openQuickBuy } = useDirectPurchase()
 
 // ==================== 列表模式 ====================
 const {

@@ -365,13 +365,6 @@
     </template>
     </template>
 
-    <ProductQuickBuy
-      v-if="quickBuyProduct"
-      :product="quickBuyProduct"
-      :visible="quickBuyVisible"
-      @update:visible="quickBuyVisible = $event"
-    />
-
     <AnnouncementModal
       v-if="activeAnnouncement"
       :announcement="activeAnnouncement"
@@ -397,7 +390,7 @@ import { usePageSeo } from '../composables/usePageSeo'
 import { useAppStore } from '../stores/app'
 import ProductCard from '../components/ProductCard.vue'
 import ProductListItem from '../components/ProductListItem.vue'
-import ProductQuickBuy from '../components/ProductQuickBuy.vue'
+import { useDirectPurchase } from '../composables/useDirectPurchase'
 import CategorySidebar from '../components/CategorySidebar.vue'
 import PaginationNav from '../components/PaginationNav.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -423,17 +416,12 @@ const products = ref<any[]>([])
 const posts = ref<any[]>([])
 const featuredLoading = ref(true)
 const latestLoading = ref(true)
-const quickBuyProduct = ref<any>(null)
-const quickBuyVisible = ref(false)
 
 const { shouldShow } = useAnnouncement()
 const activeAnnouncement = ref<HomeAnnouncement | null>(null)
 const announcementVisible = ref(false)
 
-const openQuickBuy = (product: any) => {
-  quickBuyProduct.value = product
-  quickBuyVisible.value = true
-}
+const { startPurchase: openQuickBuy } = useDirectPurchase()
 
 // ==================== Banner Carousel ====================
 const {

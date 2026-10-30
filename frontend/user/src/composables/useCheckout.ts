@@ -9,8 +9,9 @@ import { debounceAsync } from '../utils/debounce'
 import { type PageAlert } from '../utils/alerts'
 import { amountToCents, basisPointsToPercent, centsToAmount, parseInteger, rateToBasisPoints } from '../utils/money'
 import { buildSkuDisplayText, normalizeSkuId } from '../utils/sku'
-import { refreshPurchaseSnapshot, purchaseLimit as itemPurchaseLimit, purchaseMinimum as itemPurchaseMin } from '../utils/purchaseStock'
+import { refreshPurchaseSnapshot, buildPurchaseSkuSnapshot, resolveActiveSkus, purchaseLimit as itemPurchaseLimit, purchaseMinimum as itemPurchaseMin } from '../utils/purchaseStock'
 import { getImageUrl } from '../utils/image'
+import { resolveSkuAvailableStock, resolveSkuStockDisplay } from '../utils/publicStock'
 import { getAffiliateCode, getAffiliateVisitorKey } from '../utils/affiliate'
 import { MIN_GUEST_ORDER_PASSWORD_LENGTH, saveGuestOrderAuth } from '../utils/guestOrderAuth'
 import ImageCaptcha from '../components/captcha/ImageCaptcha.vue'
@@ -53,6 +54,47 @@ export function useCheckout() {
   const { resolveWholesalePriceAmount } = useProductLabels()
 
   const purchaseItems = computed<PurchaseItem[]>(() => buyNowStore.item ? [buyNowStore.item] : [])
+  const purchaseProduct = ref<any>(null)
+  const activePurchaseSkus = computed<any[]>(() => resolveActiveSkus(purchaseProduct.value))
+  const selectedPurchaseSku = computed(() => {
+    const id = normalizeSkuId(buyNowStore.item?.skuId)
+    return id ? activePurchaseSkus.value.find(sku => normalizeSkuId(sku.id) === id) || null : null
+  })
+  const isPurchaseSkuAvailable = (sku: any) => {
+    if (!sku || sku.stock_status === 'out_of_stock') return false
+    const amount = amountToCents(sku.price_amount)
+    if (amount === null || amount <= 0) return false
+    const available = resolveSkuAvailableStock(purchaseProduct.value, sku)
+    return available === null || available > 0
+  }
+  const skuSelectionValid = computed(() => !!purchaseProduct.value && !purchaseProduct.value.is_sold_out && isPurchaseSkuAvailable(selectedPurchaseSku.value))
+  const skuSelectionRequired = computed(() => !!purchaseProduct.value && activePurchaseSkus.value.length > 0 && !selectedPurchaseSku.value)
+  const skuDisplayText = (sku: any) => buildSkuDisplayText({ skuCode: sku.sku_code, specValues: sku.spec_values, fallback: t('productDetail.skuFallback'), locale: appStore.locale })
+  const skuStockText = (sku: any) => {
+    const display = resolveSkuStockDisplay(purchaseProduct.value, sku)
+    if (display.kind === 'out') return t('productDetail.skuStockOut')
+    if (display.kind === 'remaining') return t('productDetail.skuStockRemaining', { count: display.count })
+    if (display.kind === 'unlimited') return t('productDetail.skuStockUnlimited')
+    if (display.kind === 'low_stock') return t('productDetail.skuStockLow')
+    if (display.kind === 'range') return t('productDetail.skuStockRange', { min: display.min, max: display.max })
+    if (display.kind === 'range_plus') return t('productDetail.skuStockRangePlus', { min: display.min })
+    if (display.kind === 'hidden') return t('productDetail.skuStockHidden')
+    return t('productDetail.skuStockInStock')
+  }
+  const selectPurchaseSku = (sku: any) => {
+    const item = buyNowStore.item
+    if (!item || !purchaseProduct.value || submitting.value || syncingStock.value || !isPurchaseSkuAvailable(sku) || !activePurchaseSkus.value.includes(sku)) return
+    const patch = buildPurchaseSkuSnapshot(item, purchaseProduct.value, sku)
+    const next = { ...item, ...patch }
+    const min = itemPurchaseMin(next)
+    const stock = resolveSkuAvailableStock(purchaseProduct.value, sku)
+    const limit = itemPurchaseLimit(next)
+    const max = Math.min(stock ?? Number.MAX_SAFE_INTEGER, limit ?? Number.MAX_SAFE_INTEGER)
+    next.quantity = Math.max(min, Math.min(item.quantity, max))
+    error.value = ''
+    buyNowStore.setItem(next)
+  }
+
   const totalItems = computed(() => purchaseItems.value.reduce((sum, item) => sum + item.quantity, 0))
   const couponCode = ref('')
   const normalizedCouponCode = computed(() => couponCode.value.trim())
@@ -529,7 +571,7 @@ export function useCheckout() {
   }
 
   const canSubmit = computed(() => {
-    if (syncingStock.value) return false
+    if (syncingStock.value || !skuSelectionValid.value) return false
     if (submitting.value || previewPending.value || previewError.value) return false
     if (purchaseItems.value.length === 0) return false
     if (!manualFormValidation.value.valid) return false
@@ -554,6 +596,9 @@ export function useCheckout() {
   const submitBlockedReason = computed(() => {
     if (syncingStock.value) return t('checkout.stockSyncing')
     if (purchaseItems.value.length === 0) return t('checkout.errors.emptyPurchase')
+    if (!purchaseProduct.value) return t('checkout.productLoadFailed')
+    if (skuSelectionRequired.value) return t('productDetail.skuRequired')
+    if (!skuSelectionValid.value) return t('checkout.stockOut')
     if (!manualFormValidation.value.valid) {
       return manualFormValidation.value.firstError || t('checkout.errors.manualFormInvalid')
     }
@@ -647,27 +692,33 @@ export function useCheckout() {
 
   const debouncedLoadOrderPaymentChannels = debounceAsync(loadOrderPaymentChannels, 250)
 
+  let snapshotRequestId = 0
   const syncPurchaseSnapshot = async () => {
-    if (syncingStock.value) return
+    const requestId = ++snapshotRequestId
     syncingStock.value = true
+    purchaseProduct.value = null
     try {
       const item = buyNowStore.item
       if (item) {
         const patch = await refreshPurchaseSnapshot(item, product => {
-          if (buyNowStore.item?.productId === item.productId && buyNowStore.item?.slug === item.slug) {
+          if (requestId === snapshotRequestId && buyNowStore.item?.productId === item.productId && buyNowStore.item?.slug === item.slug) {
+            purchaseProduct.value = product
             purchaseDetails.value = { description: product.description, content: product.content }
           }
         })
-        if (buyNowStore.item === item) buyNowStore.setItem({ ...item, ...patch })
+        const current = buyNowStore.item
+        if (requestId === snapshotRequestId && current && current.productId === item.productId && current.slug === item.slug && normalizeSkuId(current.skuId) === normalizeSkuId(item.skuId)) {
+          buyNowStore.setItem({ ...current, ...patch })
+        }
       }
     } finally {
-      syncingStock.value = false
+      if (requestId === snapshotRequestId) syncingStock.value = false
     }
   }
 
   const loadPreview = async () => {
     previewLoading.value = false
-    if (syncingStock.value) {
+    if (syncingStock.value || !skuSelectionValid.value) {
       preview.value = null
       orderPaymentChannels.value = []
       previewError.value = ''
@@ -745,7 +796,13 @@ export function useCheckout() {
 
   const debouncedLoadPreview = debounceAsync(loadPreview, 300)
 
+  const retryProduct = async () => {
+    await syncPurchaseSnapshot()
+    debouncedLoadPreview()
+  }
+
   const loadPreviewNow = async () => {
+    snapshotRequestId++
     debouncedLoadPreview.cancel()
     debouncedLoadOrderPaymentChannels.cancel()
     await loadPreview()
@@ -838,6 +895,23 @@ export function useCheckout() {
     { deep: true, flush: 'sync' }
   )
 
+  watch(
+    () => [buyNowStore.item?.productId, buyNowStore.item?.slug],
+    async ([productId, slug], [previousId, previousSlug]) => {
+      if (productId === previousId && slug === previousSlug) return
+      if (!productId || !slug) {
+        snapshotRequestId++
+        purchaseProduct.value = null
+        purchaseDetails.value = {}
+        syncingStock.value = false
+        return
+      }
+      await syncPurchaseSnapshot()
+      debouncedLoadPreview()
+    },
+    { flush: 'sync' }
+  )
+
   watch(walletOnlyPayment, (v) => {
     if (v) useBalance.value = true
   }, { immediate: true })
@@ -891,6 +965,7 @@ export function useCheckout() {
   })
 
   onUnmounted(() => {
+    snapshotRequestId++
     debouncedLoadPreview.cancel()
     debouncedLoadOrderPaymentChannels.cancel()
   })
@@ -1095,6 +1170,7 @@ export function useCheckout() {
     // mode / items
     purchaseItems,
     purchaseDetails,
+    activePurchaseSkus, selectedPurchaseSku, skuSelectionValid, skuSelectionRequired, isPurchaseSkuAvailable, skuDisplayText, skuStockText, selectPurchaseSku, syncingStock, purchaseProduct, retryProduct,
     totalItems,
     purchaseItemKey,
     checkoutItemImage,

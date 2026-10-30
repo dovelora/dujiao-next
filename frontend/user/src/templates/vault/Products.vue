@@ -69,19 +69,12 @@
         </div>
       </section>
     </div>
-
-    <ProductQuickBuy
-      v-if="quickBuyProduct"
-      :product="quickBuyProduct"
-      :visible="quickBuyVisible"
-      @update:visible="quickBuyVisible = $event"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
 import CategoryIntroduction from '../../components/CategoryIntroduction.vue'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, PackageOpen, Search, SearchX, X } from 'lucide-vue-next'
@@ -92,18 +85,13 @@ import { useLocalized } from '../../composables/useProduct'
 import type { PublicCategory } from '../../utils/category'
 import VaultProductCard from './components/VaultProductCard.vue'
 import VaultCategorySidebar from './components/VaultCategorySidebar.vue'
-import ProductQuickBuy from '../../components/ProductQuickBuy.vue'
+import { useDirectPurchase } from '../../composables/useDirectPurchase'
 
 const { t } = useI18n()
 const route = useRoute()
 const { getLocalizedText } = useLocalized()
 
-const quickBuyProduct = ref<any>(null)
-const quickBuyVisible = ref(false)
-const openQuickBuy = (product: any) => {
-  quickBuyProduct.value = product
-  quickBuyVisible.value = true
-}
+const { startPurchase: openQuickBuy } = useDirectPurchase()
 
 const {
   loading,

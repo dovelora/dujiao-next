@@ -1132,6 +1132,7 @@
     }
   },
   "checkout": {
+    "productLoadFailed": "Could not load product details. Please retry.",
     "detailsEmpty": "No additional product details available.",
     "itemsCount": "Items",
     "decreaseQuantity": "Decrease quantity",

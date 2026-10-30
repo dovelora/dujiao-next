@@ -90,13 +90,6 @@
         </main>
       </div>
     </div>
-
-    <ProductQuickBuy
-      v-if="quickBuyProduct"
-      :product="quickBuyProduct"
-      :visible="quickBuyVisible"
-      @update:visible="quickBuyVisible = $event"
-    />
   </div>
 </template>
 
@@ -109,7 +102,7 @@ import { useProductList } from '../composables/useProductList'
 import { usePageSeo } from '../composables/usePageSeo'
 import { useLocalized } from '../composables/useProduct'
 import ProductCard from '../components/ProductCard.vue'
-import ProductQuickBuy from '../components/ProductQuickBuy.vue'
+import { useDirectPurchase } from '../composables/useDirectPurchase'
 import CategorySidebar from '../components/CategorySidebar.vue'
 import PaginationNav from '../components/PaginationNav.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -157,13 +150,8 @@ usePageSeo({
   },
 })
 
-const quickBuyProduct = ref<any>(null)
-const quickBuyVisible = ref(false)
 
-const openQuickBuy = (product: any) => {
-  quickBuyProduct.value = product
-  quickBuyVisible.value = true
-}
+const { startPurchase: openQuickBuy } = useDirectPurchase()
 
 // Detect mobile 2-col grid (< md breakpoint)
 const isMobileGrid = ref(window.innerWidth < 768)

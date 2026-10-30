@@ -132,39 +132,6 @@
             </ul>
           </div>
 
-          <!-- 规格 -->
-          <div v-if="activeSkus.length" class="my-3">
-            <div class="mb-2 text-[13px] font-bold uppercase tracking-[0.04em] text-muted-foreground">{{ t('productDetail.skuTitle') }}</div>
-            <div class="flex flex-wrap gap-2.5">
-              <button
-                v-for="sku in activeSkus"
-                :key="sku.id"
-                type="button"
-                class="flex min-w-[86px] flex-col items-start gap-0.5 rounded-sm border-2 px-4 py-2.5 text-sm font-semibold"
-                :class="[
-                  normalizeSkuId(sku.id) === selectedSkuId ? 'border-primary bg-primary/10 text-primary' : 'border-hairline-strong bg-card text-foreground',
-                  !isSkuPurchasable(sku) ? 'cursor-not-allowed opacity-[0.42]' : '',
-                ]"
-                :disabled="!isSkuPurchasable(sku)"
-                @click="selectedSkuId = normalizeSkuId(sku.id)"
-              >
-                {{ skuDisplayText(sku) }}
-                <span class="text-xs font-semibold" :class="normalizeSkuId(sku.id) === selectedSkuId ? 'text-primary' : 'text-muted-foreground'">{{ skuStockText(sku) }}</span>
-              </button>
-            </div>
-            <p v-if="requiresSKUSelection" class="mt-2 text-[13px] text-warning">{{ t('productDetail.skuRequired') }}</p>
-          </div>
-
-          <!-- 数量 -->
-          <div class="my-3">
-            <div class="mb-2 text-[13px] font-bold uppercase tracking-[0.04em] text-muted-foreground">{{ t('productDetail.quantity') }}</div>
-            <div class="inline-flex items-center overflow-hidden rounded-full border-2 border-hairline-strong">
-              <button type="button" class="grid h-11 w-[42px] place-items-center bg-card text-foreground disabled:opacity-35" :aria-label="t('productDetail.quantity')" :disabled="quantity <= quantityEffectiveMin" @click="quantity = Math.max(quantityEffectiveMin, quantity - 1)"><Minus class="h-[17px] w-[17px]" /></button>
-              <input inputmode="numeric" class="h-11 w-[50px] border-x bg-card text-center font-bold tabular-nums outline-none" :value="quantity" :aria-label="t('productDetail.quantity')" @change="handleQuantityInput($event)" @keydown.enter.prevent="($event.target as HTMLInputElement)?.blur()" />
-              <button type="button" class="grid h-11 w-[42px] place-items-center bg-card text-foreground disabled:opacity-35" :aria-label="t('productDetail.quantity')" :disabled="quantityEffectiveLimit !== null && quantity >= quantityEffectiveLimit" @click="quantity = quantity + 1"><Plus class="h-[17px] w-[17px]" /></button>
-            </div>
-          </div>
-
           <!-- 提示 -->
           <div v-if="cannotPurchaseReason" class="my-3.5 rounded-sm bg-destructive/10 px-3.5 py-2.5 text-sm font-semibold text-destructive">{{ cannotPurchaseReason }}</div>
           <div v-if="purchaseWarning" class="my-3.5 rounded-sm bg-warning/10 px-3.5 py-2.5 text-sm font-semibold text-warning">{{ purchaseWarning }}</div>
@@ -246,7 +213,7 @@
 import { computed, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-  AlertCircle, ArrowLeft, ChevronRight, Minus, Package, Pencil, Plus,
+  AlertCircle, ArrowLeft, ChevronRight, Package, Pencil,
   RotateCw, Tag, TicketCheck, Zap,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -281,17 +248,15 @@ const {
   hasPromotionPrice, getPromotionPriceAmount, getPromotionSaveAmount,
   hasSkuPromotionPrice, getSkuPromotionSaveAmount,
   hasPromotionRules, getPromotionRules,
-  formatPromotionRule, formatWholesaleTier, formatRelatedPostDate, normalizeSkuId,
-  loading, product, relatedPosts, currentImage, selectedSkuId, quantity, purchaseWarning,
-  activeSkus, selectedSku,
+  formatPromotionRule, formatWholesaleTier, formatRelatedPostDate,
+  loading, product, relatedPosts, currentImage, purchaseWarning,
+  selectedSku,
   selectedSkuMemberPrice, hasMemberPrice,
   hasSelectedSkuWholesalePrice, selectedSkuWholesaleFinalIsMember, selectedSkuWholesaleFinalPrice,
   selectedSkuWholesaleRules,
   selectedSkuPromotionPrice, selectedSkuPromotionFinalIsMember, selectedSkuPromotionFinalPrice,
   showSelectedSkuMemberBadge,
-  isSkuPurchasable, skuDisplayText, skuStockText,
-  quantityEffectiveLimit, quantityEffectiveMin, handleQuantityInput,
-  requiresSKUSelection, canPurchase, cannotPurchaseReason,
+  canPurchase, cannotPurchaseReason,
   categoryName, images,
   backToListTo,
   buyNow, loadProduct,

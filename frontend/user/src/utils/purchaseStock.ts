@@ -17,8 +17,6 @@ const normalizeManualStockTotal = (value: unknown) => {
   return Math.max(integerValue, 0)
 }
 
-const normalizeSkuCode = (value: unknown) => String(value || '').trim().toUpperCase()
-
 const normalizeOptionalLimitNumber = (value: unknown) => {
   const numberValue = Number(value)
   if (!Number.isFinite(numberValue)) return undefined
@@ -37,7 +35,7 @@ export const purchaseMinimum = (item: Pick<PurchaseItem, 'minPurchaseQuantity'>)
   return minimum && minimum > 0 ? minimum : 1
 }
 
-const resolveActiveSkus = (product: any) => {
+export const resolveActiveSkus = (product: any) => {
   const rows = Array.isArray(product?.skus) ? product.skus : []
   return rows.filter((sku: any) => Boolean(sku?.is_active))
 }
@@ -46,16 +44,10 @@ const resolveMatchedSku = (item: PurchaseItem, activeSkus: any[]) => {
   const skuId = normalizeSkuId(item.skuId)
   if (skuId > 0) {
     const matchedById = activeSkus.find((sku: any) => normalizeSkuId(sku?.id) === skuId)
-    if (matchedById) return matchedById
+    return matchedById || null
   }
 
-  const skuCode = normalizeSkuCode(item.skuCode)
-  if (skuCode) {
-    const matchedByCode = activeSkus.find((sku: any) => normalizeSkuCode(sku?.sku_code) === skuCode)
-    if (matchedByCode) return matchedByCode
-  }
-
-  if (activeSkus.length === 1) {
+  if (skuId === 0 && activeSkus.length === 1) {
     return activeSkus[0]
   }
 
@@ -76,12 +68,12 @@ const shouldEnforceSkuStock = (product: any, sku: any) => {
 
 export const refreshPurchaseSnapshot = async (
   item: PurchaseItem,
-  onProduct?: (product: { description?: Record<string, string>; content?: Record<string, string> }) => void,
+  onProduct?: (product: any) => void,
 ): Promise<Partial<PurchaseItem>> => {
   try {
     const response = await productAPI.detail(item.slug)
     const product = response.data?.data
-    if (!product) return {}
+    if (!product || Number(product.id) !== item.productId) return {}
     onProduct?.(product)
     const activeSkus = resolveActiveSkus(product)
     if (activeSkus.length === 0) return {}
@@ -89,6 +81,14 @@ export const refreshPurchaseSnapshot = async (
     const matchedSku = resolveMatchedSku(item, activeSkus)
     if (!matchedSku) return {}
 
+    return buildPurchaseSkuSnapshot(item, product, matchedSku)
+
+  } catch {
+    return {}
+  }
+}
+
+export const buildPurchaseSkuSnapshot = (item: PurchaseItem, product: any, matchedSku: any): Partial<PurchaseItem> => {
     const manualStockTotal = normalizeManualStockTotal(matchedSku?.manual_stock_total)
     const manualStockLocked = normalizeStockNumber(matchedSku?.manual_stock_locked)
     const manualStockSold = normalizeStockNumber(matchedSku?.manual_stock_sold)
@@ -99,11 +99,13 @@ export const refreshPurchaseSnapshot = async (
     const stockRangeMax = normalizeStockNumber(matchedSku?.stock_range_max)
 
     return {
+      skuId: normalizeSkuId(matchedSku.id),
       ...resolvePurchasePricingSnapshot(product, matchedSku),
-      skuCode: String(matchedSku?.sku_code || item.skuCode || ''),
+      skuCode: String(matchedSku?.sku_code || ''),
+      priceAmount: String(matchedSku?.price_amount ?? ''),
       skuSpecValues: (matchedSku?.spec_values && typeof matchedSku.spec_values === 'object')
         ? matchedSku.spec_values
-        : item.skuSpecValues,
+        : {},
       skuManualStockTotal: manualStockTotal,
       skuManualStockLocked: manualStockLocked,
       skuManualStockSold: manualStockSold,
@@ -125,7 +127,4 @@ export const refreshPurchaseSnapshot = async (
         ? product.payment_channel_ids.map(Number)
         : undefined,
     }
-  } catch {
-    return {}
-  }
 }

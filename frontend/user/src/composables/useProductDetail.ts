@@ -5,7 +5,7 @@ import { useHead } from '@unhead/vue'
 import { useAppStore } from '../stores/app'
 import { productAPI } from '../api'
 import { getImageUrl } from '../utils/image'
-import { useBuyNowStore } from '../stores/buyNow'
+import { useDirectPurchase } from './useDirectPurchase'
 import { useUserAuthStore } from '../stores/userAuth'
 import { useUserProfileStore } from '../stores/userProfile'
 import { debounceAsync } from '../utils/debounce'
@@ -26,7 +26,7 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
   const router = useRouter()
   const { t } = useI18n()
   const appStore = useAppStore()
-  const buyNowStore = useBuyNowStore()
+  const { startPurchase } = useDirectPurchase()
   const userAuthStore = useUserAuthStore()
   const userProfileStore = useUserProfileStore()
 
@@ -188,12 +188,6 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
     })
   }
 
-  const normalizeStockNumber = (value: unknown) => {
-    const numberValue = Number(value)
-    if (!Number.isFinite(numberValue)) return 0
-    return Math.max(Math.floor(numberValue), 0)
-  }
-
   const normalizeManualStockTotal = (value: unknown) => {
     const numberValue = Number(value)
     if (!Number.isFinite(numberValue)) return 0
@@ -297,28 +291,8 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
   }
 
   const requiresSKUSelection = computed(() => activeSkus.value.length > 1 && !selectedSku.value)
-  const stockBelowMinPurchase = computed(() => {
-    const limit = quantityEffectiveLimit.value
-    if (limit === null) return false
-    return limit < quantityEffectiveMin.value
-  })
-  const canPurchase = computed(() => {
-    if (!product.value) return false
-    if (activeSkus.value.length === 0) return false
-    if (product.value.is_sold_out) return false
-    if (requiresSKUSelection.value) return false
-    if (product.value.stock_status === 'out_of_stock') return false
-    if (selectedSku.value && !isSkuPurchasable(selectedSku.value)) return false
-    if (stockBelowMinPurchase.value) return false
-    return true
-  })
-  const cannotPurchaseReason = computed(() => {
-    if (!product.value) return ''
-    if (requiresSKUSelection.value) return t('productDetail.skuRequired')
-    if (stockBelowMinPurchase.value) return t('productDetail.stockBelowMinPurchase', { count: quantityEffectiveMin.value })
-    if (canPurchase.value) return ''
-    return t('productDetail.stockUnavailable')
-  })
+  const canPurchase = computed(() => Boolean(product.value && !product.value.is_sold_out && product.value.stock_status !== 'out_of_stock' && activeSkus.value.some(isSkuPurchasable)))
+  const cannotPurchaseReason = computed(() => product.value && !canPurchase.value ? t('productDetail.stockUnavailable') : '')
   const categoryName = computed(() => {
     const category = product.value?.category?.name
     return category ? getLocalizedText(category) : ''
@@ -381,68 +355,11 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
       selectedSkuId.value = normalizeSkuId(rows[0]?.id)
       return
     }
-    if (rows.some((sku: any) => normalizeSkuId(sku?.id) === selectedSkuId.value)) {
-      return
-    }
-    const firstAvailable = rows.find((sku: any) => isSkuPurchasable(sku))
-    if (firstAvailable) {
-      selectedSkuId.value = normalizeSkuId(firstAvailable?.id)
-      return
-    }
-    selectedSkuId.value = normalizeSkuId(rows[0]?.id)
+    selectedSkuId.value = 0
   }
 
-  const buildItemPayload = (sku: any) => ({
-    productId: product.value.id,
-    skuId: normalizeSkuId(sku?.id),
-    skuCode: String(sku?.sku_code || ''),
-    skuSpecValues: (sku?.spec_values && typeof sku.spec_values === 'object') ? sku.spec_values : undefined,
-    skuManualStockTotal: normalizeManualStockTotal(sku?.manual_stock_total),
-    skuManualStockLocked: normalizeStockNumber(sku?.manual_stock_locked),
-    skuManualStockSold: normalizeStockNumber(sku?.manual_stock_sold),
-    skuAutoStockAvailable: normalizeStockNumber(sku?.auto_stock_available),
-    skuUpstreamStock: normalizeManualStockTotal(sku?.upstream_stock),
-    skuStockStatus: String(sku?.stock_status || ''),
-    skuStockDisplayMode: String(sku?.stock_display_mode || product.value?.stock_display_mode || ''),
-    skuStockDisplay: String(sku?.stock_display || ''),
-    skuStockRangeMin: normalizeStockNumber(sku?.stock_range_min) || undefined,
-    skuStockRangeMax: normalizeStockNumber(sku?.stock_range_max) || undefined,
-    skuStockQuantityHidden: Boolean(sku?.stock_quantity_hidden || product.value?.stock_quantity_hidden),
-    skuStockEnforced: shouldEnforceSkuStock(sku),
-    slug: product.value.slug,
-    title: product.value.title,
-    priceAmount: String(sku?.price_amount || product.value.price_amount || '0.00'),
-    wholesalePrices: Array.isArray(product.value.wholesale_prices) ? product.value.wholesale_prices : undefined,
-    image: images.value[0],
-    minPurchaseQuantity: normalizeOptionalLimitNumber(product.value.min_purchase_quantity) ?? undefined,
-    maxPurchaseQuantity: normalizeOptionalLimitNumber(product.value.max_purchase_quantity) ?? undefined,
-    fulfillmentType: product.value.fulfillment_type,
-    manualFormSchema: product.value.manual_form_schema || {},
-    paymentChannelIds: Array.isArray(product.value.payment_channel_ids) && product.value.payment_channel_ids.length > 0 ? product.value.payment_channel_ids : undefined,
-    quantity: quantity.value,
-  })
-
   const buyNow = () => {
-    purchaseWarning.value = ''
-    if (!canPurchase.value) return
-    if (!product.value) return
-
-    const sku = selectedSku.value
-    const available = skuAvailableStock(sku)
-    const productLimit = normalizeOptionalLimitNumber(product.value?.max_purchase_quantity)
-    let limit: number | null = productLimit
-    if (available !== null) {
-      limit = limit === null ? available : Math.min(limit, available)
-    }
-    if (limit !== null && quantity.value > limit) {
-      purchaseWarning.value = available !== null && limit === available
-        ? (available > 0 ? t('productDetail.purchaseStockExceeded', { count: available }) : t('productDetail.stockUnavailable'))
-        : t('productDetail.purchaseLimitExceeded', { count: limit })
-      return
-    }
-
-    buyNowStore.setItem(buildItemPayload(sku))
-    router.push('/checkout')
+    if (canPurchase.value && product.value) startPurchase(product.value)
   }
 
   // 移动端购买条价格展示

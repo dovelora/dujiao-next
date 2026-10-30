@@ -26,8 +26,10 @@ const check = (name, passed) => { results.push({name, passed: Boolean(passed)});
 const until = async predicate => { for (let n = 0; n < 100; n++) { if (predicate()) return; await pause(30) } throw new Error('Timed out waiting for checkout state') }
 const channel = {id: 1, name: 'Test payment', provider_type: 'epay', channel_type: 'alipay'}
 let catalogPaymentChannels = [2]
-let failPreview = false, slowQuantity = 0, extraPrice = 0, failCreate = false, createCalls = [], checkout, detail, buyNow, auth
+let failPreview = false, slowQuantity = 0, extraPrice = 0, failCreate = false, createCalls = [], previewCalls = 0, checkout, detail, buyNow, auth
+let fixtureSkus = [{id: 1, is_active: true, price_amount: '15', auto_stock_available: 8, stock_status: 'in_stock'}], failProduct = false
 const preview = async payload => {
+  previewCalls++
   const quantity = payload.items.reduce((sum, item) => sum + item.quantity, 0)
   const total = (quantity * 15 + extraPrice - (payload.coupon_code ? 5 : 0)).toFixed(2)
   await pause(quantity === slowQuantity ? 500 : 20)
@@ -44,7 +46,11 @@ userOrderAPI.preview = guestOrderAPI.preview = preview
 userOrderAPI.getPaymentChannels = async () => response([channel])
 userOrderAPI.createAndPay = payload => create('member', payload)
 guestOrderAPI.createAndPay = payload => create('guest', payload)
-productAPI.detail = async slug => response(slug === 'legacy-member' ? {id: 90002, slug, title: {'zh-CN': 'Legacy member product'}, purchase_type: 'member', payment_channel_ids: catalogPaymentChannels, price_amount: '15', fulfillment_type: 'auto', stock_status: 'in_stock', auto_stock_available: 8, images: [], skus: [{id: 2, is_active: true, price_amount: '15', auto_stock_available: 8, stock_status: 'in_stock'}]} : null)
+productAPI.detail = async slug => {
+  if (failProduct) throw new Error('Product unavailable')
+  if (slug === 'legacy-member') return response({id: 90002, slug, title: {'zh-CN': 'Legacy member product'}, purchase_type: 'member', payment_channel_ids: catalogPaymentChannels, price_amount: '15', fulfillment_type: 'auto', stock_status: 'in_stock', auto_stock_available: 8, images: [], skus: [{id: 2, is_active: true, price_amount: '15', auto_stock_available: 8, stock_status: 'in_stock'}]})
+  return response({id: 90001, slug, fulfillment_type: 'auto', manual_form_schema: buyNow?.item?.manualFormSchema || {}, skus: fixtureSkus})
+}
 walletAPI.account = async () => response({balance: '100'})
 const item = {productId: 90001, skuId: 1, slug: 'local-checkout-fixture', title: {'zh-CN': '测试商品'}, priceAmount: '15', quantity: 2, fulfillmentType: 'auto', skuAutoStockAvailable: 8, skuStockSnapshotAt: '2026-01-01'}
 const router = createRouter({history: createMemoryHistory(), routes: [{path: '/products/:slug', component: {render: () => null}}, {path: '/:pathMatch(.*)*', component: {render: () => null}}]})
@@ -139,12 +145,37 @@ try {
   const invalidSelection = useBuyNowStore(createPinia())
   check('A multi-item persisted selection is rejected', invalidSelection.item === null)
   invalidSelection.$dispose()
-  const staleSelection = {...item, slug: 'legacy-member', skuId: 2, paymentChannelIds: [1]}
+  const staleSelection = {...item, productId: 90002, slug: 'legacy-member', skuId: 2, paymentChannelIds: [1]}
   const refreshed = await refreshPurchaseSnapshot(staleSelection)
   check('Restored selection uses current product payment channels', JSON.stringify(refreshed.paymentChannelIds) === '[2]')
   catalogPaymentChannels = []
   const unrestricted = await refreshPurchaseSnapshot(staleSelection)
   check('Removing product channel limits clears a stale selection restriction', unrestricted.paymentChannelIds === undefined)
+
+  buyNow.clear()
+  fixtureSkus = [
+    {id: 10, is_active: true, sku_code: 'A', spec_values: {size: 'A'}, price_amount: '15', auto_stock_available: 8},
+    {id: 11, is_active: true, sku_code: 'B', spec_values: {size: 'B'}, price_amount: '25', auto_stock_available: 3},
+    {id: 12, is_active: true, sku_code: 'C', price_amount: '5', auto_stock_available: 0, stock_status: 'out_of_stock'},
+  ]
+  const previousPreviewCalls = previewCalls
+  buyNow.setItem({...item, skuId: 0, quantity: 5})
+  await until(() => !checkout.syncingStock.value && checkout.activePurchaseSkus.value.length === 3)
+  await pause(400)
+  check('Multiple SKUs require explicit selection before preview or payment', checkout.skuSelectionRequired.value && !checkout.canSubmit.value && previewCalls === previousPreviewCalls)
+  check('A zero-price SKU cannot be selected', !checkout.isPurchaseSkuAvailable({id: 13, price_amount: '0', auto_stock_available: 1}))
+  checkout.selectPurchaseSku(checkout.activePurchaseSkus.value[2])
+  check('Sold-out SKU cannot be selected', buyNow.item.skuId === 0)
+  checkout.selectPurchaseSku(checkout.activePurchaseSkus.value[1])
+  check('SKU selection updates price, specs and clamps quantity to stock', buyNow.item.skuId === 11 && buyNow.item.skuCode === 'B' && buyNow.item.priceAmount === '25' && buyNow.item.quantity === 3 && buyNow.item.skuSpecValues.size === 'B')
+  check('Changing SKU immediately invalidates preview', !checkout.canSubmit.value)
+  buyNow.clear(); buyNow.setItem({...item, skuId: 999})
+  await until(() => !checkout.syncingStock.value && checkout.activePurchaseSkus.value.length === 3)
+  check('A removed SKU cannot silently select another one', checkout.skuSelectionRequired.value && !checkout.canSubmit.value)
+  failProduct = true; buyNow.clear(); buyNow.setItem({...item, skuId: 1})
+  await until(() => !checkout.syncingStock.value)
+  check('Failed product refresh blocks cached selection and payment', !checkout.purchaseProduct.value && !checkout.canSubmit.value)
+
 
 
 
