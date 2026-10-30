@@ -17,7 +17,7 @@ func TestUnknownUserRoutesReturn404WithExistingSPA(t *testing.T) {
 	if err := RegisterUser(r, newUserFS()); err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{"/not-a-page", "/assets/missing.js", "/me/not-a-section", "/products/item/extra", "/reseller/orders/order/extra"} {
+	for _, path := range []string{"/cart", "/not-a-page", "/assets/missing.js", "/me/not-a-section", "/products/item/extra", "/reseller/orders/order/extra"} {
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
 		if w.Code != http.StatusNotFound || !strings.Contains(w.Header().Get("X-Robots-Tag"), "noindex") || !strings.Contains(w.Body.String(), "user-spa") {

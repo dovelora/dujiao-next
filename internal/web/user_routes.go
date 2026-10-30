@@ -7,7 +7,7 @@ import "strings"
 func isUserRoute(requestPath string) bool {
 	p := strings.ToLower(strings.TrimSuffix(requestPath, "/"))
 	switch p {
-	case "", "/products", "/cart", "/checkout", "/pay",
+	case "", "/products", "/checkout", "/pay",
 		"/me", "/me/profile", "/me/security", "/me/orders", "/me/wallet", "/me/gift-cards", "/me/api", "/me/affiliate", "/me/reseller",
 		"/reseller", "/reseller/apply", "/reseller/domains", "/reseller/site", "/reseller/products", "/reseller/orders", "/reseller/finance", "/reseller/ledger", "/reseller/withdraws",
 		"/guest/orders", "/blog", "/notice", "/about", "/terms", "/privacy",
