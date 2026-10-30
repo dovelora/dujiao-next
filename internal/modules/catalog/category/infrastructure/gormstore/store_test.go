@@ -121,3 +121,24 @@ func TestCategoryStoreRestoreRevivesSoftDeletedSlug(t *testing.T) {
 		t.Fatalf("expected exactly 1 visible row for slug after restore, got %d", count)
 	}
 }
+
+func TestCategoryDescriptionMigrationPreservesExistingCategory(t *testing.T) {
+	store := setupCategoryStoreTest(t)
+	original := &categorydomain.Category{Slug: "existing-category", NameJSON: jsonmap.JSON{"zh-CN": "现有分类"}}
+	if err := store.Create(original); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.Migrator().DropColumn(&categorydomain.Category{}, "description_json"); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.AutoMigrate(&categorydomain.Category{}); err != nil {
+		t.Fatal(err)
+	}
+	var restored categorydomain.Category
+	if err := store.db.First(&restored, original.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if restored.Slug != original.Slug || restored.NameJSON["zh-CN"] != "现有分类" || len(restored.DescriptionJSON) != 0 {
+		t.Fatalf("migration changed existing data: %+v", restored)
+	}
+}

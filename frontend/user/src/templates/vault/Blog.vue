@@ -3,6 +3,7 @@
     <header class="mt-6 flex flex-col items-start gap-2">
       <h1 class="text-[34px] font-extrabold">{{ t('nav.blog') }}</h1>
       <p class="text-muted-foreground">{{ t('blog.subtitle') }}</p>
+        <RouterLink to="/products" class="mt-3 inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline">{{ t('blog.browseProducts') }}</RouterLink>
     </header>
 
     <div class="relative my-5 max-w-[520px] sm:my-7">

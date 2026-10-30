@@ -143,6 +143,7 @@
     }
   },
   "products": {
+    "purchaseGuides": "购买前先看指南",
     "subtitle": "浏览我们的精选商品",
     "priceAria": "价格 {price}",
     "promotionPriceAria": "促销价 {price}",
@@ -191,6 +192,7 @@
     "quickBuy": "购买"
   },
   "blog": {
+    "browseProducts": "按分类浏览商品",
     "subtitle": "最新文章和动态",
     "readMore": "阅读更多",
     "empty": "暂无文章",

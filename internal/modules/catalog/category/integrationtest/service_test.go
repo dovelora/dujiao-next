@@ -2,6 +2,7 @@ package categoryintegrationtest
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -175,5 +176,43 @@ func TestCategoryServiceListSortOrderDescending(t *testing.T) {
 	}
 	if rows[0].Slug != "high" || rows[1].Slug != "low" {
 		t.Fatalf("expected high sort_order first, got %s then %s", rows[0].Slug, rows[1].Slug)
+	}
+}
+
+func TestCategoryDescriptionPersistsAndCanBeCleared(t *testing.T) {
+	svc, db := newCategoryServiceForTest(t)
+	category, err := svc.Create(categoryapp.UpsertInput{Slug: "guide-category", NameJSON: map[string]interface{}{"zh-CN": "分类"}, DescriptionJSON: map[string]interface{}{"zh-CN": "先阅读使用指南"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var persisted categorydomain.Category
+	if err := db.First(&persisted, category.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if persisted.DescriptionJSON["zh-CN"] != "先阅读使用指南" {
+		t.Fatalf("description was not saved: %+v", persisted)
+	}
+	_, err = svc.Update(fmt.Sprint(category.ID), categoryapp.UpsertInput{Slug: category.Slug, NameJSON: map[string]interface{}{"zh-CN": "分类"}, DescriptionJSON: map[string]interface{}{"zh-CN": ""}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.First(&persisted, category.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if persisted.DescriptionJSON["zh-CN"] != "" {
+		t.Fatal("description could not be cleared")
+	}
+	if persisted.Slug != "guide-category" {
+		t.Fatal("slug changed")
+	}
+}
+
+func TestCategoryDescriptionRejectsNonTextAndOversizedValues(t *testing.T) {
+	svc, _ := newCategoryServiceForTest(t)
+	for _, value := range []interface{}{42, strings.Repeat("中", 4001)} {
+		_, err := svc.Create(categoryapp.UpsertInput{Slug: "invalid-description", NameJSON: map[string]interface{}{"zh-CN": "分类"}, DescriptionJSON: map[string]interface{}{"zh-CN": value}})
+		if err != categoryapp.ErrDescriptionInvalid {
+			t.Fatalf("expected description error, got %v", err)
+		}
 	}
 }

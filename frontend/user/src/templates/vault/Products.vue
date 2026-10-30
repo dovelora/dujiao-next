@@ -7,6 +7,8 @@
     </nav>
     <h1 class="mb-3.5 break-words text-3xl font-extrabold">{{ pageTitle }}</h1>
 
+    <CategoryIntroduction :description="categoryDescription" />
+
     <div class="catalog-search">
       <!-- 搜索框 -->
       <div class="relative">
@@ -78,6 +80,7 @@
 </template>
 
 <script setup lang="ts">
+import CategoryIntroduction from '../../components/CategoryIntroduction.vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -150,7 +153,9 @@ const resetFilters = () => {
   selectCategory(null)
 }
 
+const categoryDescription = computed(() => getLocalizedText(categoryMap.value.get(selectedCategory.value || 0)?.description))
 usePageSeo({
+  description: () => categoryDescription.value,
   canonicalPath: () => route.path,
   title: () => pageTitle.value,
 })

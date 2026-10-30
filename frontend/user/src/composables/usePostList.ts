@@ -1,5 +1,5 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '../stores/app'
 import { postAPI } from '../api'
 import { debounceAsync } from '../utils/debounce'
@@ -15,6 +15,7 @@ export function usePostList(
   seo: { title: () => string; canonicalPath: string },
 ) {
   const router = useRouter()
+  const route = useRoute()
   const appStore = useAppStore()
 
   usePageSeo({
@@ -24,11 +25,17 @@ export function usePostList(
 
   const loading = ref(true)
   const posts = ref<any[]>([])
-  const currentPage = ref(1)
+  const readPage = () => {
+    const value = typeof route.query.page === 'string' ? Number(route.query.page) : 1
+    return Number.isSafeInteger(value) && value > 0 && value <= 100000 ? value : 1
+  }
+  const readSearch = () => typeof route.query.q === 'string' ? route.query.q.trim() : ''
+  const currentPage = ref(readPage())
   const pageSize = ref(12)
   const total = ref(0)
   const totalPages = ref(0)
-  const searchKeyword = ref('')
+  const searchKeyword = ref(readSearch())
+  let loadVersion = 0
 
   const getLocalizedText = (jsonData: any) => {
     if (!jsonData) return ''
@@ -47,6 +54,7 @@ export function usePostList(
   }
 
   const loadPosts = async () => {
+    const version = ++loadVersion
     loading.value = true
     try {
       const params: Record<string, any> = {
@@ -59,6 +67,7 @@ export function usePostList(
         params.search = keyword
       }
       const response = await postAPI.list(params)
+      if (version !== loadVersion) return
       posts.value = response.data.data || []
       if (response.data.pagination) {
         total.value = response.data.pagination.total || 0
@@ -67,11 +76,19 @@ export function usePostList(
     } catch (error) {
       console.error('Failed to load posts:', error)
     } finally {
-      loading.value = false
+      if (version === loadVersion) loading.value = false
     }
   }
 
-  const debouncedLoadPosts = debounceAsync(loadPosts, 300)
+  const updateQuery = async (page: number, keyword: string) => {
+    const query = { ...route.query }
+    if (page > 1) query.page = String(page)
+    else delete query.page
+    if (keyword) query.q = keyword
+    else delete query.q
+    await router.replace({ query })
+  }
+  const debouncedSearch = debounceAsync(() => updateQuery(1, searchKeyword.value.trim()), 300)
 
   const goToPost = (slug: string) => {
     router.push(`/blog/${slug}`)
@@ -79,14 +96,18 @@ export function usePostList(
 
   const changePage = (page: number) => {
     if (page < 1 || page > totalPages.value) return
-    currentPage.value = page
-    debouncedLoadPosts()
+    void updateQuery(page, searchKeyword.value.trim())
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   watch(searchKeyword, () => {
-    currentPage.value = 1
-    debouncedLoadPosts()
+    if (searchKeyword.value.trim() !== readSearch()) void debouncedSearch()
+  })
+
+  watch(() => [route.query.page, route.query.q], () => {
+    currentPage.value = readPage()
+    searchKeyword.value = readSearch()
+    void loadPosts()
   })
 
   onMounted(() => {
@@ -94,7 +115,8 @@ export function usePostList(
   })
 
   onUnmounted(() => {
-    debouncedLoadPosts.cancel()
+    loadVersion++
+    debouncedSearch.cancel()
   })
 
   return {

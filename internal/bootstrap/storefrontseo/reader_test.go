@@ -34,7 +34,7 @@ func (s *catalogStub) PublicSnapshot(category, slug string, page, pageSize int) 
 type categoryStub struct{}
 
 func (categoryStub) ListActive() ([]categorydomain.Category, error) {
-	return []categorydomain.Category{{ID: 1, Slug: "category", NameJSON: jsonmap.JSON{"zh-CN": "商品分类"}}}, nil
+	return []categorydomain.Category{{ID: 1, Slug: "category", NameJSON: jsonmap.JSON{"zh-CN": "商品分类"}, DescriptionJSON: jsonmap.JSON{"zh-CN": "分类购买介绍"}}}, nil
 }
 
 type settingsStub struct{}
@@ -48,7 +48,7 @@ func (settingsStub) GetByKey(string) (jsonmap.JSON, error) {
 }
 func TestReaderUsesPublicCatalogAndTrustedOrigin(t *testing.T) {
 	catalog := &catalogStub{}
-	reader := New(catalog, categoryStub{}, settingsStub{})
+	reader := New(catalog, categoryStub{}, settingsStub{}, nil)
 	page, err := reader.ReadPage(httptest.NewRequest("GET", "https://shop.example/products/item", nil))
 	if err != nil {
 		t.Fatal(err)
@@ -63,7 +63,7 @@ func TestReaderUsesPublicCatalogAndTrustedOrigin(t *testing.T) {
 }
 func TestReaderMissingAndFailingCatalog(t *testing.T) {
 	for _, problem := range []error{productcontract.ErrNotFound, errors.New("database unavailable")} {
-		reader := New(&catalogStub{err: problem}, categoryStub{}, settingsStub{})
+		reader := New(&catalogStub{err: problem}, categoryStub{}, settingsStub{}, nil)
 		page, err := reader.ReadPage(httptest.NewRequest("GET", "https://shop.example/products/missing", nil))
 		if errors.Is(problem, productcontract.ErrNotFound) {
 			if err != nil || page.Status != 404 || !page.NoIndex {
@@ -76,7 +76,7 @@ func TestReaderMissingAndFailingCatalog(t *testing.T) {
 }
 func TestReaderMissingCategoryAndInvalidPagination(t *testing.T) {
 	catalog := &catalogStub{}
-	reader := New(catalog, categoryStub{}, settingsStub{})
+	reader := New(catalog, categoryStub{}, settingsStub{}, nil)
 	for _, path := range []string{"/categories/missing", "/products?page=-1", "/products?page=9999999999999999999999"} {
 		page, err := reader.ReadPage(httptest.NewRequest("GET", "https://shop.example"+path, nil))
 		if err != nil || page.Status != 404 {
@@ -93,7 +93,7 @@ func TestReaderMissingCategoryAndInvalidPagination(t *testing.T) {
 
 func TestReaderSearchAndTrackingParameters(t *testing.T) {
 	catalog := &catalogStub{}
-	reader := New(catalog, categoryStub{}, settingsStub{})
+	reader := New(catalog, categoryStub{}, settingsStub{}, nil)
 	page, err := reader.ReadPage(httptest.NewRequest("GET", "https://shop.example/products?q=search", nil))
 	if err != nil || page != nil || catalog.calls != 0 {
 		t.Fatal("search must not render an unrelated catalog")
@@ -117,7 +117,7 @@ func TestImageURLMatchesStorefrontRelativePaths(t *testing.T) {
 }
 
 func TestProductIgnoresPaginationQuery(t *testing.T) {
-	reader := New(&catalogStub{}, categoryStub{}, settingsStub{})
+	reader := New(&catalogStub{}, categoryStub{}, settingsStub{}, nil)
 	page, err := reader.ReadPage(httptest.NewRequest("GET", "https://shop.example/products/item?page=2", nil))
 	if err != nil || page.Status == 404 || page.Canonical != "https://shop.example/products/item" {
 		t.Fatalf("product pagination polluted canonical or status: %+v %v", page, err)
@@ -125,9 +125,17 @@ func TestProductIgnoresPaginationQuery(t *testing.T) {
 }
 
 func TestProductSearchQueryCannotBypassNotFound(t *testing.T) {
-	reader := New(&catalogStub{err: productcontract.ErrNotFound}, categoryStub{}, settingsStub{})
+	reader := New(&catalogStub{err: productcontract.ErrNotFound}, categoryStub{}, settingsStub{}, nil)
 	page, err := reader.ReadPage(httptest.NewRequest("GET", "https://shop.example/products/missing?q=anything", nil))
 	if err != nil || page == nil || page.Status != 404 {
 		t.Fatalf("detail query bypassed not found: page=%+v err=%v", page, err)
+	}
+}
+
+func TestCategoryPageUsesItsOwnIntroduction(t *testing.T) {
+	reader := New(&catalogStub{}, categoryStub{}, settingsStub{}, nil)
+	page, err := reader.ReadPage(httptest.NewRequest("GET", "https://shop.example/categories/category", nil))
+	if err != nil || page == nil || page.Description != "分类购买介绍" {
+		t.Fatalf("missing category introduction: %+v %v", page, err)
 	}
 }

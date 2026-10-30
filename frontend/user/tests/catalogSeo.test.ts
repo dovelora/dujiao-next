@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { catalogCanonicalPath } from '../src/utils/catalogSeo.ts'
 
 test('catalog pagination has its own canonical without tracking or search parameters', () => {
-  for (const path of ['/', '/products', '/categories/example']) {
+  for (const path of ['/', '/products', '/categories/example', '/blog']) {
     assert.equal(catalogCanonicalPath(path, { page: '2', utm_source: 'test', q: 'search' }), `${path}?page=2`)
     for (const page of ['1', '0', '-1', '1.5', 'bad', '99999999999999999999', ['2', '3']]) {
       assert.equal(catalogCanonicalPath(path, { page }), path)

@@ -9,6 +9,7 @@
           class="text-muted-foreground max-w-2xl mx-auto text-lg leading-relaxed border-b pb-8">
           {{ t('blog.subtitle') }}
         </p>
+        <RouterLink to="/products" class="mt-3 inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline">{{ t('blog.browseProducts') }}</RouterLink>
       </div>
 
       <!-- Search Box -->

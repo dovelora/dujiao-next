@@ -220,6 +220,12 @@ func RegisterUser(r *gin.Engine, fsys fs.FS, readers ...PageReader) error {
 			serveAsset(c, fileServer, fp)
 			return
 		}
+		if !isUserRoute(c.Request.URL.Path) {
+			c.Header("Cache-Control", indexCacheControl)
+			c.Header("X-Robots-Tag", "noindex, follow")
+			c.Data(http.StatusNotFound, "text/html; charset=utf-8", indexCached)
+			return
+		}
 		serveIndex(c, indexCached)
 	})
 	return nil

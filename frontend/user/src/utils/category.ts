@@ -2,6 +2,7 @@ export interface PublicCategory {
   id: number
   slug?: string
   name?: unknown
+  description?: Record<string, string>
   icon?: string | null
   parent_id?: number | null
 }

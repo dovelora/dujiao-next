@@ -12,15 +12,19 @@ import (
 
 func TestCategoryRespOmitsSensitiveFields(t *testing.T) {
 	cat := &categorydomain.Category{
-		ID:        1,
-		ParentID:  0,
-		Slug:      "games",
-		NameJSON:  jsonmap.JSON{"zh-CN": "游戏"},
-		Icon:      "/icons/game.png",
-		SortOrder: 10,
+		ID:              1,
+		ParentID:        0,
+		Slug:            "games",
+		NameJSON:        jsonmap.JSON{"zh-CN": "游戏"},
+		DescriptionJSON: jsonmap.JSON{"zh-CN": "分类介绍"},
+		Icon:            "/icons/game.png",
+		SortOrder:       10,
 	}
 
 	resp := New(cat)
+	if resp.Description["zh-CN"] != "分类介绍" {
+		t.Fatal("description should be public")
+	}
 	data, _ := json.Marshal(resp)
 	jsonStr := string(data)
 

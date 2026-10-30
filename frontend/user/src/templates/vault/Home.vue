@@ -1,5 +1,10 @@
 <template>
   <div class="catalog-page">
+    <section v-if="route.name === 'category-products' || route.name === 'products'" class="mx-auto w-full max-w-[1180px] px-4 pt-6 sm:px-6">
+      <h1 class="mb-3 text-3xl font-semibold">{{ seoCategoryName || t('nav.products') }}</h1>
+      <CategoryIntroduction :description="categoryDescription" />
+    </section>
+
     <!-- ==================== 列表模式 ==================== -->
     <template v-if="isListMode">
       <section class="mx-auto w-full max-w-[1180px] px-4 pb-6 sm:px-6">
@@ -164,6 +169,7 @@
 </template>
 
 <script setup lang="ts">
+import CategoryIntroduction from '../../components/CategoryIntroduction.vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -311,7 +317,9 @@ const seoCategoryName = computed(() => {
   const cat = listCategoryMap.value.get(selectedCategory.value)
   return cat ? catName(cat) : ''
 })
+const categoryDescription = computed(() => getLocalizedText(listCategoryMap.value.get(selectedCategory.value || 0)?.description))
 usePageSeo({
+  description: () => categoryDescription.value,
   canonicalPath: () => route.path,
   title: () => {
     if (route.name === 'category-products') return seoCategoryName.value || t('nav.products')

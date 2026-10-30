@@ -1,6 +1,11 @@
 <template>
   <div class="home-page min-h-screen bg-background text-foreground">
 
+    <section v-if="route.name === 'category-products' || route.name === 'products'" class="mx-auto w-full max-w-[1180px] px-4 pt-24 sm:px-6">
+      <h1 class="mb-3 text-3xl font-bold">{{ seoCategoryName || t('nav.products') }}</h1>
+      <CategoryIntroduction :description="categoryDescription" />
+    </section>
+
     <!-- ==================== LIST MODE ==================== -->
     <template v-if="templateMode === 'list'">
       <!-- Hero Banner (shared with card mode) -->
@@ -377,6 +382,7 @@
 </template>
 
 <script setup lang="ts">
+import CategoryIntroduction from '../components/CategoryIntroduction.vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -485,7 +491,9 @@ const seoCategoryName = computed(() => {
   const cat = listCategoryMap.value.get(listSelectedCategory.value)
   return cat ? getLocalizedText(cat.name) : ''
 })
+const categoryDescription = computed(() => getLocalizedText(listCategoryMap.value.get(listSelectedCategory.value || 0)?.description))
 usePageSeo({
+  description: () => categoryDescription.value,
   canonicalPath: () => route.path,
   title: () => {
     if (route.name === 'category-products') {

@@ -108,9 +108,9 @@ type urlSet struct {
 }
 
 func (s *Service) collectURLs(ctx context.Context, baseURL string) ([]domain.URL, error) {
-	now := time.Now().UTC().Format("2006-01-02")
 	entries := make([]domain.URL, 0, 64)
 
+	// 无可靠修改时间的页面省略 lastmod，不能用生成、创建或发布时间代替。
 	// 1. 静态页面
 	staticPages := []struct {
 		Path       string
@@ -128,7 +128,6 @@ func (s *Service) collectURLs(ctx context.Context, baseURL string) ([]domain.URL
 	for _, p := range staticPages {
 		entries = append(entries, domain.URL{
 			Location:        baseURL + p.Path,
-			LastModified:    now,
 			ChangeFrequency: p.ChangeFreq,
 			Priority:        p.Priority,
 		})
@@ -142,7 +141,6 @@ func (s *Service) collectURLs(ctx context.Context, baseURL string) ([]domain.URL
 	for _, cat := range categories {
 		entries = append(entries, domain.URL{
 			Location:        baseURL + "/categories/" + url.PathEscape(cat.Slug),
-			LastModified:    cat.CreatedAt.UTC().Format("2006-01-02"),
 			ChangeFrequency: "weekly",
 			Priority:        "0.7",
 		})
@@ -154,9 +152,13 @@ func (s *Service) collectURLs(ctx context.Context, baseURL string) ([]domain.URL
 		return nil, fmt.Errorf("sitemap: list products: %w", err)
 	}
 	for _, p := range products {
+		lastmod := ""
+		if !p.UpdatedAt.IsZero() {
+			lastmod = p.UpdatedAt.UTC().Format("2006-01-02")
+		}
 		entries = append(entries, domain.URL{
 			Location:        baseURL + "/products/" + url.PathEscape(p.Slug),
-			LastModified:    p.UpdatedAt.UTC().Format("2006-01-02"),
+			LastModified:    lastmod,
 			ChangeFrequency: "daily",
 			Priority:        "0.8",
 		})
@@ -168,14 +170,9 @@ func (s *Service) collectURLs(ctx context.Context, baseURL string) ([]domain.URL
 		return nil, fmt.Errorf("sitemap: list posts: %w", err)
 	}
 	for _, post := range posts {
-		lastmod := post.CreatedAt
-		if post.PublishedAt != nil {
-			lastmod = *post.PublishedAt
-		}
 		// blog 与 notice 共用 /blog/:slug 详情页（user 前台 Notice.vue 跳转到 /blog/{slug}）
 		entries = append(entries, domain.URL{
 			Location:        baseURL + "/blog/" + url.PathEscape(post.Slug),
-			LastModified:    lastmod.UTC().Format("2006-01-02"),
 			ChangeFrequency: "monthly",
 			Priority:        "0.5",
 		})

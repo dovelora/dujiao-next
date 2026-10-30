@@ -7,22 +7,24 @@ import (
 
 // Category 是公开分类响应；不暴露数据库软删除和内部时间字段。
 type Category struct {
-	ID        uint         `json:"id"`
-	ParentID  uint         `json:"parent_id"`
-	Slug      string       `json:"slug"`
-	Name      jsonmap.JSON `json:"name"`
-	Icon      string       `json:"icon,omitempty"`
-	SortOrder int          `json:"sort_order"`
+	ID          uint         `json:"id"`
+	ParentID    uint         `json:"parent_id"`
+	Slug        string       `json:"slug"`
+	Name        jsonmap.JSON `json:"name"`
+	Description jsonmap.JSON `json:"description"`
+	Icon        string       `json:"icon,omitempty"`
+	SortOrder   int          `json:"sort_order"`
 }
 
 func New(category *categorydomain.Category) Category {
 	return Category{
-		ID:        category.ID,
-		ParentID:  category.ParentID,
-		Slug:      category.Slug,
-		Name:      category.NameJSON,
-		Icon:      category.Icon,
-		SortOrder: category.SortOrder,
+		ID:          category.ID,
+		ParentID:    category.ParentID,
+		Slug:        category.Slug,
+		Name:        category.NameJSON,
+		Description: category.DescriptionJSON,
+		Icon:        category.Icon,
+		SortOrder:   category.SortOrder,
 	}
 }
 
