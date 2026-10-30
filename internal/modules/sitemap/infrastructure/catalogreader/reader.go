@@ -30,7 +30,7 @@ func (r *Reader) ListActiveCategories() ([]contract.Category, error) {
 	}
 	result := make([]contract.Category, 0, len(rows))
 	for _, row := range rows {
-		result = append(result, contract.Category{Slug: row.Slug, CreatedAt: row.CreatedAt})
+		result = append(result, contract.Category{Slug: row.Slug})
 	}
 	return result, nil
 }

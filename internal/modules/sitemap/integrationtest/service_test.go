@@ -68,9 +68,7 @@ func newSitemapServiceForTest(t *testing.T, reader sitemapcontract.PublishedPost
 			result := make([]sitemapcontract.PublishedPost, 0, len(posts))
 			for _, post := range posts {
 				result = append(result, sitemapcontract.PublishedPost{
-					Slug:        post.Slug,
-					CreatedAt:   post.CreatedAt,
-					PublishedAt: post.PublishedAt,
+					Slug: post.Slug,
 				})
 			}
 			return result, nil
