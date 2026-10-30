@@ -3,6 +3,7 @@ package categoryapp
 import (
 	"errors"
 	"strconv"
+	"unicode/utf8"
 
 	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
@@ -10,10 +11,11 @@ import (
 )
 
 var (
-	ErrNotFound      = errors.New("category not found")
-	ErrSlugExists    = errors.New("category slug exists")
-	ErrParentInvalid = errors.New("category parent invalid")
-	ErrInUse         = errors.New("category in use")
+	ErrNotFound           = errors.New("category not found")
+	ErrSlugExists         = errors.New("category slug exists")
+	ErrParentInvalid      = errors.New("category parent invalid")
+	ErrDescriptionInvalid = errors.New("category description must be text with at most 4000 characters per language")
+	ErrInUse              = errors.New("category in use")
 )
 
 // Service 承载分类查询、创建、更新、启停和删除用例。
@@ -27,11 +29,12 @@ func NewService(repository categorycontract.Repository) *Service {
 
 // UpsertInput 是创建与更新分类的应用层输入。
 type UpsertInput struct {
-	ParentID  uint
-	Slug      string
-	NameJSON  map[string]interface{}
-	Icon      string
-	SortOrder int
+	ParentID        uint
+	Slug            string
+	NameJSON        map[string]interface{}
+	DescriptionJSON map[string]interface{}
+	Icon            string
+	SortOrder       int
 }
 
 func (service *Service) List() ([]categorydomain.Category, error) {
@@ -61,6 +64,9 @@ func (service *Service) SetActive(id string, active bool) (*categorydomain.Categ
 }
 
 func (service *Service) Create(input UpsertInput) (*categorydomain.Category, error) {
+	if err := validateDescription(input.DescriptionJSON); err != nil {
+		return nil, err
+	}
 	if err := service.validateParent(nil, input.ParentID); err != nil {
 		return nil, err
 	}
@@ -72,12 +78,13 @@ func (service *Service) Create(input UpsertInput) (*categorydomain.Category, err
 		return nil, ErrSlugExists
 	}
 	category := categorydomain.Category{
-		ParentID:  input.ParentID,
-		Slug:      input.Slug,
-		NameJSON:  jsonmap.JSON(input.NameJSON),
-		Icon:      input.Icon,
-		SortOrder: input.SortOrder,
-		IsActive:  true,
+		ParentID:        input.ParentID,
+		Slug:            input.Slug,
+		NameJSON:        jsonmap.JSON(input.NameJSON),
+		DescriptionJSON: jsonmap.JSON(input.DescriptionJSON),
+		Icon:            input.Icon,
+		SortOrder:       input.SortOrder,
+		IsActive:        true,
 	}
 	if err := service.repository.Create(&category); err != nil {
 		return nil, err
@@ -86,6 +93,9 @@ func (service *Service) Create(input UpsertInput) (*categorydomain.Category, err
 }
 
 func (service *Service) Update(id string, input UpsertInput) (*categorydomain.Category, error) {
+	if err := validateDescription(input.DescriptionJSON); err != nil {
+		return nil, err
+	}
 	category, err := service.repository.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -106,6 +116,7 @@ func (service *Service) Update(id string, input UpsertInput) (*categorydomain.Ca
 	category.ParentID = input.ParentID
 	category.Slug = input.Slug
 	category.NameJSON = jsonmap.JSON(input.NameJSON)
+	category.DescriptionJSON = jsonmap.JSON(input.DescriptionJSON)
 	category.Icon = input.Icon
 	category.SortOrder = input.SortOrder
 	if err := service.repository.Update(category); err != nil {
@@ -160,6 +171,16 @@ func (service *Service) validateParent(category *categorydomain.Category, parent
 		}
 		if childCount > 0 {
 			return ErrParentInvalid
+		}
+	}
+	return nil
+}
+
+func validateDescription(description map[string]interface{}) error {
+	for _, value := range description {
+		text, ok := value.(string)
+		if !ok || utf8.RuneCountInString(text) > 4000 {
+			return ErrDescriptionInvalid
 		}
 	}
 	return nil

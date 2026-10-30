@@ -1,5 +1,5 @@
 export function isCatalogPath(path: string): boolean {
-  return path === '/' || path === '/products' || path.startsWith('/categories/')
+  return path === '/' || path === '/products' || path === '/blog' || path.startsWith('/categories/')
 }
 
 export function catalogCanonicalPath(path: string, query: Record<string, unknown>): string {

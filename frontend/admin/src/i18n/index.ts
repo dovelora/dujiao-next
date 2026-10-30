@@ -1802,6 +1802,8 @@ const messages = {
         form: {
           name: '分类名称（{lang}）',
           namePlaceholder: '请输入分类名称',
+          description: '分类介绍（{lang}）',
+          descriptionPlaceholder: '说明本分类的用途和选择要点，留空则不显示',
           nameRequired: '必须填写中文名称',
           slug: 'Slug',
           slugPlaceholder: 'example-category',
@@ -6362,6 +6364,8 @@ const messages = {
         form: {
           name: '分類名稱（{lang}）',
           namePlaceholder: '請輸入分類名稱',
+          description: '分類介紹（{lang}）',
+          descriptionPlaceholder: '說明本分類的用途和選擇重點，留空則不顯示',
           nameRequired: '必須填寫中文名稱',
           slug: 'Slug',
           slugPlaceholder: 'example-category',
@@ -10922,6 +10926,8 @@ const messages = {
         form: {
           name: 'Category name ({lang})',
           namePlaceholder: 'Enter category name',
+          description: 'Category introduction ({lang})',
+          descriptionPlaceholder: 'Describe this category and what to consider. Leave blank to hide.',
           nameRequired: 'Chinese name is required',
           slug: 'Slug',
           slugPlaceholder: 'example-category',

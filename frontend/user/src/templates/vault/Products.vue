@@ -7,6 +7,8 @@
     </nav>
     <h1 class="mb-3.5 break-words text-3xl font-extrabold">{{ pageTitle }}</h1>
 
+    <CategoryIntroduction :description="categoryDescription" />
+
     <div class="grid items-start gap-7 py-1.5 pb-9 lg:grid-cols-[248px_1fr]">
       <!-- 筛选侧栏：桌面竖排 + 移动端横向 chips -->
       <div class="grid min-w-0 gap-3 lg:sticky lg:top-[88px] lg:gap-5">
@@ -80,6 +82,7 @@
 </template>
 
 <script setup lang="ts">
+import CategoryIntroduction from '../../components/CategoryIntroduction.vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -152,7 +155,9 @@ const resetFilters = () => {
   selectCategory(null)
 }
 
+const categoryDescription = computed(() => getLocalizedText(categoryMap.value.get(selectedCategory.value || 0)?.description))
 usePageSeo({
+  description: () => categoryDescription.value,
   canonicalPath: () => route.path,
   title: () => pageTitle.value,
 })

@@ -47,11 +47,12 @@ func (h *AdminCategoryHandler) GetAdminCategories(c *gin.Context) {
 
 // CreateCategoryRequest 创建分类请求
 type CreateCategoryRequest struct {
-	ParentID  uint                   `json:"parent_id"`
-	Slug      string                 `json:"slug" binding:"required"`
-	NameJSON  map[string]interface{} `json:"name" binding:"required"`
-	Icon      string                 `json:"icon"`
-	SortOrder int                    `json:"sort_order"`
+	ParentID        uint                   `json:"parent_id"`
+	Slug            string                 `json:"slug" binding:"required"`
+	NameJSON        map[string]interface{} `json:"name" binding:"required"`
+	DescriptionJSON map[string]interface{} `json:"description"`
+	Icon            string                 `json:"icon"`
+	SortOrder       int                    `json:"sort_order"`
 }
 
 // CreateCategory 创建分类
@@ -63,13 +64,18 @@ func (h *AdminCategoryHandler) CreateCategory(c *gin.Context) {
 	}
 
 	category, err := h.service.Create(categoryapp.UpsertInput{
-		ParentID:  req.ParentID,
-		Slug:      req.Slug,
-		NameJSON:  req.NameJSON,
-		Icon:      req.Icon,
-		SortOrder: req.SortOrder,
+		ParentID:        req.ParentID,
+		Slug:            req.Slug,
+		NameJSON:        req.NameJSON,
+		DescriptionJSON: req.DescriptionJSON,
+		Icon:            req.Icon,
+		SortOrder:       req.SortOrder,
 	})
 	if err != nil {
+		if errors.Is(err, categoryapp.ErrDescriptionInvalid) {
+			ginutil.RespondError(c, response.CodeBadRequest, "error.category_description_invalid", nil)
+			return
+		}
 		if errors.Is(err, categoryapp.ErrSlugExists) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.slug_exists", nil)
 			return
@@ -96,15 +102,20 @@ func (h *AdminCategoryHandler) UpdateCategory(c *gin.Context) {
 	}
 
 	category, err := h.service.Update(id, categoryapp.UpsertInput{
-		ParentID:  req.ParentID,
-		Slug:      req.Slug,
-		NameJSON:  req.NameJSON,
-		Icon:      req.Icon,
-		SortOrder: req.SortOrder,
+		ParentID:        req.ParentID,
+		Slug:            req.Slug,
+		NameJSON:        req.NameJSON,
+		DescriptionJSON: req.DescriptionJSON,
+		Icon:            req.Icon,
+		SortOrder:       req.SortOrder,
 	})
 	if err != nil {
 		if errors.Is(err, categoryapp.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.category_not_found", nil)
+			return
+		}
+		if errors.Is(err, categoryapp.ErrDescriptionInvalid) {
+			ginutil.RespondError(c, response.CodeBadRequest, "error.category_description_invalid", nil)
 			return
 		}
 		if errors.Is(err, categoryapp.ErrSlugExists) {
