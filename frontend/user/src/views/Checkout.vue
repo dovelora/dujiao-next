@@ -11,8 +11,10 @@
         current-step="checkout"
       />
 
+      <div v-if="productRouteLoading" class="py-16 text-center text-muted-foreground">{{ t('common.loading') }}</div>
+      <div v-else-if="productRouteError" class="py-16 text-center text-destructive">{{ t('checkout.productLoadFailed') }} <button type="button" class="ml-2 underline" @click="retryProductRoute">{{ t('common.retry') }}</button></div>
       <EmptyState
-        v-if="purchaseItems.length === 0"
+        v-else-if="purchaseItems.length === 0"
         icon="package"
         :title="t('checkout.empty')"
         :action-label="t('checkout.emptyAction')"
@@ -21,9 +23,9 @@
 
       <div v-else class="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
-          <section class="rounded-2xl border bg-card p-6">
-            <h2 class="mb-3 text-base font-semibold">{{ t('productDetail.selectSku') }}</h2>
-            <div class="flex flex-wrap gap-2" role="group" :aria-label="t('productDetail.selectSku')">
+          <section v-if="activePurchaseSkus.length > 1 || skuSelectionRequired || (!syncingStock && (!purchaseProduct || !activePurchaseSkus.length))" class="rounded-2xl border bg-card p-6">
+            <h2 v-if="activePurchaseSkus.length > 1 || skuSelectionRequired" class="mb-3 text-base font-semibold">{{ t('productDetail.skuTitle') }}</h2>
+            <div v-if="activePurchaseSkus.length > 1 || skuSelectionRequired" class="flex flex-wrap gap-2" role="group" :aria-label="t('productDetail.skuTitle')">
               <button v-for="sku in activePurchaseSkus" :key="sku.id" type="button" class="min-h-11 rounded-lg border px-3 py-2 text-left text-sm disabled:opacity-40" :class="selectedPurchaseSku?.id === sku.id ? 'border-primary bg-primary/10 text-primary' : 'border-border'" :disabled="!isPurchaseSkuAvailable(sku) || syncingStock" :aria-pressed="selectedPurchaseSku?.id === sku.id" @click="selectPurchaseSku(sku)">
                 <span class="block font-semibold">{{ skuDisplayText(sku) }}</span><span class="block text-xs">{{ skuStockText(sku) }}</span>
               </button>
@@ -99,6 +101,13 @@
               </div>
             </div>
           </div>
+
+          <section class="rounded-2xl border bg-card p-6">
+            <h2 class="mb-3 border-b pb-3 text-base font-semibold">{{ t('productDetail.details') }}</h2>
+            <p v-if="purchaseDescription" class="mb-3 whitespace-pre-line break-words text-sm leading-7 text-muted-foreground">{{ purchaseDescription }}</p>
+            <div v-if="purchaseContent" class="theme-prose prose prose-sm max-w-none overflow-x-auto break-words dark:prose-invert prose-a:text-primary prose-img:rounded-md" v-html="purchaseContent"></div>
+            <p v-if="!purchaseDescription && !purchaseContent" class="text-sm leading-7 text-muted-foreground">{{ t('checkout.detailsEmpty') }}</p>
+          </section>
 
           <CheckoutManualForm
             :manual-form-products="manualFormProducts"
@@ -328,6 +337,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { pageAlertVariant, pageAlertToneClass } from '../utils/alerts'
 import ImageCaptcha from '../components/captcha/ImageCaptcha.vue'
@@ -340,6 +350,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useCheckout } from '../composables/useCheckout'
+import { getProductDescriptionText } from '../utils/productDescription'
+import { processHtmlForDisplay } from '../utils/content'
 import { MIN_GUEST_ORDER_PASSWORD_LENGTH } from '../utils/guestOrderAuth'
 
 const { t } = useI18n()
@@ -347,7 +359,8 @@ const { t } = useI18n()
 const {
   userAuthStore, getLocalizedText, formatPrice, getImageUrl,
   activePurchaseSkus, selectedPurchaseSku, skuSelectionValid, skuSelectionRequired, isPurchaseSkuAvailable, skuDisplayText, skuStockText, selectPurchaseSku, syncingStock, purchaseProduct, retryProduct,
-  purchaseItems, totalItems, purchaseItemKey, checkoutItemImage, itemSkuDisplay, itemPurchaseMin, itemMaxQuantity, handleQuantityChange,
+  productRouteLoading, productRouteError, retryProductRoute,
+  purchaseItems, purchaseDetails, totalItems, purchaseItemKey, checkoutItemImage, itemSkuDisplay, itemPurchaseMin, itemMaxQuantity, handleQuantityChange,
   itemStockExceeded, itemStockHint,
   checkoutItemCurrency, checkoutItemPriceParts, checkoutItemOriginalPriceParts, checkoutItemHasPriceDiscount,
   manualFormProducts, manualFormData, submitAttempted, getManualFieldLabel, getManualFieldPlaceholder, manualFieldError,
@@ -363,6 +376,12 @@ const {
   handleSelectChannel, formatChannelFeeRate, formatChannelFixedFee,
   submitting, canSubmit, handleSubmit,
 } = useCheckout()
+
+const purchaseDescription = computed(() => getProductDescriptionText(getLocalizedText(purchaseDetails.value.description)))
+const purchaseContent = computed(() => {
+  const html = processHtmlForDisplay(getLocalizedText(purchaseDetails.value.content))
+  return getProductDescriptionText(html) || /<(?:img|video|audio|svg)\b/i.test(html) ? html : ''
+})
 
 // 这两个引用仅通过模板字符串 ref 绑定（刷新/重置逻辑在 composable 内），
 // vue-tsc 不将字符串模板 ref 计为使用，这里显式标记避免 noUnusedLocals 误报。

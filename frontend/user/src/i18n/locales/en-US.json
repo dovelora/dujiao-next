@@ -1137,7 +1137,7 @@
     "itemsCount": "Items",
     "decreaseQuantity": "Decrease quantity",
     "increaseQuantity": "Increase quantity",
-    "stockOut": "This SKU is sold out. Return to the product page to choose another.",
+    "stockOut": "This product or option is currently unavailable.",
     "stockRemaining": "{count} left for this SKU",
     "stockExceeded": "You can buy up to {count} units of this SKU.",
     "maxPurchaseExceeded": "This product can be purchased up to {count} per order",

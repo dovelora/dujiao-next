@@ -1,22 +1,24 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useHead } from '@unhead/vue'
 import { useI18n } from 'vue-i18n'
 import { useBuyNowStore, type PurchaseItem } from '../stores/buyNow'
 import { useAppStore } from '../stores/app'
 import { useUserAuthStore } from '../stores/userAuth'
-import { guestOrderAPI, userOrderAPI, walletAPI, type CaptchaPayload } from '../api'
+import { guestOrderAPI, userOrderAPI, walletAPI, productAPI, type CaptchaPayload } from '../api'
 import { debounceAsync } from '../utils/debounce'
 import { type PageAlert } from '../utils/alerts'
 import { amountToCents, basisPointsToPercent, centsToAmount, parseInteger, rateToBasisPoints } from '../utils/money'
 import { buildSkuDisplayText, normalizeSkuId } from '../utils/sku'
 import { refreshPurchaseSnapshot, buildPurchaseSkuSnapshot, resolveActiveSkus, purchaseLimit as itemPurchaseLimit, purchaseMinimum as itemPurchaseMin } from '../utils/purchaseStock'
-import { getImageUrl } from '../utils/image'
+import { getFirstImageUrl, getImageUrl } from '../utils/image'
 import { resolveSkuAvailableStock, resolveSkuStockDisplay } from '../utils/publicStock'
 import { getAffiliateCode, getAffiliateVisitorKey } from '../utils/affiliate'
 import { MIN_GUEST_ORDER_PASSWORD_LENGTH, saveGuestOrderAuth } from '../utils/guestOrderAuth'
 import ImageCaptcha from '../components/captcha/ImageCaptcha.vue'
 import TurnstileCaptcha from '../components/captcha/TurnstileCaptcha.vue'
 import { useLocalized, useProductLabels } from './useProduct'
+import { createPurchaseItem } from './useDirectPurchase'
 
 interface ManualFormField {
   key: string
@@ -45,6 +47,7 @@ interface ManualFormProduct {
  */
 export function useCheckout() {
   const router = useRouter()
+  const route = useRoute()
   const buyNowStore = useBuyNowStore()
   const appStore = useAppStore()
   const userAuthStore = useUserAuthStore()
@@ -55,6 +58,8 @@ export function useCheckout() {
 
   const purchaseItems = computed<PurchaseItem[]>(() => buyNowStore.item ? [buyNowStore.item] : [])
   const purchaseProduct = ref<any>(null)
+  const productRouteLoading = ref(Boolean(route.params.slug))
+  const productRouteError = ref(false)
   const activePurchaseSkus = computed<any[]>(() => resolveActiveSkus(purchaseProduct.value))
   const selectedPurchaseSku = computed(() => {
     const id = normalizeSkuId(buyNowStore.item?.skuId)
@@ -67,7 +72,7 @@ export function useCheckout() {
     const available = resolveSkuAvailableStock(purchaseProduct.value, sku)
     return available === null || available > 0
   }
-  const skuSelectionValid = computed(() => !!purchaseProduct.value && !purchaseProduct.value.is_sold_out && isPurchaseSkuAvailable(selectedPurchaseSku.value))
+  const skuSelectionValid = computed(() => !productRouteLoading.value && !productRouteError.value && !!purchaseProduct.value && !purchaseProduct.value.is_sold_out && isPurchaseSkuAvailable(selectedPurchaseSku.value))
   const skuSelectionRequired = computed(() => !!purchaseProduct.value && activePurchaseSkus.value.length > 0 && !selectedPurchaseSku.value)
   const skuDisplayText = (sku: any) => buildSkuDisplayText({ skuCode: sku.sku_code, specValues: sku.spec_values, fallback: t('productDetail.skuFallback'), locale: appStore.locale })
   const skuStockText = (sku: any) => {
@@ -955,16 +960,102 @@ export function useCheckout() {
     }
   }
 
+  let productRouteRequestId = 0
+  const retryProductRoute = async () => {
+    const slug = typeof route.params.slug === 'string' ? route.params.slug : ''
+    const requestId = ++productRouteRequestId
+    if (!slug) {
+      productRouteLoading.value = false
+      productRouteError.value = false
+      return
+    }
+    productRouteLoading.value = true
+    productRouteError.value = false
+    snapshotRequestId++
+    purchaseProduct.value = null
+    purchaseDetails.value = {}
+    if (buyNowStore.item?.slug !== slug) buyNowStore.clear()
+    try {
+      const response = await productAPI.detail(slug)
+      const product = response.data?.data
+      if (requestId !== productRouteRequestId || route.params.slug !== slug) return
+      if (!product || product.slug !== slug || !Number.isSafeInteger(Number(product.id)) || Number(product.id) <= 0) throw new Error('Invalid product')
+      if (buyNowStore.item?.slug !== slug || buyNowStore.item.productId !== Number(product.id)) {
+        buyNowStore.setItem(createPurchaseItem(product))
+      } else {
+        const current = buyNowStore.item
+        const fresh = createPurchaseItem(product)
+        buyNowStore.setItem({ ...current, title: fresh.title, image: fresh.image })
+      }
+      await syncPurchaseSnapshot()
+      if (requestId !== productRouteRequestId || route.params.slug !== slug) return
+      if (!purchaseProduct.value) throw new Error('Product unavailable')
+      productRouteLoading.value = false
+      debouncedLoadPreview()
+    } catch {
+      if (requestId !== productRouteRequestId || route.params.slug !== slug) return
+      productRouteError.value = true
+      productRouteLoading.value = false
+      purchaseProduct.value = null
+    }
+  }
+
+  watch(() => route.params.slug, () => { void retryProductRoute() }, { immediate: true, flush: 'sync' })
+
+  const seoProduct = computed(() => typeof route.params.slug === 'string' && purchaseProduct.value?.slug === route.params.slug ? purchaseProduct.value : null)
+  const canonicalUrl = computed(() => {
+    if (!seoProduct.value) return ''
+    const fromConfig = String(appStore.config?.brand?.site_url || '').trim().replace(/\/+$/, '')
+    const base = fromConfig || window.location.origin.replace(/\/+$/, '')
+    return `${base}/products/${seoProduct.value.slug}`
+  })
+  useHead({
+    title: () => seoProduct.value ? getLocalizedText(seoProduct.value.title) : '',
+    link: () => canonicalUrl.value ? [{ rel: 'canonical', href: canonicalUrl.value }] : [],
+    meta: () => {
+      const product = seoProduct.value
+      if (!product) return []
+      const seo = product.seo_meta || {}
+      const description = getLocalizedText(seo.description) || (typeof seo.description === 'string' ? seo.description : '')
+      const keywords = getLocalizedText(seo.keywords) || (typeof seo.keywords === 'string' ? seo.keywords : '')
+      const title = getLocalizedText(product.title)
+      const image = getFirstImageUrl(product.images)
+      const tags: Array<Record<string, string>> = [{ property: 'og:type', content: 'product' }, { name: 'twitter:card', content: 'summary_large_image' }]
+      if (keywords) tags.push({ name: 'keywords', content: keywords })
+      if (description) tags.push({ name: 'description', content: description }, { property: 'og:description', content: description }, { name: 'twitter:description', content: description })
+      if (title) tags.push({ property: 'og:title', content: title }, { name: 'twitter:title', content: title })
+      if (image) tags.push({ property: 'og:image', content: getImageUrl(image) }, { name: 'twitter:image', content: getImageUrl(image) })
+      if (canonicalUrl.value) tags.push({ property: 'og:url', content: canonicalUrl.value })
+      return tags
+    },
+    script: () => {
+      const product = seoProduct.value
+      if (!product) return []
+      const seo = product.seo_meta || {}
+      const description = getLocalizedText(seo.description) || (typeof seo.description === 'string' ? seo.description : '')
+      const images = Array.isArray(product.images) ? product.images : Array.isArray(product.images?.images) ? product.images.images : []
+      const data: Record<string, any> = {
+        '@context': 'https://schema.org', '@type': 'Product', name: getLocalizedText(product.title), url: canonicalUrl.value,
+        offers: { '@type': 'Offer', price: product.promotion_price_amount ?? product.price_amount ?? '0', priceCurrency: siteCurrency.value || 'CNY', availability: product.is_sold_out || product.stock_status === 'out_of_stock' ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock' },
+      }
+      if (description) data.description = description
+      if (images.length) data.image = images.map((image: string) => getImageUrl(image))
+      if (product.category?.name) data.category = getLocalizedText(product.category.name)
+      return [{ type: 'application/ld+json', innerHTML: JSON.stringify(data) }]
+    },
+  })
+
   onMounted(async () => {
     if (!appStore.config) {
       await appStore.loadConfig()
     }
-    await syncPurchaseSnapshot()
+    if (!route.params.slug) await syncPurchaseSnapshot()
     debouncedLoadPreview()
     loadWalletBalance()
   })
 
   onUnmounted(() => {
+    productRouteRequestId++
     snapshotRequestId++
     debouncedLoadPreview.cancel()
     debouncedLoadOrderPaymentChannels.cancel()
@@ -1170,7 +1261,7 @@ export function useCheckout() {
     // mode / items
     purchaseItems,
     purchaseDetails,
-    activePurchaseSkus, selectedPurchaseSku, skuSelectionValid, skuSelectionRequired, isPurchaseSkuAvailable, skuDisplayText, skuStockText, selectPurchaseSku, syncingStock, purchaseProduct, retryProduct,
+    activePurchaseSkus, selectedPurchaseSku, skuSelectionValid, skuSelectionRequired, isPurchaseSkuAvailable, skuDisplayText, skuStockText, selectPurchaseSku, syncingStock, purchaseProduct, retryProduct, productRouteLoading, productRouteError, retryProductRoute,
     totalItems,
     purchaseItemKey,
     checkoutItemImage,

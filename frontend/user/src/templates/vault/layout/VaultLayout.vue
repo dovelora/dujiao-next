@@ -159,9 +159,9 @@ import '../styles/vault.css'
 
 const { t } = useI18n()
 const route = useRoute()
-const isCheckoutPage = computed(() => route.name === 'checkout')
+const isCheckoutPage = computed(() => route.name === 'checkout' || route.name === 'product-detail')
 const loginTarget = computed(() => isCheckoutPage.value
-  ? { path: '/auth/login', query: { redirect: '/checkout' } }
+  ? { path: '/auth/login', query: { redirect: route.fullPath } }
   : { path: '/auth/login' })
 const appStore = useAppStore()
 const userAuthStore = useUserAuthStore()

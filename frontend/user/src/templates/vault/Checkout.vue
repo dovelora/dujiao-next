@@ -1,20 +1,23 @@
 <template>
   <div class="checkout-page mx-auto w-full max-w-[1120px] px-4 pb-4 pt-4 sm:px-6 lg:flex lg:min-h-[calc(100dvh-71px)] lg:flex-col lg:pt-6">
     <nav :aria-label="t('nav.home')" class="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-[13px] font-medium text-muted-foreground">
-      <div class="flex items-center gap-1.5">
-        <RouterLink to="/" class="hover:text-primary">{{ t('nav.home') }}</RouterLink>
+      <div class="flex min-w-0 flex-1 items-center gap-1.5">
+        <RouterLink to="/" class="shrink-0 hover:text-primary">{{ t('nav.home') }}</RouterLink>
         <ChevronRight class="h-4 w-4 flex-none" />
-        <span class="text-foreground" aria-current="page">{{ t('checkout.title') }}</span>
+        <span class="truncate text-foreground" aria-current="page">{{ purchaseItems[0] ? getLocalizedText(purchaseItems[0].title) : t('checkout.title') }}</span>
       </div>
-      <p v-if="!userAuthStore.isAuthenticated" class="ml-auto hidden flex-wrap items-center justify-end gap-1.5 text-xs text-muted-foreground max-[900px]:flex">
+      <p v-if="!userAuthStore.isAuthenticated" class="ml-auto hidden shrink-0 items-center justify-end gap-1.5 whitespace-nowrap text-xs text-muted-foreground max-[900px]:flex">
         {{ t('checkout.accountLoginHint') }}
-        <RouterLink class="inline-flex min-h-8 items-center font-medium text-primary underline-offset-4 hover:underline" :to="{ path: '/auth/login', query: { redirect: '/checkout' } }">{{ t('navbar.login') }}</RouterLink>
+        <RouterLink class="inline-flex min-h-8 items-center font-medium text-primary underline-offset-4 hover:underline" :to="{ path: '/auth/login', query: { redirect: route.fullPath } }">{{ t('navbar.login') }}</RouterLink>
       </p>
     </nav>
-    <h1 class="sr-only">{{ t('checkout.title') }}</h1>
+    <h1 class="sr-only">{{ purchaseItems[0] ? getLocalizedText(purchaseItems[0].title) : t('checkout.title') }}</h1>
+
+    <div v-if="productRouteLoading" class="py-16 text-center text-muted-foreground">{{ t('common.loading') }}</div>
+    <div v-else-if="productRouteError" class="py-16 text-center text-destructive">{{ t('checkout.productLoadFailed') }} <button type="button" class="ml-2 underline" @click="retryProductRoute">{{ t('common.retry') }}</button></div>
 
     <!-- 空 -->
-    <div v-if="purchaseItems.length === 0" class="my-8 flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center text-muted-foreground">
+    <div v-else-if="purchaseItems.length === 0" class="my-8 flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center text-muted-foreground">
       <ShoppingBag class="h-10 w-10 opacity-60" />
       <p>{{ t('checkout.empty') }}</p>
       <Button as-child class="mt-2 rounded-full" size="sm"><RouterLink to="/products">{{ t('checkout.emptyAction') }}</RouterLink></Button>
@@ -33,9 +36,9 @@
             <p v-if="selectedPurchaseSku && itemSkuDisplay(item)" class="mt-1 text-xs leading-5 text-muted-foreground lg:text-[13px]">{{ t('checkout.skuLabel') }}：{{ itemSkuDisplay(item) }}</p>
             <p v-if="itemStockHint(item)" class="mt-1 text-xs leading-5" :class="itemStockExceeded(item) ? 'text-warning' : 'text-muted-foreground'">{{ itemStockHint(item) }}</p>
           </div>
-          <div class="col-span-2 border-t pt-3">
-            <p class="mb-2 text-sm font-semibold">{{ t('productDetail.selectSku') }}</p>
-            <div v-if="activePurchaseSkus.length" class="flex flex-wrap gap-2" role="group" :aria-label="t('productDetail.selectSku')">
+          <div v-if="activePurchaseSkus.length > 1 || skuSelectionRequired || (!syncingStock && (!purchaseProduct || !activePurchaseSkus.length))" class="col-span-2 border-t pt-3">
+            <p v-if="activePurchaseSkus.length > 1 || skuSelectionRequired" class="mb-2 text-sm font-semibold">{{ t('productDetail.skuTitle') }}</p>
+            <div v-if="activePurchaseSkus.length > 1 || skuSelectionRequired" class="flex flex-wrap gap-2" role="group" :aria-label="t('productDetail.skuTitle')">
               <button v-for="sku in activePurchaseSkus" :key="sku.id" type="button" class="min-h-11 rounded-lg border px-3 py-2 text-left text-sm disabled:opacity-40" :class="selectedPurchaseSku?.id === sku.id ? 'border-primary bg-primary/5 text-primary' : 'border-border'" :disabled="!isPurchaseSkuAvailable(sku) || syncingStock" :aria-pressed="selectedPurchaseSku?.id === sku.id" @click="selectPurchaseSku(sku)">
                 <span class="block font-semibold">{{ skuDisplayText(sku) }}</span><span class="block text-xs">{{ skuStockText(sku) }}</span>
               </button>
@@ -224,6 +227,7 @@
 import { computed, nextTick, ref } from 'vue'
 import { useElementSize, useMediaQuery } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { Check, ChevronRight, Minus, Package, Plus, ShoppingBag } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -237,6 +241,7 @@ import { toast } from '../../composables/useToast'
 import { MIN_GUEST_ORDER_PASSWORD_LENGTH } from '../../utils/guestOrderAuth'
 
 const { t } = useI18n()
+const route = useRoute()
 const isDesktop = useMediaQuery('(min-width: 1024px)')
 const payBar = ref<HTMLElement | null>(null)
 const guestInfo = ref<HTMLElement | null>(null)
@@ -247,6 +252,7 @@ const { height: payBarHeight } = useElementSize(payBar, { width: 0, height: 84 }
 const {
   userAuthStore, getLocalizedText, formatPrice, getImageUrl,
   activePurchaseSkus, selectedPurchaseSku, skuSelectionValid, skuSelectionRequired, isPurchaseSkuAvailable, skuDisplayText, skuStockText, selectPurchaseSku, syncingStock, purchaseProduct, retryProduct,
+  productRouteLoading, productRouteError, retryProductRoute,
   purchaseItems, purchaseDetails, purchaseItemKey, checkoutItemImage, itemSkuDisplay,
   itemStockExceeded, itemStockHint, itemPurchaseMin, itemMaxQuantity, updateQuantity, handleQuantityChange,
   checkoutItemCurrency, checkoutItemPriceParts, checkoutItemOriginalPriceParts, checkoutItemHasPriceDiscount,

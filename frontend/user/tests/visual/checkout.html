@@ -53,7 +53,7 @@ productAPI.detail = async slug => {
 }
 walletAPI.account = async () => response({balance: '100'})
 const item = {productId: 90001, skuId: 1, slug: 'local-checkout-fixture', title: {'zh-CN': '测试商品'}, priceAmount: '15', quantity: 2, fulfillmentType: 'auto', skuAutoStockAvailable: 8, skuStockSnapshotAt: '2026-01-01'}
-const router = createRouter({history: createMemoryHistory(), routes: [{path: '/products/:slug', component: {render: () => null}}, {path: '/:pathMatch(.*)*', component: {render: () => null}}]})
+const router = createRouter({history: createMemoryHistory(), routes: [{path: '/products/:slug', name: 'product-detail', component: {render: () => null}}, {path: '/:pathMatch(.*)*', component: {render: () => null}}]})
 const app = createApp({setup() {
   const config = useAppStore()
   config.config = {currency: 'CNY', payment_channels: [channel], captcha: {provider: 'none'}}
@@ -123,8 +123,10 @@ try {
   auth.token = ''; buyNow.clear()
   await router.push('/products/legacy-member')
   await until(() => detail.canPurchase.value)
+  await until(() => !checkout.productRouteLoading.value && checkout.purchaseProduct.value?.slug === 'legacy-member')
+  check('Direct product URL loads the purchase without a previous selection', buyNow.item?.productId === 90002 && checkout.purchaseProduct.value?.slug === 'legacy-member')
   detail.buyNow(); await pause(30)
-  check('Buy-now goes directly to checkout without login or cart mode', router.currentRoute.value.path === '/checkout' && !router.currentRoute.value.query.mode && buyNow.item?.productId === 90002)
+  check('Buy-now stays on the same product purchase page without login or cart mode', router.currentRoute.value.path === '/products/legacy-member' && !router.currentRoute.value.query.mode && buyNow.item?.productId === 90002)
   check('Selecting another product replaces the previous purchase', checkout.purchaseItems.value.length === 1 && checkout.purchaseItems.value[0].productId === 90002)
   detail.product.value.is_sold_out = true
   buyNow.clear(); detail.buyNow()
@@ -175,6 +177,12 @@ try {
   failProduct = true; buyNow.clear(); buyNow.setItem({...item, skuId: 1})
   await until(() => !checkout.syncingStock.value)
   check('Failed product refresh blocks cached selection and payment', !checkout.purchaseProduct.value && !checkout.canSubmit.value)
+  await router.push('/products/unavailable-product')
+  await until(() => !checkout.productRouteLoading.value && checkout.productRouteError.value)
+  check('A failed direct product load never exposes another purchase', buyNow.item === null && !checkout.canSubmit.value)
+  failProduct = false
+  await checkout.retryProductRoute()
+  check('A failed direct product load can retry', !checkout.productRouteError.value && buyNow.item?.slug === 'unavailable-product')
 
 
 

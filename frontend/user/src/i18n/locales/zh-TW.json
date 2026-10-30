@@ -1137,7 +1137,7 @@
     "itemsCount": "商品數量",
     "decreaseQuantity": "減少數量",
     "increaseQuantity": "增加數量",
-    "stockOut": "此規格已售罄，請返回商品頁選擇其他規格",
+    "stockOut": "目前商品或規格暫時無法購買",
     "stockRemaining": "該規格剩餘 {count} 件",
     "stockExceeded": "目前規格最多可購買 {count} 件",
     "maxPurchaseExceeded": "該商品單次下單最多可購買 {count} 件",

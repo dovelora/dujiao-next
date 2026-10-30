@@ -1100,7 +1100,7 @@
     "itemsCount": "商品数量",
     "decreaseQuantity": "减少数量",
     "increaseQuantity": "增加数量",
-    "stockOut": "该规格已售罄，请返回商品页选择其他规格",
+    "stockOut": "当前商品或规格暂不可购买",
     "stockRemaining": "该规格剩余 {count} 件",
     "stockExceeded": "当前规格最多可购买 {count} 件",
     "maxPurchaseExceeded": "该商品单次下单最多可购买 {count} 件",
