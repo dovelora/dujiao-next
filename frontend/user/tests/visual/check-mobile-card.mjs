@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { spawn } from 'node:child_process'
@@ -100,6 +100,32 @@ try {
     assert.deepEqual(blocked, [], 'card fixture attempted a non-local or API request')
     console.log(`PASS ${width}px: typography, layout, purchase target, stock state, click isolation and product navigation`)
     await page.close()
+  }
+
+  // Exercise the real critical HTML with the module deliberately unavailable.
+  const initialIndex = await readFile(process.env.STOREFRONT_BOOT_INDEX || new URL('../../dist/index.html', import.meta.url), 'utf8')
+  const initialHTML = initialIndex
+    .replace(/<!--storefront-content-start-->[\s\S]*?<!--storefront-content-end-->/, '<main class="storefront-initial-content"><h1>Server-rendered product</h1></main>')
+    .replace(/<script\b[^>]*type="module"[^>]*>[\s\S]*?<\/script>/g, '')
+    .replace(/<link\b[^>]*rel="(?:stylesheet|modulepreload)"[^>]*>/g, '')
+  for (const outcome of ['ready', 'failed', 'timeout', 'no-javascript']) {
+    const page = await browser.newPage({ javaScriptEnabled: outcome !== 'no-javascript' })
+    if (outcome === 'timeout') await page.clock.install()
+    await restrictRequests(page)
+    await page.route(`${origin}/startup-check`, route => route.fulfill({ contentType: 'text/html', body: initialHTML }))
+    await page.goto(`${origin}/startup-check`)
+    const content = page.locator('.storefront-initial-content')
+    const overlay = page.locator('.storefront-boot')
+    if (outcome !== 'no-javascript') {
+      assert.equal(await content.isVisible(), false, 'raw SEO content flashes while the application loads')
+      assert.equal(await overlay.isVisible(), true, 'initial styled loading state missing')
+      if (outcome === 'timeout') await page.clock.fastForward(15000)
+      else await page.evaluate(name => window.dispatchEvent(new Event(`storefront-${name}`)), outcome)
+    }
+    assert.equal(await content.isVisible(), true, `${outcome}: server-rendered fallback became inaccessible`)
+    assert.equal(await overlay.isVisible(), false, `${outcome}: loading overlay did not clear`)
+    await page.close()
+    console.log(`PASS startup ${outcome}: initial content visibility and loading handoff`)
   }
 
   for (const fixture of [
