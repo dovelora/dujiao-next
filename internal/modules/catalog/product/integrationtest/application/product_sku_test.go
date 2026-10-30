@@ -35,7 +35,6 @@ func TestProductServiceUpdateRejectsDisablingAutoSKUWithCardSecretStock(t *testi
 		Slug:            "auto-card-secret-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "auto-card-secret-product"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(10)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
 	}
@@ -73,7 +72,6 @@ func TestProductServiceUpdateRejectsDisablingAutoSKUWithCardSecretStock(t *testi
 		Slug:            product.Slug,
 		TitleJSON:       map[string]interface{}{"zh-CN": "auto-card-secret-product"},
 		PriceAmount:     decimal.NewFromInt(10),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		SKUs: []productwrite.ProductSKUInput{
 			{
@@ -130,7 +128,6 @@ func TestProductServiceUpdateWithEmptySKUsCollapsesToSingleSpec(t *testing.T) {
 		Slug:            "collapse-single-spec-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "collapse-single-spec-product"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(10)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
 	}
@@ -168,7 +165,6 @@ func TestProductServiceUpdateWithEmptySKUsCollapsesToSingleSpec(t *testing.T) {
 			Slug:            product.Slug,
 			TitleJSON:       map[string]interface{}{"zh-CN": "collapse-single-spec-product"},
 			PriceAmount:     decimal.NewFromInt(10),
-			PurchaseType:    constants.ProductPurchaseMember,
 			FulfillmentType: constants.FulfillmentTypeAuto,
 			SKUs:            nil, // 后台把规格全删了
 			IsActive: func() *bool {
@@ -227,7 +223,6 @@ func TestProductServiceUpdateWithoutStockKeepsReservedSKUStock(t *testing.T) {
 		Slug:             "keep-stock-product",
 		TitleJSON:        jsonmap.JSON{"zh-CN": "keep-stock-product"},
 		PriceAmount:      money.FromDecimal(decimal.NewFromInt(10)),
-		PurchaseType:     constants.ProductPurchaseMember,
 		FulfillmentType:  constants.FulfillmentTypeManual,
 		ManualStockTotal: 10,
 		IsActive:         true,
@@ -248,7 +243,6 @@ func TestProductServiceUpdateWithoutStockKeepsReservedSKUStock(t *testing.T) {
 			Slug:            product.Slug,
 			TitleJSON:       map[string]interface{}{"zh-CN": "renamed"},
 			PriceAmount:     decimal.NewFromInt(10),
-			PurchaseType:    constants.ProductPurchaseMember,
 			FulfillmentType: constants.FulfillmentTypeManual,
 			SKUs:            skus,
 			IsActive:        &active,

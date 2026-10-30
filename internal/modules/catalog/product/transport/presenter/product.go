@@ -25,7 +25,6 @@ type Product struct {
 	WholesalePrices      []WholesalePrice  `json:"wholesale_prices,omitempty"`
 	Images               jsonslice.Strings `json:"images"`
 	Tags                 jsonslice.Strings `json:"tags"`
-	PurchaseType         string            `json:"purchase_type"`
 	MinPurchaseQuantity  int               `json:"min_purchase_quantity"`
 	MaxPurchaseQuantity  int               `json:"max_purchase_quantity"`
 	StockDisplayMode     string            `json:"stock_display_mode"`

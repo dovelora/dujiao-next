@@ -27,7 +27,6 @@ func TestGetTopProductsIncludesChildOrderItems(t *testing.T) {
 		Slug:            "test-dashboard-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "测试商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 	}
@@ -112,7 +111,6 @@ func TestGetTopProductsGroupsBySKU(t *testing.T) {
 		Slug:            "sku-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "订阅"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 	}

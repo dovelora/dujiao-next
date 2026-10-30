@@ -1,12 +1,23 @@
 <template>
-  <div>
-    <!-- 站长配置的横幅轮播（两种模式共用，顶部展示） -->
-    <VaultBannerHero />
-
+  <div class="catalog-page">
     <!-- ==================== 列表模式 ==================== -->
     <template v-if="isListMode">
-      <section class="mx-auto w-full max-w-[1180px] px-4 py-6 sm:px-6">
-        <div class="grid items-start gap-5 lg:grid-cols-[248px_1fr] lg:gap-7">
+      <section class="mx-auto w-full max-w-[1180px] px-4 pb-6 sm:px-6">
+        <div class="catalog-search">
+          <!-- 搜索 -->
+          <div class="relative">
+            <Search class="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
+            <input
+              v-model="searchQuery"
+              class="h-11 w-full rounded-xl border border-border bg-card pl-10 pr-10 text-base text-foreground sm:text-[15px] transition-colors placeholder:text-muted-foreground hover:border-hairline-strong"
+              :placeholder="t('products.searchBoxPlaceholder')"
+              :aria-label="t('products.searchLabel')"
+            />
+            <button v-if="searchQuery" type="button" class="absolute right-0 top-0 grid h-11 w-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" :aria-label="t('blog.searchClear')" @click="clearSearch"><X class="h-3.5 w-3.5" /></button>
+          </div>
+        </div>
+
+        <div class="mt-4 grid items-start gap-3 lg:grid-cols-[232px_minmax(0,1fr)] lg:gap-6">
           <VaultCategorySidebar
             :category-groups="categoryGroups"
             :selected-category="selectedCategory"
@@ -15,19 +26,7 @@
             @toggle="toggleParentCategory"
           />
 
-          <main class="min-w-0">
-            <!-- 搜索 -->
-            <div class="relative mb-4">
-              <Search class="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
-              <input
-                v-model="searchQuery"
-                class="h-11 w-full rounded-xl border border-border bg-card pl-10 pr-10 text-[15px] text-foreground transition-colors placeholder:text-muted-foreground hover:border-hairline-strong"
-                :placeholder="t('products.searchBoxPlaceholder')"
-                :aria-label="t('products.searchLabel')"
-              />
-              <button v-if="searchQuery" type="button" class="absolute right-2.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" :aria-label="t('blog.searchClear')" @click="clearSearch"><X class="h-3.5 w-3.5" /></button>
-            </div>
-
+          <section class="catalog-results min-w-0" :aria-label="t('nav.products')">
             <!-- 骨架 -->
             <div v-if="listLoading" class="space-y-2.5">
               <div v-for="i in 8" :key="i" class="h-[76px] rounded-lg border bg-card"></div>
@@ -72,7 +71,7 @@
               <p>{{ (searchQuery || selectedCategory) ? t('products.emptyFiltered') : t('products.empty') }}</p>
               <Button v-if="searchQuery || selectedCategory" variant="outline" size="sm" class="mt-2 rounded-full" @click="resetFilters">{{ t('products.clearFilters') }}</Button>
             </div>
-          </main>
+          </section>
         </div>
       </section>
     </template>
@@ -181,7 +180,6 @@ import { useAppStore } from '../../stores/app'
 import VaultProductCard from './components/VaultProductCard.vue'
 import VaultProductListItem from './components/VaultProductListItem.vue'
 import VaultCategorySidebar from './components/VaultCategorySidebar.vue'
-import VaultBannerHero from './components/VaultBannerHero.vue'
 import ProductQuickBuy from '../../components/ProductQuickBuy.vue'
 import AnnouncementModal from '../../components/AnnouncementModal.vue'
 import { useAnnouncement, type HomeAnnouncement } from '../../composables/useAnnouncement'

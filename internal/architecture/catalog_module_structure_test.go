@@ -182,7 +182,7 @@ func TestCatalogProductImplementationLivesInNestedBoundedContext(t *testing.T) {
 	assertFileDeclaresTypes(t, filepath.Join(adminRoot, "service.go"), []string{
 		"ProductRepository", "CategoryRepository", "CardSecretStockRepository", "OrderHistoryRepository",
 		"ProductDeleteRepository", "CardSecretDeleteRepository", "CardSecretBatchDeleteRepository",
-		"SKUDeleteRepository", "MemberLevelPriceDeleteRepository", "CartDeleteRepository",
+		"SKUDeleteRepository", "MemberLevelPriceDeleteRepository",
 		"ProductMappingDeleteRepository", "DeleteRepositories", "UnitOfWork", "Options", "AdminService",
 	})
 	assertFileDeclaresFunctions(t, filepath.Join(adminRoot, "service.go"), []string{"NewAdminService"})
@@ -223,7 +223,7 @@ func TestCatalogProductImplementationLivesInNestedBoundedContext(t *testing.T) {
 		"ResolveWholesaleUnitPrice", "ResolveWholesaleUnitPriceForSKU",
 	})
 	assertFileDeclaresFunctions(t, filepath.Join(domainRoot, "purchase_policy.go"), []string{
-		"NormalizePurchaseType", "NormalizeFulfillmentType", "NormalizeStockDisplayMode",
+		"NormalizeFulfillmentType", "NormalizeStockDisplayMode",
 		"ValidateCategoryAssignment", "NormalizePurchaseQuantityLimit", "ValidatePurchaseQuantity",
 	})
 	assertFileDeclaresFunctions(t, filepath.Join(domainRoot, "inventory_policy.go"), []string{

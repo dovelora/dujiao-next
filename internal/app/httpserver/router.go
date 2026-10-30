@@ -35,7 +35,6 @@ import (
 	auditlogtransport "github.com/dujiao-next/internal/modules/auditlog/transport/http"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	cardsecrettransport "github.com/dujiao-next/internal/modules/cardsecret/transport/http"
-	carttransport "github.com/dujiao-next/internal/modules/cart/transport/http"
 	categoryhttp "github.com/dujiao-next/internal/modules/catalog/category/transport/http"
 	mappinghttp "github.com/dujiao-next/internal/modules/catalog/mapping/transport/http"
 	producthttp "github.com/dujiao-next/internal/modules/catalog/product/transport/http"
@@ -92,7 +91,6 @@ func SetupRouter(cfg *config.Config, c *container.Container) *gin.Engine {
 	paymentCallbackHandler := paymentHandlers.Callback
 	paymentEpayRedirectHandler := paymentHandlers.EpayRedirect
 	publicConfigHandler := publicconfigwiring.NewHandler(c)
-	userCartHandler := carttransport.NewUserHandler(c.CartService)
 	channelHandler := channelwiring.NewHandler(c)
 	upstreamHandler := upstreamwiring.NewHandler(c)
 	publicContentHandler := contenttransport.NewPublicHandler(
@@ -269,7 +267,7 @@ func SetupRouter(cfg *config.Config, c *container.Container) *gin.Engine {
 		c.Header("X-Robots-Tag", "noindex")
 		c.Next()
 	})
-	registerStorefrontRoutes(apiV1, cfg, c, publicContentHandler, publicCatalogHandler, publicCategoryHandler, userResellerHandler, userResellerProductSettingHandler, userResellerFinanceHandler, userResellerOrderHandler, userApiCredentialHandler, userAuditLogHandler, userGiftCardHandler, publicMemberLevelHandler, userProfileHandler, userEmailHandler, userPasswordHandler, userVerifyHandler, userTelegramOIDCHandler, userTelegramHandler, userGoogleHandler, userLoginHandler, user2FAHandler, userInviteHandler, publicConfigHandler, userCartHandler, userOrderHandler, guestOrderHandler, orderPreviewHandler, orderCreateHandler, paymentLatestHandler, paymentWriteHandler, userWalletHandler, redisClient, loginRule, guestReadRule, guestWriteRule, giftCardRedeemRule)
+	registerStorefrontRoutes(apiV1, cfg, c, publicContentHandler, publicCatalogHandler, publicCategoryHandler, userResellerHandler, userResellerProductSettingHandler, userResellerFinanceHandler, userResellerOrderHandler, userApiCredentialHandler, userAuditLogHandler, userGiftCardHandler, publicMemberLevelHandler, userProfileHandler, userEmailHandler, userPasswordHandler, userVerifyHandler, userTelegramOIDCHandler, userTelegramHandler, userGoogleHandler, userLoginHandler, user2FAHandler, userInviteHandler, publicConfigHandler, userOrderHandler, guestOrderHandler, orderPreviewHandler, orderCreateHandler, paymentLatestHandler, paymentWriteHandler, userWalletHandler, redisClient, loginRule, guestReadRule, guestWriteRule, giftCardRedeemRule)
 	registerUpstreamRoutes(apiV1, c, upstreamHandler, redisClient, upstreamAPIRule, callbackRule)
 	registerChannelRoutes(apiV1, c, channelHandler, channelMemberLevelHandler, channelGiftCardHandler, channelAffiliateHandler, channelTelegramBotHandler, channelWalletHandler, redisClient, channelAPIRule)
 	registerPaymentCallbackRoutes(apiV1, paymentCallbackHandler, paymentWebhookHandler, paymentEpayRedirectHandler, redisClient, callbackRule)

@@ -65,7 +65,6 @@ func seedResellerPricingProduct(t *testing.T, db *gorm.DB, slug string, activeSK
 		Slug:            slug,
 		TitleJSON:       jsonmap.JSON{"zh-CN": slug},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 		CreatedAt:       time.Now(),

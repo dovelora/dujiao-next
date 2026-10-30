@@ -1,24 +1,24 @@
 <template>
-  <div class="mx-auto w-full max-w-[1180px] px-6 pb-10 pt-2">
+  <div class="mx-auto w-full max-w-[1180px] px-4 pb-10 pt-2 sm:px-6">
     <header class="mt-6 flex flex-col items-start gap-2">
       <h1 class="text-[34px] font-extrabold">{{ t('nav.blog') }}</h1>
       <p class="text-muted-foreground">{{ t('blog.subtitle') }}</p>
     </header>
 
-    <div class="relative my-7 max-w-[520px]">
+    <div class="relative my-5 max-w-[520px] sm:my-7">
       <Search class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input v-model="searchKeyword" type="text" class="h-11 pl-10 pr-[88px]" :placeholder="t('blog.searchPlaceholder')" />
       <Button v-if="searchKeyword" type="button" variant="ghost" size="sm" class="absolute right-1.5 top-1/2 h-8 -translate-y-1/2 rounded-full" @click="searchKeyword = ''">{{ t('blog.searchClear') }}</Button>
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="grid gap-5 grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
+    <div v-if="loading" class="grid gap-5 grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))]">
       <div v-for="i in 6" :key="i" class="h-[280px] rounded-xl border bg-card opacity-50"></div>
     </div>
 
     <!-- Posts -->
     <template v-else-if="posts.length > 0">
-      <div class="grid gap-5 grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
+      <div class="grid gap-5 grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))]">
         <RouterLink
           v-for="post in posts"
           :key="post.id"

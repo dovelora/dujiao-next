@@ -64,7 +64,6 @@ export interface AdminProduct {
   wholesale_prices?: AdminWholesalePrice[]
   images: string[]
   tags: string[]
-  purchase_type: string
   min_purchase_quantity: number
   max_purchase_quantity: number
   stock_display_mode: string

@@ -184,7 +184,6 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID str
 		WholesalePrices:      productdomain.WholesalePriceTiers{},
 		Images:               jsonslice.Strings(localImages),
 		Tags:                 jsonslice.Strings(upProduct.Tags),
-		PurchaseType:         constants.ProductPurchaseMember,
 		FulfillmentType:      fulfillmentType,
 		ManualStockTotal:     0,
 		IsMapped:             true,

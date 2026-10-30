@@ -77,7 +77,6 @@ func (s *Service) GenerateRobots(baseURL string) string {
 	b.WriteString("Disallow: /api/\n")
 	b.WriteString("Disallow: /admin/\n")
 	b.WriteString("Disallow: /me/\n")
-	b.WriteString("Disallow: /cart\n")
 	b.WriteString("Disallow: /checkout\n")
 	b.WriteString("Disallow: /pay\n")
 	b.WriteString("Disallow: /orders/\n")

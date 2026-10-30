@@ -290,7 +290,6 @@ func TestProductServiceUpdateWholesalePricesOptionalSemantics(t *testing.T) {
 		Slug:            "wholesale-update",
 		TitleJSON:       map[string]interface{}{"zh-CN": "wholesale-update"},
 		PriceAmount:     decimal.NewFromInt(100),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		WholesalePrices: &[]productdomain.WholesalePriceInput{
 			{MinQuantity: 5, UnitPrice: decimal.NewFromInt(80)},
@@ -311,7 +310,6 @@ func TestProductServiceUpdateWholesalePricesOptionalSemantics(t *testing.T) {
 			Slug:            created.Slug,
 			TitleJSON:       map[string]interface{}{"zh-CN": "wholesale-update"},
 			PriceAmount:     decimal.NewFromInt(100),
-			PurchaseType:    constants.ProductPurchaseMember,
 			FulfillmentType: constants.FulfillmentTypeAuto,
 			IsActive:        boolPtr(true),
 		}
@@ -358,7 +356,6 @@ func TestProductServiceUpdateWholesalePricesOnlyTouchesWholesaleField(t *testing
 		TitleJSON:        jsonmap.JSON{"zh-CN": "原商品名"},
 		PriceAmount:      money.FromDecimal(decimal.NewFromInt(100)),
 		CostPriceAmount:  money.FromDecimal(decimal.NewFromInt(30)),
-		PurchaseType:     constants.ProductPurchaseMember,
 		FulfillmentType:  constants.FulfillmentTypeManual,
 		ManualStockTotal: 8,
 		IsActive:         true,

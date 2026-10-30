@@ -85,7 +85,6 @@ func (v *publicProductView) toProductResp() productpresenter.Product {
 		WholesalePrices:      productpresenter.WholesalePrices(v.Product.WholesalePrices),
 		Images:               v.Product.Images,
 		Tags:                 v.Product.Tags,
-		PurchaseType:         v.Product.PurchaseType,
 		MinPurchaseQuantity:  v.Product.MinPurchaseQuantity,
 		MaxPurchaseQuantity:  v.Product.MaxPurchaseQuantity,
 		StockDisplayMode:     productDisplay.Mode,

@@ -54,9 +54,6 @@ func (s *AdminService) Delete(id string) error {
 		if err := repositories.MemberLevelPrices.DeleteByProduct(product.ID); err != nil {
 			return err
 		}
-		if err := repositories.Carts.DeleteByProduct(product.ID); err != nil {
-			return err
-		}
 		if err := repositories.ProductMappings.DeleteByLocalProduct(product.ID); err != nil {
 			return err
 		}

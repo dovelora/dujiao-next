@@ -14,20 +14,17 @@
       </span>
       <div class="flex min-w-0 flex-col gap-0.5 px-1">
         <span v-if="categoryName" class="truncate text-xs font-semibold text-muted-foreground">{{ categoryName }}</span>
-        <h3 class="line-clamp-2 text-base font-bold leading-[1.3]">{{ title }}</h3>
+        <h3 class="line-clamp-2 text-base font-semibold leading-6">{{ title }}</h3>
       </div>
     </div>
 
-    <!-- 属性徽章：交付方式 · 购买类型 · 库存 -->
+    <!-- 属性徽章：交付方式 · 库存 -->
     <div class="mx-1 flex flex-wrap items-center gap-1.5">
       <span class="inline-flex items-center gap-1 rounded-full bg-[color:var(--teal-soft)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--teal-strong)]">
         <component :is="product.fulfillment_type === 'auto' ? Zap : Pencil" class="h-3 w-3" />
         {{ getFulfillmentTypeLabel(product.fulfillment_type) }}
       </span>
-      <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="product.purchase_type === 'guest' ? 'bg-[color:var(--gold-soft)] text-[color:var(--gold-strong)]' : 'bg-[color:var(--teal-soft)] text-[color:var(--teal-strong)]'">
-        <component :is="product.purchase_type === 'guest' ? UserPlus : Lock" class="h-3 w-3" />
-        {{ getPurchaseTypeLabel(product.purchase_type) }}
-      </span>
+
       <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="stockPill.tone">
         <component :is="stockPill.icon" class="h-3 w-3" />
         {{ stockPill.label }}
@@ -63,7 +60,7 @@
 <script setup lang="ts">
 import { computed, ref, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { AlarmClock, Lock, Package, Pencil, UserPlus, XCircle, Zap } from 'lucide-vue-next'
+import { AlarmClock, Package, Pencil, XCircle, Zap } from 'lucide-vue-next'
 import { getFirstImageUrl, getImageUrl } from '../../../utils/image'
 import { useLocalized, useProductLabels } from '../../../composables/useProduct'
 
@@ -74,7 +71,7 @@ defineEmits<{ quickBuy: [product: any] }>()
 const { t } = useI18n()
 const { getLocalizedText, siteCurrency, formatPrice } = useLocalized()
 const {
-  getStockStatusLabel, getPurchaseTypeLabel, getFulfillmentTypeLabel,
+  getStockStatusLabel, getFulfillmentTypeLabel,
   isSoldOut, hasPromotionPrice, getPromotionPriceAmount, hasWholesalePrices, hasPromotionRules,
 } = useProductLabels()
 

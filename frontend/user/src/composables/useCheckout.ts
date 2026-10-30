@@ -1,8 +1,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useCartStore, type CartItem } from '../stores/cart'
-import { useBuyNowStore } from '../stores/buyNow'
+import { useBuyNowStore, type PurchaseItem } from '../stores/buyNow'
 import { useAppStore } from '../stores/app'
 import { useUserAuthStore } from '../stores/userAuth'
 import { guestOrderAPI, userOrderAPI, walletAPI, type CaptchaPayload } from '../api'
@@ -10,7 +9,7 @@ import { debounceAsync } from '../utils/debounce'
 import { type PageAlert } from '../utils/alerts'
 import { amountToCents, basisPointsToPercent, centsToAmount, parseInteger, rateToBasisPoints } from '../utils/money'
 import { buildSkuDisplayText, normalizeSkuId } from '../utils/sku'
-import { refreshCartStockSnapshots, cartItemPurchaseLimit as itemPurchaseLimit, cartItemPurchaseMin as itemPurchaseMin } from '../utils/cartStock'
+import { refreshPurchaseSnapshot, purchaseLimit as itemPurchaseLimit, purchaseMinimum as itemPurchaseMin } from '../utils/purchaseStock'
 import { getImageUrl } from '../utils/image'
 import { getAffiliateCode, getAffiliateVisitorKey } from '../utils/affiliate'
 import { MIN_GUEST_ORDER_PASSWORD_LENGTH, saveGuestOrderAuth } from '../utils/guestOrderAuth'
@@ -45,8 +44,6 @@ interface ManualFormProduct {
  */
 export function useCheckout() {
   const router = useRouter()
-  const route = useRoute()
-  const cartStore = useCartStore()
   const buyNowStore = useBuyNowStore()
   const appStore = useAppStore()
   const userAuthStore = useUserAuthStore()
@@ -55,14 +52,8 @@ export function useCheckout() {
   const { getLocalizedText, siteCurrency, formatPrice } = useLocalized()
   const { resolveWholesalePriceAmount } = useProductLabels()
 
-  const isBuyNowMode = computed(() => route.query.mode === 'buynow')
-  const cartItems = computed<CartItem[]>(() => {
-    if (isBuyNowMode.value) {
-      return buyNowStore.item ? [buyNowStore.item] : []
-    }
-    return cartStore.items
-  })
-  const totalItems = computed(() => cartItems.value.reduce((sum, item) => sum + item.quantity, 0))
+  const purchaseItems = computed<PurchaseItem[]>(() => buyNowStore.item ? [buyNowStore.item] : [])
+  const totalItems = computed(() => purchaseItems.value.reduce((sum, item) => sum + item.quantity, 0))
   const couponCode = ref('')
   const normalizedCouponCode = computed(() => couponCode.value.trim())
   const submitting = ref(false)
@@ -71,8 +62,11 @@ export function useCheckout() {
   const previewLoading = ref(false)
   const previewError = ref('')
   const previewRequestId = ref(0)
+  const previewStale = ref(true)
   const couponRefreshing = ref(false)
+  const previewPending = computed(() => !preview.value || previewStale.value || previewLoading.value || couponRefreshing.value)
   const syncingStock = ref(false)
+  const purchaseDetails = ref<{ description?: Record<string, string>; content?: Record<string, string> }>({})
   const orderPaymentChannels = ref<any[]>([])
   const orderPaymentChannelsRequestId = ref(0)
 
@@ -96,26 +90,10 @@ export function useCheckout() {
       }
       return true
     })
-    // 按购物车中商品允许的支付渠道交集过滤
-    const items = cartItems.value
-    if (items.length > 0) {
-      let intersectionArr: number[] | null = null
-      for (const item of items) {
-        const ids = item.paymentChannelIds
-        if (!Array.isArray(ids) || ids.length === 0) continue
-        const idSet = new Set(ids.map(Number))
-        if (intersectionArr === null) {
-          intersectionArr = [...idSet]
-        } else {
-          intersectionArr = intersectionArr.filter((id) => idSet.has(id))
-        }
-      }
-      if (intersectionArr !== null && intersectionArr.length > 0) {
-        const allowedSet = new Set(intersectionArr)
-        filtered = filtered.filter((ch: any) => allowedSet.has(Number(ch?.id)))
-      } else if (intersectionArr !== null) {
-        filtered = []
-      }
+    const allowedIds = buyNowStore.item?.paymentChannelIds
+    if (Array.isArray(allowedIds) && allowedIds.length > 0) {
+      const allowed = new Set(allowedIds.map(Number))
+      filtered = filtered.filter((channel: any) => allowed.has(Number(channel?.id)))
     }
     return filtered
   })
@@ -221,7 +199,7 @@ export function useCheckout() {
   }
 
   const totalAmount = computed(() => {
-    const totalCents = cartItems.value.reduce((sum, item) => {
+    const totalCents = purchaseItems.value.reduce((sum, item) => {
       const amountCents = amountToCents(item.priceAmount)
       const qty = parseInteger(item.quantity)
       if (amountCents === null || qty === null) return sum
@@ -246,17 +224,6 @@ export function useCheckout() {
     const items = Array.isArray(preview.value?.items) ? preview.value.items : []
     for (const item of items) {
       map.set(`${item.product_id}:${normalizeSkuId(item.sku_id)}`, item)
-    }
-    return map
-  })
-
-  const cartProductQuantities = computed(() => {
-    const map = new Map<number, number>()
-    for (const item of cartItems.value) {
-      const productId = Number(item.productId || 0)
-      const qty = parseInteger(item.quantity)
-      if (!Number.isFinite(productId) || productId <= 0 || qty === null || qty <= 0) continue
-      map.set(productId, (map.get(productId) || 0) + qty)
     }
     return map
   })
@@ -362,32 +329,17 @@ export function useCheckout() {
   }
 
   const manualFormProducts = computed<ManualFormProduct[]>(() => {
-    const grouped = new Map<number, ManualFormProduct>()
-    cartItems.value.forEach((item) => {
-      // 按 schema 而非交付类型判断：对接商品对外展示为 auto 时也可能需要交付资料
-      const fields = normalizeManualFormSchema(item.manualFormSchema)
-      if (fields.length === 0) {
-        return
-      }
-      const productId = Number(item.productId)
-      if (!Number.isFinite(productId) || productId <= 0) {
-        return
-      }
-      const normalizedProductId = Math.trunc(productId)
-      const existing = grouped.get(normalizedProductId)
-      if (existing) {
-        existing.skuCount += 1
-        return
-      }
-      grouped.set(normalizedProductId, {
-        itemKey: String(normalizedProductId),
-        productId: normalizedProductId,
-        title: item.title,
-        fields,
-        skuCount: 1,
-      })
-    })
-    return Array.from(grouped.values())
+    const item = buyNowStore.item
+    if (!item) return []
+    const fields = normalizeManualFormSchema(item.manualFormSchema)
+    if (fields.length === 0) return []
+    return [{
+      itemKey: String(item.productId),
+      productId: item.productId,
+      title: item.title,
+      fields,
+      skuCount: 1,
+    }]
   })
 
   watch(manualFormProducts, (products) => {
@@ -578,11 +530,11 @@ export function useCheckout() {
 
   const canSubmit = computed(() => {
     if (syncingStock.value) return false
-    if (submitting.value) return false
-    if (cartItems.value.length === 0) return false
+    if (submitting.value || previewPending.value || previewError.value) return false
+    if (purchaseItems.value.length === 0) return false
     if (!manualFormValidation.value.valid) return false
-    if (cartItems.value.some((item) => itemStockExceeded(item))) return false
-    if (cartItems.value.some((item) => itemMinNotMet(item))) return false
+    if (purchaseItems.value.some((item) => itemStockExceeded(item))) return false
+    if (purchaseItems.value.some((item) => itemMinNotMet(item))) return false
     if (walletOnlyPayment.value && expectedOnlinePayCents.value > 0) return false
     if (!walletOnlyPayment.value && requiresOnlineChannel.value && !selectedChannelId.value) return false
     if (requiresOnlineChannel.value && selectedChannelAmountHint.value) return false
@@ -601,22 +553,22 @@ export function useCheckout() {
 
   const submitBlockedReason = computed(() => {
     if (syncingStock.value) return t('checkout.stockSyncing')
-    if (cartItems.value.length === 0) return t('checkout.errors.emptyCart')
+    if (purchaseItems.value.length === 0) return t('checkout.errors.emptyPurchase')
     if (!manualFormValidation.value.valid) {
       return manualFormValidation.value.firstError || t('checkout.errors.manualFormInvalid')
     }
-    const stockBlockedItem = cartItems.value.find((item) => itemStockExceeded(item))
+    const stockBlockedItem = purchaseItems.value.find((item) => itemStockExceeded(item))
     if (stockBlockedItem) {
-      return itemStockHint(stockBlockedItem) || t('cart.stockOut')
+      return itemStockHint(stockBlockedItem) || t('checkout.stockOut')
     }
-    const minBlockedItem = cartItems.value.find((item) => itemMinNotMet(item))
+    const minBlockedItem = purchaseItems.value.find((item) => itemMinNotMet(item))
     if (minBlockedItem) {
-      return t('cart.minPurchaseNotMet', { count: itemPurchaseMin(minBlockedItem) })
+      return t('checkout.minPurchaseNotMet', { count: itemPurchaseMin(minBlockedItem) })
     }
     if (walletOnlyPayment.value && expectedOnlinePayCents.value > 0) return t('payment.walletInsufficientHint')
     if (!walletOnlyPayment.value && requiresOnlineChannel.value && !selectedChannelId.value) return t('checkout.errors.selectPayment')
     if (requiresOnlineChannel.value && selectedChannelAmountHint.value) return selectedChannelAmountHint.value
-    if (userAuthStore.isAuthenticated) return ''
+    if (userAuthStore.isAuthenticated) return previewPending.value ? t('checkout.previewLoading') : ''
     if (checkoutMode.value !== 'guest') return t('checkout.errors.loginOrGuest')
     if (!guestEmail.value.trim() || !guestPassword.value.trim()) return t('checkout.errors.missingGuest')
     if (!guestPasswordValid.value) return t('checkout.errors.guestPasswordTooShort', { count: MIN_GUEST_ORDER_PASSWORD_LENGTH })
@@ -629,7 +581,7 @@ export function useCheckout() {
         return t('auth.common.captchaRequired')
       }
     }
-    return ''
+    return previewPending.value ? t('checkout.previewLoading') : ''
   })
 
   const previewStatusText = computed(() => couponRefreshing.value
@@ -649,7 +601,7 @@ export function useCheckout() {
     return null
   })
 
-  const buildItemsPayload = () => cartItems.value.map(item => ({
+  const buildItemsPayload = () => purchaseItems.value.map(item => ({
     product_id: item.productId,
     sku_id: normalizeSkuId(item.skuId) || undefined,
     quantity: item.quantity,
@@ -673,7 +625,7 @@ export function useCheckout() {
       orderPaymentChannels.value = []
       return
     }
-    if (cartItems.value.length === 0 || !preview.value) {
+    if (purchaseItems.value.length === 0 || !preview.value) {
       orderPaymentChannels.value = []
       return
     }
@@ -695,18 +647,26 @@ export function useCheckout() {
 
   const debouncedLoadOrderPaymentChannels = debounceAsync(loadOrderPaymentChannels, 250)
 
-  const syncCartStockSnapshots = async () => {
-    if (isBuyNowMode.value) return
+  const syncPurchaseSnapshot = async () => {
     if (syncingStock.value) return
     syncingStock.value = true
     try {
-      await refreshCartStockSnapshots(cartStore)
+      const item = buyNowStore.item
+      if (item) {
+        const patch = await refreshPurchaseSnapshot(item, product => {
+          if (buyNowStore.item?.productId === item.productId && buyNowStore.item?.slug === item.slug) {
+            purchaseDetails.value = { description: product.description, content: product.content }
+          }
+        })
+        if (buyNowStore.item === item) buyNowStore.setItem({ ...item, ...patch })
+      }
     } finally {
       syncingStock.value = false
     }
   }
 
   const loadPreview = async () => {
+    previewLoading.value = false
     if (syncingStock.value) {
       preview.value = null
       orderPaymentChannels.value = []
@@ -714,7 +674,7 @@ export function useCheckout() {
       couponRefreshing.value = false
       return
     }
-    if (cartItems.value.length === 0) {
+    if (purchaseItems.value.length === 0) {
       preview.value = null
       orderPaymentChannels.value = []
       previewError.value = ''
@@ -729,14 +689,14 @@ export function useCheckout() {
       return
     }
 
-    if (cartItems.value.some((item) => itemStockExceeded(item))) {
+    if (purchaseItems.value.some((item) => itemStockExceeded(item))) {
       preview.value = null
       orderPaymentChannels.value = []
       previewError.value = ''
       couponRefreshing.value = false
       return
     }
-    if (cartItems.value.some((item) => itemMinNotMet(item))) {
+    if (purchaseItems.value.some((item) => itemMinNotMet(item))) {
       preview.value = null
       orderPaymentChannels.value = []
       previewError.value = ''
@@ -764,6 +724,7 @@ export function useCheckout() {
 
       if (requestId !== previewRequestId.value) return
       preview.value = response.data.data
+      previewStale.value = false
       if (userAuthStore.isAuthenticated) {
         debouncedLoadOrderPaymentChannels()
       } else {
@@ -790,14 +751,6 @@ export function useCheckout() {
     await loadPreview()
   }
 
-  const clearSourceStore = () => {
-    if (isBuyNowMode.value) {
-      buyNowStore.clear()
-    } else {
-      cartStore.clear()
-    }
-  }
-
   const handleSubmit = async () => {
     submitAttempted.value = true
     error.value = ''
@@ -807,11 +760,21 @@ export function useCheckout() {
       return
     }
 
+    const confirmedTotal = amountToCents(previewTotal.value)
+    const confirmedCurrency = previewCurrency.value
     submitting.value = true
     try {
       await loadPreviewNow()
-      if (previewError.value) {
-        error.value = previewError.value
+      if (previewError.value || previewPending.value) {
+        error.value = previewError.value || t('checkout.previewLoading')
+        return
+      }
+      if (amountToCents(previewTotal.value) !== confirmedTotal || previewCurrency.value !== confirmedCurrency) {
+        error.value = t('checkout.totalChanged')
+        return
+      }
+      if (submitBlockedReason.value) {
+        error.value = submitBlockedReason.value
         return
       }
 
@@ -844,7 +807,7 @@ export function useCheckout() {
         throw new Error(t('checkout.errors.submitFailed'))
       }
 
-      clearSourceStore()
+      buyNowStore.clear()
 
       // Redirect to the existing Payment page which handles all payment display
       const query = userAuthStore.isAuthenticated
@@ -866,11 +829,13 @@ export function useCheckout() {
   }
 
   watch(
-    () => [cartItems.value, manualFormFingerprint.value, normalizedCouponCode.value, checkoutMode.value, guestEmail.value, guestPassword.value, userAuthStore.isAuthenticated],
+    () => [purchaseItems.value, manualFormFingerprint.value, normalizedCouponCode.value, checkoutMode.value, guestEmail.value, guestPassword.value, userAuthStore.isAuthenticated],
     () => {
+      previewStale.value = true
+      previewRequestId.value++
       debouncedLoadPreview()
     },
-    { deep: true }
+    { deep: true, flush: 'sync' }
   )
 
   watch(walletOnlyPayment, (v) => {
@@ -920,7 +885,7 @@ export function useCheckout() {
     if (!appStore.config) {
       await appStore.loadConfig()
     }
-    await syncCartStockSnapshots()
+    await syncPurchaseSnapshot()
     debouncedLoadPreview()
     loadWalletBalance()
   })
@@ -930,22 +895,22 @@ export function useCheckout() {
     debouncedLoadOrderPaymentChannels.cancel()
   })
 
-  const cartItemKey = (item: CartItem) => `${item.productId}:${normalizeSkuId(item.skuId)}`
+  const purchaseItemKey = (item: PurchaseItem) => `${item.productId}:${normalizeSkuId(item.skuId)}`
 
-  const itemSkuDisplay = (item: CartItem) => buildSkuDisplayText({
+  const itemSkuDisplay = (item: PurchaseItem) => buildSkuDisplayText({
     skuCode: item.skuCode,
     specValues: item.skuSpecValues,
     fallback: t('productDetail.skuFallback'),
     locale: appStore.locale,
   })
 
-  const checkoutItemImage = (item: CartItem) => {
+  const checkoutItemImage = (item: PurchaseItem) => {
     const rawImage = String(item.image || '').trim()
     if (!rawImage) return ''
     return getImageUrl(rawImage)
   }
 
-  const cartItemSubtotalCents = (item: CartItem) => {
+  const itemSubtotalCents = (item: PurchaseItem) => {
     const amountCents = amountToCents(item.priceAmount)
     const qty = parseInteger(item.quantity)
     if (amountCents === null || qty === null) {
@@ -954,13 +919,12 @@ export function useCheckout() {
     return amountCents * qty
   }
 
-  const cartItemWholesaleSubtotalCents = (item: CartItem) => {
+  const itemWholesaleSubtotalCents = (item: PurchaseItem) => {
     const qty = parseInteger(item.quantity)
     if (qty === null || qty <= 0 || !Array.isArray(item.wholesalePrices)) {
       return null
     }
-    const productId = Number(item.productId || 0)
-    const matchQuantity = cartProductQuantities.value.get(productId) || qty
+    const matchQuantity = qty
     const matchedPriceCents = amountToCents(resolveWholesalePriceAmount(
       item,
       item.priceAmount,
@@ -973,23 +937,23 @@ export function useCheckout() {
     return matchedPriceCents * qty
   }
 
-  const checkoutItemPreview = (item: CartItem) => previewItemsByKey.value.get(cartItemKey(item))
+  const checkoutItemPreview = (item: PurchaseItem) => previewItemsByKey.value.get(purchaseItemKey(item))
 
-  const checkoutItemOriginalCents = (item: CartItem) => {
+  const checkoutItemOriginalCents = (item: PurchaseItem) => {
     const previewItem = checkoutItemPreview(item)
     const previewOriginalCents = amountToCents(previewItem?.original_total_price)
     if (previewOriginalCents !== null) return previewOriginalCents
-    return cartItemSubtotalCents(item)
+    return itemSubtotalCents(item)
   }
 
-  const checkoutItemPayableCents = (item: CartItem) => {
+  const checkoutItemPayableCents = (item: PurchaseItem) => {
     const previewItem = checkoutItemPreview(item)
     const previewPayableCents = amountToCents(previewItem?.total_price)
     if (previewPayableCents !== null) {
       const couponDiscountCents = amountToCents(previewItem?.coupon_discount_amount) || 0
       return Math.max(0, previewPayableCents - couponDiscountCents)
     }
-    const wholesaleSubtotal = cartItemWholesaleSubtotalCents(item)
+    const wholesaleSubtotal = itemWholesaleSubtotalCents(item)
     if (wholesaleSubtotal !== null) return wholesaleSubtotal
     return checkoutItemOriginalCents(item)
   }
@@ -1004,11 +968,11 @@ export function useCheckout() {
     }
   }
 
-  const checkoutItemPriceParts = (item: CartItem) => pricePartsFromCents(checkoutItemPayableCents(item))
+  const checkoutItemPriceParts = (item: PurchaseItem) => pricePartsFromCents(checkoutItemPayableCents(item))
 
-  const checkoutItemOriginalPriceParts = (item: CartItem) => pricePartsFromCents(checkoutItemOriginalCents(item))
+  const checkoutItemOriginalPriceParts = (item: PurchaseItem) => pricePartsFromCents(checkoutItemOriginalCents(item))
 
-  const checkoutItemHasPriceDiscount = (item: CartItem) => {
+  const checkoutItemHasPriceDiscount = (item: PurchaseItem) => {
     const originalCents = checkoutItemOriginalCents(item)
     const payableCents = checkoutItemPayableCents(item)
     return originalCents !== null && payableCents !== null && originalCents > payableCents
@@ -1028,9 +992,9 @@ export function useCheckout() {
     return Math.max(integerValue, 0)
   }
 
-  const hasItemStockSnapshot = (item: CartItem) => Boolean(String(item.skuStockSnapshotAt || '').trim())
+  const hasItemStockSnapshot = (item: PurchaseItem) => Boolean(String(item.skuStockSnapshotAt || '').trim())
 
-  const shouldEnforceItemStock = (item: CartItem) => {
+  const shouldEnforceItemStock = (item: PurchaseItem) => {
     if (item.skuStockQuantityHidden === true) return false
     if (item.fulfillmentType === 'auto') return true
     if (item.fulfillmentType === 'upstream') return true
@@ -1043,7 +1007,7 @@ export function useCheckout() {
     return true
   }
 
-  const itemAvailableStock = (item: CartItem) => {
+  const itemAvailableStock = (item: PurchaseItem) => {
     if (item.skuStockQuantityHidden === true) {
       return item.skuStockStatus === 'out_of_stock' ? 0 : null
     }
@@ -1061,7 +1025,7 @@ export function useCheckout() {
     return total
   }
 
-  const itemMaxQuantity = (item: CartItem) => {
+  const itemMaxQuantity = (item: PurchaseItem) => {
     const available = itemAvailableStock(item)
     const purchaseLimit = itemPurchaseLimit(item)
     if (available === null && purchaseLimit === null) return Number.MAX_SAFE_INTEGER
@@ -1070,36 +1034,56 @@ export function useCheckout() {
     return Math.max(Math.min(available, purchaseLimit), 0)
   }
 
-  const itemStockExceeded = (item: CartItem) => {
+  const updateQuantity = (item: PurchaseItem, quantity: number) => {
+    if (submitting.value || buyNowStore.item !== item) return
+    error.value = ''
+    if (!Number.isSafeInteger(quantity) || quantity < itemPurchaseMin(item)) {
+      error.value = t('checkout.minPurchaseNotMet', { count: itemPurchaseMin(item) })
+      return
+    }
+    if (quantity > itemMaxQuantity(item)) {
+      error.value = t('checkout.stockExceeded', { count: itemMaxQuantity(item) })
+      return
+    }
+    buyNowStore.setItem({ ...item, quantity })
+  }
+
+  const handleQuantityChange = (item: PurchaseItem, event: Event) => {
+    const input = event.target as HTMLInputElement
+    updateQuantity(item, Number(input.value))
+    input.value = String(buyNowStore.item?.quantity ?? item.quantity)
+  }
+
+  const itemStockExceeded = (item: PurchaseItem) => {
     const qty = parseInteger(item.quantity)
     if (qty === null) return true
     return qty > itemMaxQuantity(item)
   }
 
-  const itemMinNotMet = (item: CartItem) => {
+  const itemMinNotMet = (item: PurchaseItem) => {
     const qty = parseInteger(item.quantity)
     if (qty === null) return false
     return qty < itemPurchaseMin(item)
   }
 
-  const itemStockHint = (item: CartItem) => {
+  const itemStockHint = (item: PurchaseItem) => {
     const available = itemAvailableStock(item)
     const purchaseLimit = itemPurchaseLimit(item)
     const maxQuantity = itemMaxQuantity(item)
     if (itemMinNotMet(item)) {
-      return t('cart.minPurchaseNotMet', { count: itemPurchaseMin(item) })
+      return t('checkout.minPurchaseNotMet', { count: itemPurchaseMin(item) })
     }
     if (available === null && purchaseLimit === null) return ''
-    if (maxQuantity <= 0) return t('cart.stockOut')
+    if (maxQuantity <= 0) return t('checkout.stockOut')
     if (itemStockExceeded(item)) {
       if (purchaseLimit !== null && maxQuantity === purchaseLimit && (available === null || purchaseLimit < available)) {
-        return t('cart.maxPurchaseExceeded', { count: purchaseLimit })
+        return t('checkout.maxPurchaseExceeded', { count: purchaseLimit })
       }
-      return t('cart.stockExceeded', { count: maxQuantity })
+      return t('checkout.stockExceeded', { count: maxQuantity })
     }
     if (available === null) return ''
-    if (available <= 0) return t('cart.stockOut')
-    return t('cart.stockRemaining', { count: available })
+    if (available <= 0) return t('checkout.stockOut')
+    return t('checkout.stockRemaining', { count: available })
   }
 
   return {
@@ -1109,13 +1093,14 @@ export function useCheckout() {
     formatPrice,
     getImageUrl,
     // mode / items
-    isBuyNowMode,
-    cartItems,
+    purchaseItems,
+    purchaseDetails,
     totalItems,
-    cartItemKey,
+    purchaseItemKey,
     checkoutItemImage,
     itemSkuDisplay,
     itemStockExceeded,
+    itemPurchaseMin, itemMaxQuantity, updateQuantity, handleQuantityChange,
     itemStockHint,
     checkoutItemCurrency,
     checkoutItemPriceParts,
@@ -1153,6 +1138,8 @@ export function useCheckout() {
     previewMemberDiscount,
     previewTotal,
     previewLoading,
+    previewError,
+    retryPreview: loadPreviewNow,
     couponRefreshing,
     previewStatusText,
     hasPositiveAmount,

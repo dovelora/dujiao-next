@@ -1,11 +1,8 @@
 <template>
-  <div class="space-y-6">
+  <div class="wallet-panel space-y-4">
     <WalletBalanceCard
       :alert="walletAlert"
       :balance-display="balanceDisplay"
-      :total-transactions="pagination.total"
-      :current-page="pagination.page"
-      :total-pages="pagination.total_page"
     />
 
     <WalletRechargeForm
@@ -27,6 +24,7 @@
     />
 
     <WalletTransactionList
+      :total-transactions="pagination.total"
       :loading="loading"
       :transactions="transactions"
       :current-page="pagination.page"

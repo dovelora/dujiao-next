@@ -153,7 +153,6 @@ func TestSitemapServiceIncludesActiveContent(t *testing.T) {
 		Slug:            "visible-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "p"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(10)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 	}
@@ -166,7 +165,6 @@ func TestSitemapServiceIncludesActiveContent(t *testing.T) {
 		Slug:            "draft-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "p"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(10)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        false,
 	}
@@ -179,7 +177,6 @@ func TestSitemapServiceIncludesActiveContent(t *testing.T) {
 		Slug:            "in-hidden-category",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "p"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(10)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 	}

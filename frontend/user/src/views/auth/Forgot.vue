@@ -74,7 +74,7 @@
                 v-model="code"
                 type="text"
                 required
-                class="h-11 min-w-0 flex-1"
+                class="h-11 min-w-0 flex-none sm:flex-1"
                 :placeholder="t('auth.forgot.codePlaceholder')"
               />
               <Button

@@ -65,15 +65,7 @@
         </Badge>
 
         <!-- Desktop: show all badges -->
-        <Badge
-          class="hidden md:inline-flex"
-          size="xs"
-          :variant="product.purchase_type === 'guest' ? 'warning' : 'success'"
-        >
-          <UserPlus v-if="product.purchase_type === 'guest'" class="h-3 w-3" />
-          <Lock v-else class="h-3 w-3" />
-          {{ getPurchaseTypeLabel(product.purchase_type) }}
-        </Badge>
+
 
         <Badge
           class="hidden md:inline-flex"
@@ -91,7 +83,7 @@
       </div>
 
       <p class="mb-2 hidden text-sm leading-5 text-muted-foreground md:block line-clamp-2">
-        {{ getLocalizedText(product.description) }}
+        {{ getProductDescriptionText(getLocalizedText(product.description)) }}
       </p>
 
       <div class="mt-auto flex items-center justify-between border-t pt-2">
@@ -135,7 +127,7 @@
         </div>
 
         <div class="flex items-center gap-1.5">
-          <!-- Quick buy cart button -->
+          <!-- Quick buy button -->
           <Button
             type="button"
             variant="outline"
@@ -145,7 +137,7 @@
             :disabled="isSoldOut(product)"
             @click.stop="$emit('quickBuy', product)"
           >
-            <ShoppingCart class="h-4 w-4" />
+            <ShoppingBag class="h-4 w-4" />
           </Button>
           <!-- Desktop: view details -->
           <span
@@ -166,7 +158,8 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { computed, ref, watch } from 'vue'
-import { ArrowRight, ChevronRight, Image as ImageIcon, Lock, Pencil, ShoppingCart, UserPlus, Zap } from 'lucide-vue-next'
+import { getProductDescriptionText } from '../utils/productDescription'
+import { ArrowRight, ChevronRight, Image as ImageIcon, Pencil, ShoppingBag, Zap } from 'lucide-vue-next'
 import { getFirstImageUrl, getImageUrl } from '../utils/image'
 import { useLocalized, useProductLabels } from '../composables/useProduct'
 import { Badge } from '@/components/ui/badge'
@@ -191,7 +184,7 @@ defineEmits<{
 
 const { t } = useI18n()
 const { getLocalizedText, siteCurrency, formatPrice } = useLocalized()
-const { getPurchaseTypeLabel, getFulfillmentTypeLabel, getStockBadgeVariant, getStockStatusLabel, isSoldOut, hasPromotionPrice, getPromotionPriceAmount, hasPromotionRules, hasWholesalePrices } = useProductLabels()
+const { getFulfillmentTypeLabel, getStockBadgeVariant, getStockStatusLabel, isSoldOut, hasPromotionPrice, getPromotionPriceAmount, hasPromotionRules, hasWholesalePrices } = useProductLabels()
 
 const imageErrored = ref(false)
 const attemptIdx = ref(0)

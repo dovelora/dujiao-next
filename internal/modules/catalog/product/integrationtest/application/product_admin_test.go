@@ -22,8 +22,6 @@ import (
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	"github.com/dujiao-next/internal/constants"
-	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
-	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
@@ -108,18 +106,6 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 		t.Fatalf("create member level price: %v", err)
 	}
 
-	// 创建购物车项
-	cart := cartdomain.Item{
-		UserID:          1,
-		ProductID:       product.ID,
-		SKUID:           sku.ID,
-		Quantity:        1,
-		FulfillmentType: constants.FulfillmentTypeManual,
-	}
-	if err := db.Create(&cart).Error; err != nil {
-		t.Fatalf("create cart item: %v", err)
-	}
-
 	// 创建商品映射
 	pm := mappingdomain.Mapping{
 		ConnectionID:      1,
@@ -158,12 +144,6 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 		Count(&mlpCount)
 	if mlpCount != 0 {
 		t.Errorf("expected 0 member level prices after delete, got %d", mlpCount)
-	}
-
-	var cartCount int64
-	db.Model(&cartdomain.Item{}).Where("product_id = ? AND deleted_at IS NULL", product.ID).Count(&cartCount)
-	if cartCount != 0 {
-		t.Errorf("expected 0 cart items after delete, got %d", cartCount)
 	}
 
 	var pmCount int64
@@ -207,7 +187,6 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 		CardSecretBatches: cardsecretgormstore.NewBatch(db),
 		Categories:        categorygormstore.NewCategoryStore(db),
 		MemberLevelPrices: memberlevelgormstore.NewPriceStore(db),
-		Carts:             cartgormstore.New(db),
 		ProductMappings:   mappinggormstore.NewMappingStore(db),
 		Orders:            ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes"),
 		PaymentChannels:   paymentgormstore.NewChannelStore(db),
@@ -233,16 +212,6 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 	if err := db.Create(&sku).Error; err != nil {
 		t.Fatalf("create sku failed: %v", err)
 	}
-	cart := cartdomain.Item{
-		UserID:          1,
-		ProductID:       product.ID,
-		SKUID:           sku.ID,
-		Quantity:        1,
-		FulfillmentType: constants.FulfillmentTypeManual,
-	}
-	if err := db.Create(&cart).Error; err != nil {
-		t.Fatalf("create cart item failed: %v", err)
-	}
 	mapping := mappingdomain.Mapping{
 		ConnectionID:      1,
 		LocalProductID:    product.ID,
@@ -259,7 +228,6 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 
 	assertProductRelationCount(t, db, &productdomain.Product{}, "id = ?", product.ID, 1)
 	assertProductRelationCount(t, db, &productdomain.ProductSKU{}, "product_id = ?", product.ID, 1)
-	assertProductRelationCount(t, db, &cartdomain.Item{}, "product_id = ? AND deleted_at IS NULL", product.ID, 1)
 	assertProductRelationCount(t, db, &mappingdomain.Mapping{}, "local_product_id = ?", product.ID, 1)
 }
 

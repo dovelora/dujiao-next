@@ -1,16 +1,16 @@
 <template>
   <Card class="group relative overflow-hidden transition-shadow hover:shadow-md">
-    <div class="flex items-start justify-between gap-3 p-4 sm:p-5">
-      <div class="min-w-0">
-        <p class="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{{ label }}</p>
-        <div class="mt-2 truncate text-xl font-black leading-tight text-foreground sm:text-2xl" :class="{ 'font-mono': mono }">
+    <div class="flex flex-col items-start justify-between gap-2 p-3 sm:flex-row sm:gap-3 sm:p-5">
+      <div class="min-w-0 w-full sm:w-auto sm:flex-1">
+        <p class="break-words text-xs font-semibold leading-5 sm:truncate sm:text-[11px] sm:uppercase sm:tracking-[0.16em] text-muted-foreground">{{ label }}</p>
+        <div class="mt-2 break-all text-xl font-bold sm:truncate sm:font-black leading-tight text-foreground sm:text-2xl" :class="{ 'font-mono': mono }">
           <slot name="value">{{ value }}</slot>
         </div>
-        <p v-if="hint" class="mt-1 truncate text-xs text-muted-foreground">{{ hint }}</p>
+        <p v-if="hint" class="mt-1 break-words text-xs sm:truncate text-muted-foreground">{{ hint }}</p>
       </div>
       <span
         v-if="icon"
-        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105"
+        class="order-first flex h-8 w-8 shrink-0 sm:order-last sm:h-10 sm:w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-105"
         :class="toneClass"
       >
         <component :is="icon" class="h-5 w-5" />

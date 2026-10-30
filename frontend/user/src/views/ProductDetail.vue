@@ -76,11 +76,7 @@
                 </h1>
 
                 <div class="mb-6 flex flex-wrap items-center gap-2">
-                  <Badge :variant="product.purchase_type === 'guest' ? 'warning' : 'success'">
-                    <UserPlus v-if="product.purchase_type === 'guest'" class="h-3 w-3" />
-                    <Lock v-else class="h-3 w-3" />
-                    {{ getPurchaseTypeLabel(product.purchase_type) }}
-                  </Badge>
+
 
                   <Badge :variant="product.fulfillment_type === 'auto' ? 'info' : 'neutral'">
                     <Zap v-if="product.fulfillment_type === 'auto'" class="h-3 w-3" />
@@ -249,8 +245,8 @@
                   <h2 class="mb-3 text-sm font-bold uppercase tracking-widest text-muted-foreground">
                     {{ t('productDetail.description') }}
                   </h2>
-                  <p class="text-lg leading-relaxed text-muted-foreground">
-                    {{ getLocalizedText(product.description) }}
+                  <p class="whitespace-pre-line text-sm leading-relaxed text-muted-foreground sm:text-lg">
+                    {{ getProductDescriptionText(getLocalizedText(product.description)) }}
                   </p>
                 </div>
               </div>
@@ -298,13 +294,7 @@
                 </Alert>
 
                 <div class="space-y-3">
-                  <Button v-if="requiresLogin" class="w-full h-12 font-bold" @click="goLogin">
-                    {{ t('productDetail.loginToBuy') }}
-                  </Button>
-                  <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Button variant="secondary" class="h-12 font-bold" :disabled="!canPurchase" @click="addToCart">
-                      {{ t('productDetail.addToCart') }}
-                    </Button>
+                  <div class="grid grid-cols-1 gap-4">
                     <Button class="h-12 font-bold" :disabled="!canPurchase" @click="buyNow">
                       {{ t('productDetail.buyNow') }}
                     </Button>
@@ -372,7 +362,7 @@
         <!-- Mobile Fixed Purchase Bar -->
         <ProductMobileBar
           :visible="showMobileBar && !!product && !loading"
-          :requires-login="requiresLogin"
+
           :can-purchase="canPurchase"
           :show-member-price="mobileBarShowMemberPrice"
           :member-price-display="mobileBarMemberPriceDisplay"
@@ -383,9 +373,9 @@
           :show-product-promotion-price="mobileBarShowProductPromotionPrice"
           :product-promotion-price-display="mobileBarProductPromotionPriceDisplay"
           :product-price-display="mobileBarProductPriceDisplay"
-          @add-to-cart="addToCart"
+
           @buy-now="buyNow"
-          @go-login="goLogin"
+
         />
       </div>
 
@@ -413,9 +403,10 @@
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, Lock, Minus, Pencil, Plus, RotateCw, Tag, UserPlus, Zap } from 'lucide-vue-next'
+import { ArrowLeft, Minus, Pencil, Plus, RotateCw, Tag, Zap } from 'lucide-vue-next'
 import { getImageUrl } from '../utils/image'
 import { processHtmlForDisplay } from '../utils/content'
+import { getProductDescriptionText } from '../utils/productDescription'
 import { useProductDetail } from '../composables/useProductDetail'
 import ProductImageGallery from '../components/product/ProductImageGallery.vue'
 import ProductMobileBar from '../components/product/ProductMobileBar.vue'
@@ -450,7 +441,7 @@ const setupMobileBarObserver = () => {
 // 全部业务逻辑由 useProductDetail 提供（与 vault 模板共用，保证功能一致）
 const {
   getLocalizedText, siteCurrency, formatPrice,
-  getPurchaseTypeLabel, getFulfillmentTypeLabel, getStockBadgeVariant, getStockStatusLabel,
+  getFulfillmentTypeLabel, getStockBadgeVariant, getStockStatusLabel,
   hasPromotionPrice, getPromotionPriceAmount, getPromotionSaveAmount,
   hasSkuPromotionPrice, getSkuPromotionSaveAmount,
   hasPromotionRules, getPromotionRules,
@@ -464,10 +455,10 @@ const {
   showSelectedSkuMemberBadge,
   isSkuPurchasable, skuDisplayText, skuStockText, skuStockBadgeClass,
   quantityEffectiveLimit, quantityEffectiveMin, handleQuantityInput,
-  requiresLogin, requiresSKUSelection, canPurchase, cannotPurchaseReason,
+  requiresSKUSelection, canPurchase, cannotPurchaseReason,
   categoryName, images,
   backToListTo,
-  addToCart, buyNow, goLogin, loadProduct,
+  buyNow, loadProduct,
   mobileBarShowMemberPrice, mobileBarMemberPriceDisplay,
   mobileBarShowSkuPromotionPrice, mobileBarSkuPromotionPriceDisplay,
   mobileBarShowSkuPrice, mobileBarSkuPriceDisplay,

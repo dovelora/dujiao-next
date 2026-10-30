@@ -1,0 +1,327 @@
+.login-panel {
+  display: contents;
+}
+
+.login-status,
+.login-mobile-brand {
+  display: none;
+}
+
+@media (width < 640px) {
+  .mobile-login .auth-login-page,
+  .mobile-login .auth-login-page h1,
+  .mobile-login .auth-login-page input,
+  .mobile-login .auth-login-page button {
+    font-family: var(--ui-font-family);
+  }
+
+  html:has(.mobile-login),
+  body:has(.mobile-login) {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    scrollbar-gutter: auto;
+    overscroll-behavior: none;
+  }
+
+  #app.mobile-login {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .mobile-login .vault-scope,
+  .mobile-login main {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    padding: 0;
+  }
+
+  .mobile-login .storefront-navbar,
+  .mobile-login .storefront-footer,
+  .mobile-login .vault-scope > header,
+  .mobile-login .vault-scope > footer,
+  .mobile-login .back-to-top,
+  .mobile-login .login-store-navigation,
+  .mobile-login .login-context-badge,
+  .mobile-login .login-heading > p:first-child,
+  .mobile-login .login-subtitle-hidden,
+  .mobile-login .login-form > [role="alert"],
+  .mobile-login .login-provider-note {
+    display: none;
+  }
+
+  .mobile-login .auth-login-page {
+    --ui-shadow-1: none;
+    --ui-shadow-2: none;
+    --ui-shadow-3: none;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    gap: 12px;
+    padding: max(16px, env(safe-area-inset-top)) 24px max(12px, env(safe-area-inset-bottom));
+    background: var(--ui-bg-page);
+  }
+
+  .mobile-login .login-content {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    max-width: 400px;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+  }
+
+  .mobile-login .login-topbar {
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    min-height: 24px;
+  }
+
+  .mobile-login .login-topbar a {
+    height: 24px;
+    padding: 0;
+    font-size: 13px;
+  }
+
+  .mobile-login .login-mobile-brand {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ui-text-primary);
+  }
+
+  .mobile-login .login-panel {
+    flex-shrink: 0;
+    margin-block: auto;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .mobile-login .login-card {
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .mobile-login .login-heading {
+    margin-bottom: 16px;
+    text-align: left;
+  }
+
+  .mobile-login .login-heading h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 28px;
+    letter-spacing: 0;
+  }
+
+  .mobile-login .login-subtitle,
+  .mobile-login .login-status {
+    margin-top: 6px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .mobile-login .login-status {
+    display: block;
+  }
+
+  .mobile-login .login-form {
+    display: grid;
+    gap: 8px;
+  }
+
+  .mobile-login .login-form > * {
+    margin-block: 0;
+  }
+
+  .mobile-login .form-field > label,
+  .mobile-login .login-captcha > label {
+    margin-bottom: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 18px;
+    letter-spacing: 0;
+    color: var(--ui-text-secondary);
+  }
+
+  .mobile-login .login-form input:not([type="checkbox"]) {
+    height: 44px;
+    border-radius: 10px;
+    background: var(--ui-bg-elevated);
+    font-size: 16px;
+    line-height: 24px;
+    box-shadow: none;
+  }
+
+  .mobile-login .login-form button.h-11 {
+    height: 44px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 23px;
+    letter-spacing: 0.005em;
+    box-shadow: none;
+  }
+
+  .mobile-login .login-captcha {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 96px;
+    align-items: center;
+    gap: 4px 12px;
+  }
+
+  .mobile-login .login-captcha > label {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0;
+  }
+
+  .mobile-login .form-field > label > span:first-child:has(svg),
+  .mobile-login .login-captcha > label > svg {
+    display: none;
+  }
+
+  .mobile-login .login-image-captcha,
+  .mobile-login .login-image-captcha > div {
+    display: contents;
+  }
+
+  .mobile-login .login-image-captcha img {
+    grid-column: 2;
+    grid-row: 2;
+    width: 96px;
+    height: 44px;
+    object-fit: fill;
+  }
+
+  .mobile-login .login-image-captcha button {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    line-height: 16px;
+  }
+
+  .mobile-login .login-image-captcha input {
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .mobile-login .login-captcha > :not(label):not(.login-image-captcha) {
+    grid-column: 1 / -1;
+  }
+
+  .mobile-login .login-social,
+  .mobile-login .login-social > div + div {
+    display: grid;
+    gap: 6px;
+    padding-top: 0;
+  }
+
+  .mobile-login .login-social > div:first-child {
+    gap: 8px;
+    font-size: 11px;
+    line-height: 16px;
+    letter-spacing: 0;
+  }
+
+  .mobile-login .login-social > div,
+  .mobile-login .login-social > div + div > div {
+    margin: 0;
+  }
+
+  .mobile-login .login-registration {
+    flex-shrink: 0;
+    margin: 0;
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .mobile-login .login-registration a {
+    font-size: inherit;
+  }
+}
+
+@media (width < 640px) and (height < 600px) {
+  .mobile-login .auth-login-page {
+    gap: 8px;
+    padding: max(8px, env(safe-area-inset-top)) 20px max(8px, env(safe-area-inset-bottom));
+  }
+
+  .mobile-login .login-content {
+    gap: 8px;
+  }
+
+  .mobile-login .login-heading {
+    margin-bottom: 10px;
+  }
+
+  .mobile-login .login-heading h1 {
+    font-size: 22px;
+    line-height: 28px;
+  }
+
+  .mobile-login .login-subtitle:not(.login-subtitle-hidden) {
+    display: none;
+  }
+
+  .mobile-login .login-form {
+    gap: 6px;
+  }
+
+  .mobile-login .login-content:has(.login-status) .login-form {
+    gap: 4px;
+  }
+
+  .mobile-login .form-field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .mobile-login .form-field-control {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .mobile-login .form-field > p {
+    grid-column: 2;
+    grid-row: 1;
+    max-width: 170px;
+    margin: 0 0 4px 4px;
+    text-align: right;
+  }
+
+  .mobile-login .login-footer p {
+    margin-top: 2px;
+  }
+}
+
+@layer utilities {
+  @media (width < 640px) {
+    .mobile-login .login-form input:not([type="checkbox"]),
+    .mobile-login .login-image-captcha img,
+    .mobile-login .login-form button.h-11 {
+      border-radius: 10px !important;
+    }
+
+    .mobile-login .login-heading h1 {
+      font-weight: 600 !important;
+      letter-spacing: 0;
+    }
+  }
+}

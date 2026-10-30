@@ -1,43 +1,29 @@
 <template>
-  <div>
-    <PanelHeading :title="t('personalCenter.wallet.title')" :description="t('personalCenter.wallet.subtitle')" :icon="Wallet">
-      <template #actions>
-        <Badge variant="accent" size="sm">{{ t('personalCenter.tabs.wallet') }}</Badge>
-      </template>
-    </PanelHeading>
+  <section class="wallet-balance space-y-3">
+    <header>
+      <h2 class="text-xl font-semibold text-foreground">{{ t('personalCenter.wallet.title') }}</h2>
+      <p class="mt-1 text-xs text-muted-foreground">{{ t('personalCenter.wallet.subtitle') }}</p>
+    </header>
 
-    <Alert v-if="alert" class="mb-5" :variant="pageAlertVariant(alert.level)" :class="pageAlertToneClass(alert.level)">
+    <Alert v-if="alert" :variant="pageAlertVariant(alert.level)" :class="pageAlertToneClass(alert.level)">
       <AlertDescription>{{ alert.message }}</AlertDescription>
     </Alert>
 
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-      <StatCard :label="t('personalCenter.wallet.balanceLabel')" :value="balanceDisplay" :icon="Banknote" tone="accent" mono />
-      <StatCard :label="t('personalCenter.wallet.transactionsLabel')" :value="totalTransactions" :icon="ReceiptText" tone="info" mono />
-      <StatCard
-        :label="t('personalCenter.wallet.currentPageLabel')"
-        :value="t('orders.pageInfo', { page: currentPage, total: totalPages })"
-        :icon="Layers"
-        tone="neutral"
-      />
+    <div class="rounded-xl border bg-card p-4 sm:p-5">
+      <p class="text-xs text-muted-foreground">{{ t('personalCenter.wallet.balanceLabel') }}</p>
+      <p class="mt-2 break-words text-[28px] font-semibold leading-tight tabular-nums text-foreground">{{ balanceDisplay }}</p>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Wallet, Banknote, ReceiptText, Layers } from 'lucide-vue-next'
 import { pageAlertVariant, pageAlertToneClass, type PageAlert } from '../../utils/alerts'
-import PanelHeading from '../shared/PanelHeading.vue'
-import StatCard from '../shared/StatCard.vue'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
 
 defineProps<{
   alert: PageAlert | null
   balanceDisplay: string
-  totalTransactions: number
-  currentPage: number
-  totalPages: number
 }>()
 
 const { t } = useI18n()

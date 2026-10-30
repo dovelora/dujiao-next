@@ -226,7 +226,6 @@
     "contactText": "如果您对我们的产品或服务有任何疑问，欢迎通过以下方式联系我们："
   },
   "navbar": {
-    "cart": "购物车",
     "login": "登录",
     "personalCenter": "个人中心",
     "guestOrders": "游客查单",
@@ -235,12 +234,10 @@
     "more": "更多"
   },
   "toast": {
-    "addedToCart": "已加入购物车"
   },
   "bottomNav": {
     "home": "首页",
     "products": "商品",
-    "cart": "购物车",
     "me": "我的"
   },
   "personalCenter": {
@@ -1095,31 +1092,25 @@
       "refunded": "已退款"
     }
   },
-  "cart": {
-    "title": "购物车",
-    "subtitle": "确认商品后进入结算",
-    "empty": "购物车为空",
-    "emptyAction": "去逛逛",
-    "priceLabel": "价格",
-    "skuLabel": "规格",
-    "remove": "移除",
-    "removed": "已从购物车移除",
-    "undo": "撤销",
-    "summaryTitle": "结算信息",
-    "itemsCount": "商品数量",
-    "totalLabel": "合计",
-    "disclaimer": "实际金额以结算页为准（活动价/优惠券在服务端计算）",
-    "checkout": "去结算",
-    "stockOut": "该规格已售罄，请减少数量或移除",
-    "stockRemaining": "该规格剩余 {count} 件",
-    "stockExceeded": "该规格库存不足，当前购物车最多 {count} 件",
-    "maxPurchaseExceeded": "该商品单次下单最多可购买 {count} 件",
-    "minPurchaseNotMet": "该商品单次下单至少需购买 {count} 件"
-  },
   "checkout": {
+    "detailsEmpty": "暂无详细信息",
+    "itemsCount": "商品数量",
+    "decreaseQuantity": "减少数量",
+    "increaseQuantity": "增加数量",
+    "stockOut": "该规格已售罄，请返回商品页选择其他规格",
+    "stockRemaining": "该规格剩余 {count} 件",
+    "stockExceeded": "当前规格最多可购买 {count} 件",
+    "maxPurchaseExceeded": "该商品单次下单最多可购买 {count} 件",
+    "minPurchaseNotMet": "该商品单次下单至少需购买 {count} 件",
+    "accountLoginHint": "已有账号？",
+    "guestEmailLabel": "查单邮箱",
+    "guestPasswordLabel": "查询密码（至少 {count} 位）",
+    "guestDetailsHint": "邮箱和查询密码用于查询订单、提取商品，请妥善保存。",
+    "totalChanged": "订单金额已更新，请核对新金额后再次点击付款。",
+    "payNow": "立即支付",
     "title": "订单结算",
     "subtitle": "确认订单信息并提交",
-    "empty": "购物车为空",
+    "empty": "尚未选择商品",
     "emptyAction": "去选购",
     "itemsTitle": "订单商品",
     "quantityLabel": "数量",
@@ -1170,7 +1161,7 @@
     "submitButton": "提交订单并支付",
     "submitting": "提交中...",
     "errors": {
-      "emptyCart": "购物车为空",
+      "emptyPurchase": "尚未选择商品",
       "missingGuest": "请输入邮箱与订单密码",
       "guestPasswordTooShort": "订单密码至少需要 {count} 个字符",
       "loginOrGuest": "请先登录或使用游客购买",
@@ -1558,11 +1549,11 @@
     "rechargePayable": "应付金额",
     "rechargeFilters": {
       "keyword": "充值单号",
-      "rechargeNoPlaceholder": "输入充值单号筛选"
+      "rechargeNoPlaceholder": "输入充值单号"
     },
     "filters": {
       "keyword": "订单号",
-      "orderNoPlaceholder": "输入订单号筛选",
+      "orderNoPlaceholder": "输入订单号",
       "status": "订单状态",
       "statusAll": "全部状态",
       "search": "筛选",
@@ -1572,10 +1563,10 @@
       "current": "当前筛选：订单号 {orderNo}，状态 {status}"
     },
     "stats": {
-      "totalMatched": "匹配订单总数",
-      "currentPage": "当前页订单数",
+      "totalMatched": "匹配订单",
+      "currentPage": "本页订单",
       "pendingPayment": "待支付",
-      "finished": "已完成/已交付"
+      "finished": "已完成/交付"
     }
   },
   "rechargeOrder": {
@@ -1703,8 +1694,6 @@
     "relatedPosts": "相关文章",
     "deliveryReassurance": "付款成功后，兑换码即时送达订单页与邮箱，凭证仅你本人可见。",
     "deliveryReassuranceManual": "付款成功后由人工为你处理，处理进度与结果会同步到订单页与邮箱。",
-    "loginToBuy": "登录后购买",
-    "addToCart": "加入购物车",
     "buyNow": "立即购买",
     "categoryLabel": "分类",
     "fulfillmentLabel": "交付方式",
@@ -1721,25 +1710,16 @@
     "skuStockRangePlus": "{min}+ 件",
     "stockUnavailable": "当前商品库存不足，暂不可购买",
     "stockBelowMinPurchase": "当前库存不足以满足该商品的最小购买数量（{count} 件）",
-    "addCartStockExceeded": "该规格库存不足，最多可购买 {count} 件",
-    "addCartStockExceededWithCart": "该规格库存不足，最多可购买 {count} 件（购物车中已有 {cartCount} 件）",
-    "addCartLimitExceeded": "当前商品单次最多可购买 {count} 件",
-    "addCartLimitExceededWithCart": "当前商品单次最多可购买 {count} 件（购物车中已有 {cartCount} 件）"
+    "purchaseStockExceeded": "该规格库存不足，最多可购买 {count} 件",
+    "purchaseLimitExceeded": "当前商品单次最多可购买 {count} 件"
   },
   "quickBuy": {
     "title": "快速购买",
     "selectSku": "选择规格",
     "quantity": "数量",
     "stock": "库存",
-    "addToCart": "加入购物车",
     "buyNow": "立即购买",
-    "loginToBuy": "登录后购买",
     "soldOut": "已售罄",
     "viewDetail": "查看详情"
-  },
-  "productPurchase": {
-    "label": "购买身份",
-    "member": "会员购买",
-    "guest": "游客可购"
   }
 }

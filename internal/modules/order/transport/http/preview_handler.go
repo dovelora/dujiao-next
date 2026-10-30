@@ -25,25 +25,24 @@ import (
 )
 
 var (
-	ErrProductSKURequired        = errors.New("product sku required")
-	ErrInvalidOrderAmount        = errors.New("invalid order amount")
-	ErrGuestEmailRequired        = errors.New("guest email required")
-	ErrGuestPasswordRequired     = errors.New("guest password required")
-	ErrGuestPasswordTooWeak      = errors.New("guest password too weak")
-	ErrInvalidEmail              = errors.New("invalid email")
-	ErrProductPurchaseNotAllowed = errors.New("product purchase not allowed")
-	ErrGuestCouponNotAllowed     = errors.New("guest coupon not allowed")
-	ErrManualStockInsufficient   = errors.New("manual stock insufficient")
-	ErrOrderCurrencyMismatch     = errors.New("order currency mismatch")
-	ErrProductNotAvailable       = errors.New("product not available")
-	ErrResellerCouponNotAllowed  = errors.New("reseller coupon not allowed")
-	ErrQueueUnavailable          = errors.New("queue unavailable")
-	ErrRiskIPBlacklisted         = errors.New("risk: ip blacklisted")
-	ErrRiskClientIPUnavailable   = errors.New("risk: client ip unavailable")
-	ErrRiskTooManyPendingOrders  = errors.New("risk: too many pending orders")
-	ErrRiskProductQuantityLimit  = errors.New("risk: product quantity limit")
-	ErrRiskPendingProductLimit   = errors.New("risk: pending product quantity limit")
-	ErrRiskOrderRateLimited      = errors.New("risk: order rate limited")
+	ErrProductSKURequired       = errors.New("product sku required")
+	ErrInvalidOrderAmount       = errors.New("invalid order amount")
+	ErrGuestEmailRequired       = errors.New("guest email required")
+	ErrGuestPasswordRequired    = errors.New("guest password required")
+	ErrGuestPasswordTooWeak     = errors.New("guest password too weak")
+	ErrInvalidEmail             = errors.New("invalid email")
+	ErrGuestCouponNotAllowed    = errors.New("guest coupon not allowed")
+	ErrManualStockInsufficient  = errors.New("manual stock insufficient")
+	ErrOrderCurrencyMismatch    = errors.New("order currency mismatch")
+	ErrProductNotAvailable      = errors.New("product not available")
+	ErrResellerCouponNotAllowed = errors.New("reseller coupon not allowed")
+	ErrQueueUnavailable         = errors.New("queue unavailable")
+	ErrRiskIPBlacklisted        = errors.New("risk: ip blacklisted")
+	ErrRiskClientIPUnavailable  = errors.New("risk: client ip unavailable")
+	ErrRiskTooManyPendingOrders = errors.New("risk: too many pending orders")
+	ErrRiskProductQuantityLimit = errors.New("risk: product quantity limit")
+	ErrRiskPendingProductLimit  = errors.New("risk: pending product quantity limit")
+	ErrRiskOrderRateLimited     = errors.New("risk: order rate limited")
 )
 
 type riskRateLimitedError struct {
@@ -86,7 +85,7 @@ type OrderItemRequest struct {
 
 // CreateOrderRequest 用户订单预览/创建请求体（preview 使用）。
 type CreateOrderRequest struct {
-	Items               []OrderItemRequest      `json:"items" binding:"required"`
+	Items               []OrderItemRequest      `json:"items" binding:"required,len=1"`
 	CouponCode          string                  `json:"coupon_code"`
 	AffiliateCode       string                  `json:"affiliate_code"`
 	AffiliateVisitorKey string                  `json:"affiliate_visitor_key"`
@@ -97,7 +96,7 @@ type CreateOrderRequest struct {
 type CreateGuestOrderRequest struct {
 	Email               string                            `json:"email" binding:"required"`
 	OrderPassword       string                            `json:"order_password" binding:"required"`
-	Items               []OrderItemRequest                `json:"items" binding:"required"`
+	Items               []OrderItemRequest                `json:"items" binding:"required,len=1"`
 	CouponCode          string                            `json:"coupon_code"`
 	AffiliateCode       string                            `json:"affiliate_code"`
 	AffiliateVisitorKey string                            `json:"affiliate_visitor_key"`
@@ -336,7 +335,6 @@ var userOrderCommonErrorRules = []mappedError{
 	{target: productcontract.ErrProductSKUInvalid, code: response.CodeBadRequest, key: "error.order_item_invalid"},
 	{target: productdomain.ErrPurchaseQuantityInvalid, code: response.CodeBadRequest, key: "error.order_item_invalid"},
 	{target: ErrInvalidOrderAmount, code: response.CodeBadRequest, key: "error.order_amount_invalid"},
-	{target: ErrProductPurchaseNotAllowed, code: response.CodeBadRequest, key: "error.product_purchase_not_allowed"},
 	{target: productdomain.ErrMaxPurchaseExceeded, code: response.CodeBadRequest, key: "error.product_max_purchase_exceeded"},
 	{target: productdomain.ErrMinPurchaseNotMet, code: response.CodeBadRequest, key: "error.product_min_purchase_not_met"},
 	{target: ErrManualStockInsufficient, code: response.CodeBadRequest, key: "error.manual_stock_insufficient"},
@@ -382,7 +380,6 @@ var guestOrderCommonErrorRules = []mappedError{
 	{target: ErrGuestPasswordRequired, code: response.CodeBadRequest, key: "error.guest_password_required"},
 	{target: ErrGuestPasswordTooWeak, code: response.CodeBadRequest, key: "error.guest_password_too_weak"},
 	{target: ErrInvalidEmail, code: response.CodeBadRequest, key: "error.email_invalid"},
-	{target: ErrProductPurchaseNotAllowed, code: response.CodeBadRequest, key: "error.product_purchase_not_allowed"},
 	{target: productdomain.ErrMaxPurchaseExceeded, code: response.CodeBadRequest, key: "error.product_max_purchase_exceeded"},
 	{target: productdomain.ErrMinPurchaseNotMet, code: response.CodeBadRequest, key: "error.product_min_purchase_not_met"},
 	{target: ErrGuestCouponNotAllowed, code: response.CodeBadRequest, key: "error.guest_coupon_not_allowed"},

@@ -1,5 +1,5 @@
 <template>
-  <div id="app" class="min-h-screen bg-background text-foreground flex flex-col">
+  <div id="app" class="min-h-screen bg-background text-foreground flex flex-col" :class="{ 'mobile-login': isLoginPage }">
     <!-- 首次访问还不知道站点用哪套模板时先不渲染外壳，等配置返回（见 shellReady） -->
     <template v-if="shellReady">
       <!-- vault 模板：自带顶栏/页脚的外壳包裹页面（控制台仍走下方分支） -->
@@ -15,7 +15,7 @@
 
       <!-- classic 模板 / 分销控制台（保持原有结构不变） -->
       <template v-else>
-        <Navbar v-if="!isResellerConsole" />
+        <Navbar v-if="!isResellerConsole" class="storefront-navbar" />
         <main class="flex-1" :class="isResellerConsole ? '' : 'pb-14 lg:pb-0'">
           <ErrorBoundary>
             <RouterView v-slot="{ Component }">
@@ -25,9 +25,9 @@
             </RouterView>
           </ErrorBoundary>
         </main>
-        <Footer v-if="!isResellerConsole" />
+        <Footer v-if="!isResellerConsole" class="storefront-footer" />
         <BackToTop v-if="!isResellerConsole" />
-        <MobileBottomNav v-if="!isResellerConsole" />
+        <MobileBottomNav v-if="!isResellerConsole && route.name !== 'product-detail'" :class="{ 'login-store-navigation': isLoginPage }" />
       </template>
     </template>
 
@@ -50,6 +50,7 @@ import ConfirmDialog from './components/ConfirmDialog.vue'
 import ErrorBoundary from './components/ErrorBoundary.vue'
 import BackToTop from './components/BackToTop.vue'
 import MobileBottomNav from './components/MobileBottomNav.vue'
+import './components/auth/login.css'
 
 // vault 外壳按需加载，classic 用户不会拉取其 chunk/样式
 const VaultLayout = defineAsyncComponent(() => import('./templates/vault/layout/VaultLayout.vue'))
@@ -57,6 +58,7 @@ const VaultLayout = defineAsyncComponent(() => import('./templates/vault/layout/
 // config 由 router.beforeEach 统一加载，无需在此重复调用
 const appStore = useAppStore()
 const route = useRoute()
+const isLoginPage = computed(() => route.path === '/auth/login')
 const isResellerConsole = computed(() => route.meta.resellerConsole === true)
 // getActiveTemplate 读取 appStore.config（响应式），config 加载后会重新计算
 const isVault = computed(() => getActiveTemplate() === 'vault')

@@ -1,13 +1,13 @@
 <template>
-  <div class="mx-auto w-full max-w-[840px] px-6 pb-10 pt-2">
+  <div class="mx-auto w-full max-w-[840px] px-4 pb-10 pt-2 sm:px-6">
     <header class="my-8 text-center">
       <h1 class="mb-2.5 text-4xl font-extrabold">{{ heroTitle }}</h1>
       <p class="text-muted-foreground">{{ heroSubtitle }}</p>
     </header>
 
-    <Card class="p-7 sm:p-[34px]">
+    <Card class="p-4 sm:p-[34px]">
       <div v-if="hasIntroduction" class="mb-9 last:mb-0">
-        <p class="whitespace-pre-line text-base leading-[1.8] text-muted-foreground">{{ introductionText }}</p>
+        <p class="whitespace-pre-line break-words text-sm sm:text-base leading-[1.8] text-muted-foreground">{{ introductionText }}</p>
       </div>
 
       <div v-if="hasServices" class="mb-9 last:mb-0">

@@ -17,9 +17,7 @@
     <!-- Info -->
     <div class="contents sm:flex sm:min-w-0 sm:flex-1 sm:flex-col sm:gap-1">
       <div class="col-start-2 row-start-1 flex min-w-0 items-center gap-1.5">
-        <span v-if="categoryName" class="hidden max-w-[88px] flex-none truncate text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:inline">{{ categoryName }}</span>
-        <span v-if="categoryName" class="hidden flex-none text-muted-foreground/40 sm:inline">·</span>
-        <h3 class="product-title line-clamp-2 min-w-0 break-words text-sm font-bold leading-[21px] text-foreground sm:line-clamp-none sm:truncate sm:leading-5">{{ title }}</h3>
+        <h3 class="product-title line-clamp-2 min-w-0 break-words text-sm font-bold leading-[21px] text-foreground sm:text-base sm:font-semibold sm:leading-6">{{ title }}</h3>
       </div>
       <div class="product-tags col-span-2 row-start-2 flex flex-wrap items-center gap-1.5">
         <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="stockPill.tone">
@@ -30,10 +28,7 @@
           <component :is="product.fulfillment_type === 'auto' ? Zap : Pencil" class="h-3 w-3" />
           {{ getFulfillmentTypeLabel(product.fulfillment_type) }}
         </span>
-        <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="product.purchase_type === 'guest' ? 'bg-[color:var(--gold-soft)] text-[color:var(--gold-strong)]' : 'bg-[color:var(--teal-soft)] text-[color:var(--teal-strong)]'">
-          <component :is="product.purchase_type === 'guest' ? UserPlus : Lock" class="h-3 w-3" />
-          {{ getPurchaseTypeLabel(product.purchase_type) }}
-        </span>
+
         <span v-if="priceSignal" class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="priceSignal.tone">{{ priceSignal.label }}</span>
         <template v-if="!soldOut && product.tags && product.tags.length">
           <span v-for="(tag, i) in product.tags.slice(0, 2)" :key="i" class="inline-flex max-w-[120px] items-center truncate rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">{{ tag }}</span>
@@ -59,14 +54,13 @@
       <button
         v-if="!soldOut"
         type="button"
-        class="product-action inline-flex h-11 flex-none items-center justify-center rounded-full bg-primary px-4 text-[13px] font-semibold text-white transition hover:bg-primary/90 sm:grid sm:h-9 sm:w-9 sm:place-items-center sm:p-0"
+        class="product-action inline-flex h-11 flex-none items-center justify-center rounded-full bg-primary px-4 text-[13px] font-semibold text-white transition hover:bg-primary/90 sm:h-10 sm:w-[100px] sm:px-3"
         :aria-label="t('products.quickBuyAria')"
         @click.prevent.stop="$emit('quickBuy', product)"
       >
-        <span class="sm:hidden">{{ t('products.quickBuyAria') }}</span>
-        <ShoppingCart class="hidden h-4 w-4 sm:block" />
+        <span>{{ t('products.quickBuyAria') }}</span>
       </button>
-      <button v-else type="button" disabled class="product-action h-11 flex-none rounded-full bg-secondary px-4 text-[13px] font-semibold text-muted-foreground sm:hidden">
+      <button v-else type="button" disabled class="product-action h-11 flex-none rounded-full bg-secondary px-4 text-[13px] font-semibold text-muted-foreground sm:h-10 sm:w-[100px] sm:px-3">
         {{ t('products.stockStatus.outOfStock') }}
       </button>
       <ChevronRight class="hidden h-4 w-4 flex-none text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-foreground sm:block" />
@@ -77,7 +71,7 @@
 <script setup lang="ts">
 import { computed, ref, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { AlarmClock, ChevronRight, Lock, Package, Pencil, ShoppingCart, UserPlus, XCircle, Zap } from 'lucide-vue-next'
+import { AlarmClock, ChevronRight, Package, Pencil, XCircle, Zap } from 'lucide-vue-next'
 import { getFirstImageUrl, getImageUrl } from '../../../utils/image'
 import { useLocalized, useProductLabels } from '../../../composables/useProduct'
 
@@ -88,7 +82,7 @@ defineEmits<{ quickBuy: [product: any] }>()
 const { t } = useI18n()
 const { getLocalizedText, siteCurrency, formatPrice } = useLocalized()
 const {
-  getStockStatusLabel, getPurchaseTypeLabel, getFulfillmentTypeLabel,
+  getStockStatusLabel, getFulfillmentTypeLabel,
   isSoldOut, hasPromotionPrice, getPromotionPriceAmount, hasWholesalePrices, hasPromotionRules,
 } = useProductLabels()
 
@@ -102,7 +96,6 @@ const covers = [
 const coverClass = computed(() => covers[(props.index ?? 0) % covers.length])
 
 const title = computed(() => getLocalizedText(props.product?.title))
-const categoryName = computed(() => getLocalizedText(props.product?.category?.name))
 const soldOut = computed(() => isSoldOut(props.product))
 const promo = computed(() => hasPromotionPrice(props.product))
 
@@ -135,9 +128,19 @@ const priceSignal = computed<{ tone: string; label: string } | null>(() => {
 </script>
 
 <style scoped>
+@media (width >= 640px) {
+  .product-price {
+    min-width: 96px;
+    font-family: "Rubik", var(--ui-font-family);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+}
+
 @media (width < 640px) {
   .product-list-item {
-    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+    font-family: var(--ui-font-family);
   }
 
   .product-title {

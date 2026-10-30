@@ -23,19 +23,6 @@ type CategoryAssignmentRepository interface {
 	CountChildren(categoryID string) (int64, error)
 }
 
-// NormalizePurchaseType 归一化商品购买身份限制。
-func NormalizePurchaseType(raw string) string {
-	value := strings.ToLower(strings.TrimSpace(raw))
-	switch value {
-	case "", constants.ProductPurchaseMember:
-		return constants.ProductPurchaseMember
-	case constants.ProductPurchaseGuest:
-		return constants.ProductPurchaseGuest
-	default:
-		return ""
-	}
-}
-
 // NormalizeFulfillmentType 归一化商品交付类型。
 func NormalizeFulfillmentType(raw string) string {
 	value := strings.ToLower(strings.TrimSpace(raw))

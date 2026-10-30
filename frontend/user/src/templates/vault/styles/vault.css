@@ -196,3 +196,33 @@ body.vault-tokens {
   .vault-scope *::before,
   .vault-scope *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
+
+/* Customer purchase pages share typography at mobile and desktop sizes. */
+.vault-scope :is(.catalog-page, .product-detail-page, .checkout-page, .purchase-support-page) {
+  --font-head: var(--ui-font-family);
+  --font-body: var(--ui-font-family);
+  font-family: var(--ui-font-family);
+}
+
+.vault-scope .catalog-search {
+  position: sticky;
+  top: 71px; /* 70px navigation + border */
+  z-index: 30;
+  padding-block: 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--ui-border);
+}
+
+@media (width >= 1024px) {
+  .vault-scope .catalog-categories {
+    position: sticky;
+    top: 155px; /* navigation + 68px search toolbar + gap */
+    max-height: calc(100dvh - 171px);
+    overflow-y: auto;
+  }
+}
+
+.vault-scope .support-amount {
+  font-family: "Rubik", var(--ui-font-family);
+  font-variant-numeric: tabular-nums;
+}

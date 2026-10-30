@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-background text-foreground pt-24 pb-16">
     <div class="container mx-auto px-4">
-      <div class="mb-8 flex items-center justify-between">
+      <div class="mb-8 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div>
           <h1 class="text-3xl font-black text-foreground mb-2">{{ t('rechargeOrder.title') }}</h1>
           <p class="text-muted-foreground text-sm">{{ t('rechargeOrder.subtitle') }}</p>
@@ -25,7 +25,7 @@
           <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div class="text-xs uppercase tracking-wider text-muted-foreground">{{ t('personalCenter.wallet.rechargeNoLabel') }}</div>
-              <div class="text-sm font-semibold text-foreground mt-1">{{ recharge.recharge_no }}</div>
+              <div class="break-all text-sm font-semibold text-foreground mt-1">{{ recharge.recharge_no }}</div>
               <div class="text-xs text-muted-foreground mt-2">{{ t('rechargeOrder.createdAtLabel') }}：{{ formatDate(recharge.created_at) }}</div>
             </div>
             <div class="flex flex-col items-start md:items-end gap-2">

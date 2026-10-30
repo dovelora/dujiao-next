@@ -34,10 +34,6 @@ export function useLocalized() {
 export function useProductLabels() {
   const { t } = useI18n()
 
-  const getPurchaseTypeLabel = (purchaseType: string) => {
-    return purchaseType === 'guest' ? t('productPurchase.guest') : t('productPurchase.member')
-  }
-
   const getFulfillmentTypeLabel = (fulfillmentType: string) => {
     return fulfillmentType === 'auto' ? t('products.fulfillmentType.auto') : t('products.fulfillmentType.manual')
   }
@@ -195,7 +191,6 @@ export function useProductLabels() {
   }
 
   return {
-    getPurchaseTypeLabel,
     getFulfillmentTypeLabel,
     getStockBadgeVariant,
     getStockStatusLabel,

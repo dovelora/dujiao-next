@@ -80,7 +80,6 @@ func TestRouteDomainFilesPreserveTrustBoundaries(t *testing.T) {
 				`userauthtransport.RegisterUserPasswordRoutes(user, userPasswordHandler)`,
 				`memberleveltransport.RegisterPublicRoutes(public, publicMemberLevelHandler)`,
 				`publicconfigtransport.RegisterPublicRoutes(public, publicConfigHandler)`,
-				`carttransport.RegisterUserRoutes(user, userCartHandler)`,
 				`ordertransport.RegisterUserReadRoutes(user, userOrderHandler)`,
 				`ordertransport.RegisterUserCancelRoute(user, userOrderHandler)`,
 				`ordertransport.RegisterUserPreviewRoute(user, orderPreviewHandler)`,

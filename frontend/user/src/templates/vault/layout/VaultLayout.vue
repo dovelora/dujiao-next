@@ -27,15 +27,14 @@
         </nav>
 
         <div class="ml-auto flex items-center gap-2">
-          <RouterLink class="grid h-10 w-10 flex-none place-items-center rounded-full bg-secondary text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary" to="/products" :aria-label="t('nav.products')"><Search class="h-[18px] w-[18px]" /></RouterLink>
-          <RouterLink v-if="!userAuthStore.isAuthenticated" class="grid h-10 w-10 flex-none place-items-center rounded-full bg-secondary text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary" to="/guest/orders" :aria-label="t('navbar.guestOrders')" :title="t('navbar.guestOrders')"><ClipboardList class="h-[18px] w-[18px]" /></RouterLink>
+          <RouterLink class="hidden h-10 w-10 flex-none place-items-center rounded-full bg-secondary text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary sm:grid" to="/products" :aria-label="t('nav.products')"><Search class="h-[18px] w-[18px]" /></RouterLink>
+          <RouterLink v-if="!userAuthStore.isAuthenticated" class="hidden h-10 w-10 flex-none place-items-center rounded-full bg-secondary text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary sm:grid" to="/guest/orders" :aria-label="t('navbar.guestOrders')" :title="t('navbar.guestOrders')"><ClipboardList class="h-[18px] w-[18px]" /></RouterLink>
           <button class="grid h-10 w-10 flex-none place-items-center rounded-full bg-secondary text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary" type="button" :aria-label="t('resellerConsole.common.toggleTheme')" @click="toggleTheme">
             <Sun v-if="theme === 'dark'" class="h-[18px] w-[18px]" />
             <Moon v-else class="h-[18px] w-[18px]" />
           </button>
-          <RouterLink class="relative grid h-10 w-10 flex-none place-items-center rounded-full bg-secondary text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary" to="/cart" :aria-label="t('navbar.cart')">
-            <ShoppingCart class="h-[18px] w-[18px]" />
-            <span v-if="cartCount > 0" class="absolute -right-[3px] -top-[3px] grid h-[19px] min-w-[19px] place-items-center rounded-full bg-primary px-[5px] text-[11px] font-bold text-white">{{ cartCount }}</span>
+          <RouterLink class="relative grid h-10 w-10 flex-none place-items-center rounded-full bg-secondary text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary" to="/products" :aria-label="t('nav.products')">
+            <ShoppingBag class="h-[18px] w-[18px]" />
           </RouterLink>
 
           <!-- 语言切换 -->
@@ -57,7 +56,7 @@
             <RouterLink class="inline-flex items-center gap-2 rounded-full border-2 border-hairline-strong px-3.5 py-1.5 text-[13px] font-bold text-foreground transition-colors hover:border-[color:var(--ink)] max-[900px]:hidden" to="/me"><User class="h-[18px] w-[18px]" /> {{ t('navbar.personalCenter') }}</RouterLink>
             <button type="button" class="grid h-10 w-10 flex-none place-items-center rounded-full bg-secondary text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive max-[900px]:hidden" :aria-label="t('navbar.logout')" :title="t('navbar.logout')" @click="userAuthStore.logout()"><LogOut class="h-[18px] w-[18px]" /></button>
           </template>
-          <RouterLink v-else class="inline-flex items-center gap-2 rounded-full bg-primary px-3.5 py-1.5 text-[13px] font-bold text-primary-foreground transition-colors hover:bg-primary/90 max-[900px]:hidden" to="/auth/login">{{ t('navbar.login') }}</RouterLink>
+          <RouterLink v-else class="inline-flex items-center gap-2 rounded-full bg-primary px-3.5 py-1.5 text-[13px] font-bold text-primary-foreground transition-colors hover:bg-primary/90 max-[900px]:hidden" :to="loginTarget">{{ t('navbar.login') }}</RouterLink>
 
           <!-- 移动端：更多菜单 -->
           <div class="relative hidden max-[900px]:block" ref="moreEl">
@@ -66,13 +65,14 @@
               <X v-else class="pointer-events-none h-[18px] w-[18px]" />
             </button>
             <div v-if="moreOpen" class="absolute right-0 top-[calc(100%+8px)] z-[60] flex min-w-[168px] flex-col gap-0.5 rounded-md border bg-card p-2 shadow-[var(--shadow-lg)]">
+              <RouterLink v-if="isListMode" to="/products" class="flex items-center rounded-sm px-3 py-2.5 text-sm font-semibold text-muted-foreground hover:bg-secondary sm:hidden" @click="moreOpen = false">{{ t('nav.products') }}</RouterLink>
               <template v-for="item in menuItems" :key="`m-${item.key}`">
                 <RouterLink v-if="item.type === 'route'" :to="item.path" class="flex w-full items-center gap-2.5 rounded-sm px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" @click="moreOpen = false">{{ item.label }}</RouterLink>
                 <a v-else :href="item.path" :target="item.target" rel="noopener noreferrer" class="flex w-full items-center gap-2.5 rounded-sm px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" @click="moreOpen = false">{{ item.label }}</a>
               </template>
               <RouterLink v-if="!userAuthStore.isAuthenticated" to="/guest/orders" class="flex w-full items-center gap-2.5 rounded-sm px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" @click="moreOpen = false">{{ t('navbar.guestOrders') }}</RouterLink>
               <RouterLink v-if="userAuthStore.isAuthenticated" to="/me" class="flex w-full items-center gap-2.5 rounded-sm px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" @click="moreOpen = false">{{ t('navbar.personalCenter') }}</RouterLink>
-              <RouterLink v-else to="/auth/login" class="flex w-full items-center gap-2.5 rounded-sm px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" @click="moreOpen = false">{{ t('navbar.login') }}</RouterLink>
+              <RouterLink v-else :to="loginTarget" class="flex w-full items-center gap-2.5 rounded-sm px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" @click="moreOpen = false">{{ t('navbar.login') }}</RouterLink>
               <button v-if="userAuthStore.isAuthenticated" class="flex w-full items-center gap-2.5 rounded-sm px-3 py-2.5 text-left text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" @click="userAuthStore.logout(); moreOpen = false">{{ t('navbar.logout') }}</button>
               <span class="px-3 pb-0.5 pt-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{{ t('navbar.selectLanguage') }}</span>
               <button v-for="lang in languages" :key="`ml-${lang.code}`" class="flex w-full items-center justify-between gap-2.5 rounded-sm px-3 py-2.5 text-left text-sm font-semibold transition-colors hover:bg-secondary hover:text-foreground" :class="appStore.locale === lang.code ? 'text-primary' : 'text-muted-foreground'" @click="changeLanguage(lang.code); moreOpen = false">
@@ -91,8 +91,8 @@
     </main>
 
     <!-- 页脚 -->
-    <footer class="mt-[var(--gap-block)] border-t bg-[color:var(--bg-warm)]">
-      <div class="mx-auto grid w-full max-w-[1180px] grid-cols-1 gap-[30px] px-6 pb-9 pt-[52px] sm:grid-cols-2 lg:grid-cols-[1.7fr_repeat(3,1fr)]">
+    <footer v-if="!isCheckoutPage" class="vault-footer mt-[var(--gap-block)] border-t bg-[color:var(--bg-warm)]">
+      <div class="vault-footer-links mx-auto grid w-full max-w-[1180px] grid-cols-1 gap-[30px] px-6 pb-9 pt-[52px] sm:grid-cols-2 lg:grid-cols-[1.7fr_repeat(3,1fr)]">
         <div>
           <RouterLink class="inline-flex items-center gap-2.5 text-[19px] font-extrabold tracking-[-0.02em] text-foreground" to="/">
             <img v-if="brandLogo" :src="brandLogo" :alt="brandName" class="h-8 max-w-[160px] object-contain" />
@@ -134,12 +134,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import {
-  Search, Moon, Sun, ShoppingCart, Languages, Menu, X, User, Info, ClipboardList, LogOut,
+  Search, Moon, Sun, ShoppingBag, Languages, Menu, X, User, Info, ClipboardList, LogOut,
   LayoutGrid, Send, MessageCircle, Mail, Headphones,
 } from 'lucide-vue-next'
 import { useAppStore } from '../../../stores/app'
-import { useCartStore } from '../../../stores/cart'
 import { useUserAuthStore } from '../../../stores/userAuth'
 import { useNavConfig, type NavItem } from '../../../composables/useNavConfig'
 import { useTheme } from '../../../utils/theme'
@@ -158,8 +158,12 @@ import '@fontsource/nunito-sans/latin-700.css'
 import '../styles/vault.css'
 
 const { t } = useI18n()
+const route = useRoute()
+const isCheckoutPage = computed(() => route.name === 'checkout')
+const loginTarget = computed(() => isCheckoutPage.value
+  ? { path: '/auth/login', query: { redirect: '/checkout' } }
+  : { path: '/auth/login' })
 const appStore = useAppStore()
-const cartStore = useCartStore()
 const userAuthStore = useUserAuthStore()
 const { theme, toggleTheme } = useTheme()
 
@@ -211,8 +215,6 @@ const footerLinks = computed(() => {
 
 const contact = computed(() => appStore.config?.contact as { telegram?: string; whatsapp?: string; email?: string; support_url?: string } | undefined)
 
-const cartCount = computed(() => cartStore.totalItems)
-
 const languages = [
   { code: 'zh-CN', name: '简体中文' },
   { code: 'zh-TW', name: '繁體中文' },
@@ -244,3 +246,43 @@ onUnmounted(() => {
   document.body.classList.remove('vault-tokens')
 })
 </script>
+
+<style scoped>
+@media (width < 640px) {
+  .vault-footer {
+    margin-top: 24px;
+  }
+
+  .vault-footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 16px;
+    padding: 16px;
+  }
+
+  .vault-footer-links > div {
+    display: contents;
+  }
+
+  .vault-footer-links > div:first-child,
+  .vault-footer-links h4 {
+    display: none;
+  }
+
+  .vault-footer-links a {
+    display: inline-flex;
+    min-height: 32px;
+    padding: 4px 0;
+    font-size: 12px;
+    line-height: 20px;
+  }
+
+  .vault-footer > div:last-child {
+    justify-content: center;
+    gap: 6px 16px;
+    padding: 12px 16px max(16px, env(safe-area-inset-bottom));
+    font-size: 12px;
+  }
+}
+</style>

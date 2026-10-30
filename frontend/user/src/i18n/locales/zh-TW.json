@@ -199,8 +199,6 @@
     "relatedPosts": "相關文章",
     "deliveryReassurance": "付款成功後，兌換碼即時送達訂單頁與郵箱，憑證僅你本人可見。",
     "deliveryReassuranceManual": "付款成功後由人工為你處理，處理進度與結果會同步到訂單頁與郵箱。",
-    "loginToBuy": "登入後購買",
-    "addToCart": "加入購物車",
     "buyNow": "立即購買",
     "categoryLabel": "分類",
     "fulfillmentLabel": "交付方式",
@@ -217,26 +215,17 @@
     "skuStockRangePlus": "{min}+ 件",
     "stockUnavailable": "當前商品庫存不足，暫不可購買",
     "stockBelowMinPurchase": "目前庫存不足以滿足該商品的最小購買數量（{count} 件）",
-    "addCartStockExceeded": "該規格庫存不足，最多可購買 {count} 件",
-    "addCartStockExceededWithCart": "該規格庫存不足，最多可購買 {count} 件（購物車中已有 {cartCount} 件）",
-    "addCartLimitExceeded": "當前商品單次最多可購買 {count} 件",
-    "addCartLimitExceededWithCart": "當前商品單次最多可購買 {count} 件（購物車中已有 {cartCount} 件）"
+    "purchaseStockExceeded": "該規格庫存不足，最多可購買 {count} 件",
+    "purchaseLimitExceeded": "當前商品單次最多可購買 {count} 件"
   },
   "quickBuy": {
     "title": "快速購買",
     "selectSku": "選擇規格",
     "quantity": "數量",
     "stock": "庫存",
-    "addToCart": "加入購物車",
     "buyNow": "立即購買",
-    "loginToBuy": "登入後購買",
     "soldOut": "已售罄",
     "viewDetail": "查看詳情"
-  },
-  "productPurchase": {
-    "label": "購買身份",
-    "member": "會員購買",
-    "guest": "遊客可購"
   },
   "blog": {
     "subtitle": "最新文章和動態",
@@ -274,7 +263,6 @@
     "contactText": "如果您對我們的產品或服務有任何疑問，歡迎透過以下方式聯絡我們："
   },
   "navbar": {
-    "cart": "購物車",
     "login": "登入",
     "personalCenter": "個人中心",
     "guestOrders": "遊客查單",
@@ -283,12 +271,10 @@
     "more": "更多"
   },
   "toast": {
-    "addedToCart": "已加入購物車"
   },
   "bottomNav": {
     "home": "首頁",
     "products": "商品",
-    "cart": "購物車",
     "me": "我的"
   },
   "personalCenter": {
@@ -1143,31 +1129,25 @@
       "refunded": "已退款"
     }
   },
-  "cart": {
-    "title": "購物車",
-    "subtitle": "確認商品後進入結算",
-    "empty": "購物車為空",
-    "emptyAction": "去逛逛",
-    "priceLabel": "價格",
-    "skuLabel": "規格",
-    "remove": "移除",
-    "removed": "已從購物車移除",
-    "undo": "撤銷",
-    "summaryTitle": "結算資訊",
-    "itemsCount": "商品數量",
-    "totalLabel": "合計",
-    "disclaimer": "實際金額以結算頁為準（活動價/優惠券在服務端計算）",
-    "checkout": "去結算",
-    "stockOut": "該規格已售罄，請減少數量或移除",
-    "stockRemaining": "該規格剩餘 {count} 件",
-    "stockExceeded": "該規格庫存不足，目前購物車最多 {count} 件",
-    "maxPurchaseExceeded": "該商品單次下單最多可購買 {count} 件",
-    "minPurchaseNotMet": "該商品單次下單至少需購買 {count} 件"
-  },
   "checkout": {
+    "detailsEmpty": "暫無詳細資訊",
+    "itemsCount": "商品數量",
+    "decreaseQuantity": "減少數量",
+    "increaseQuantity": "增加數量",
+    "stockOut": "此規格已售罄，請返回商品頁選擇其他規格",
+    "stockRemaining": "該規格剩餘 {count} 件",
+    "stockExceeded": "目前規格最多可購買 {count} 件",
+    "maxPurchaseExceeded": "該商品單次下單最多可購買 {count} 件",
+    "minPurchaseNotMet": "該商品單次下單至少需購買 {count} 件",
+    "accountLoginHint": "已有帳號？",
+    "guestEmailLabel": "查單信箱",
+    "guestPasswordLabel": "查詢密碼（至少 {count} 位）",
+    "guestDetailsHint": "信箱和查詢密碼用於查詢訂單、提取商品，請妥善保存。",
+    "totalChanged": "訂單金額已更新，請核對新金額後再次點擊付款。",
+    "payNow": "立即付款",
     "title": "訂單結算",
     "subtitle": "確認訂單資訊並提交",
-    "empty": "購物車為空",
+    "empty": "尚未選擇商品",
     "emptyAction": "去選購",
     "itemsTitle": "訂單商品",
     "quantityLabel": "數量",
@@ -1218,7 +1198,7 @@
     "submitButton": "提交訂單並支付",
     "submitting": "提交中...",
     "errors": {
-      "emptyCart": "購物車為空",
+      "emptyPurchase": "尚未選擇商品",
       "missingGuest": "請輸入信箱與訂單密碼",
       "guestPasswordTooShort": "訂單密碼至少需要 {count} 個字元",
       "loginOrGuest": "請先登入或使用遊客購買",
@@ -1606,11 +1586,11 @@
     "rechargePayable": "應付金額",
     "rechargeFilters": {
       "keyword": "儲值單號",
-      "rechargeNoPlaceholder": "輸入儲值單號篩選"
+      "rechargeNoPlaceholder": "輸入充值單號"
     },
     "filters": {
       "keyword": "訂單號",
-      "orderNoPlaceholder": "輸入訂單號篩選",
+      "orderNoPlaceholder": "輸入訂單號",
       "status": "訂單狀態",
       "statusAll": "全部狀態",
       "search": "篩選",
@@ -1620,10 +1600,10 @@
       "current": "當前篩選：訂單號 {orderNo}，狀態 {status}"
     },
     "stats": {
-      "totalMatched": "匹配訂單總數",
-      "currentPage": "當前頁訂單數",
+      "totalMatched": "匹配訂單",
+      "currentPage": "本頁訂單",
       "pendingPayment": "待支付",
-      "finished": "已完成/已交付"
+      "finished": "已完成/交付"
     }
   },
   "rechargeOrder": {

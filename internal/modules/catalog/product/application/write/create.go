@@ -36,10 +36,6 @@ func (s *WriteService) Create(input CreateProductInput) (*productdomain.Product,
 	if input.IsAffiliateEnabled != nil {
 		isAffiliateEnabled = *input.IsAffiliateEnabled
 	}
-	purchaseType := productdomain.NormalizePurchaseType(input.PurchaseType)
-	if purchaseType == "" {
-		return nil, productcontract.ErrProductPurchaseInvalid
-	}
 	fulfillmentType := productdomain.NormalizeFulfillmentType(input.FulfillmentType)
 	if fulfillmentType == "" {
 		return nil, productcontract.ErrFulfillmentInvalid
@@ -110,7 +106,6 @@ func (s *WriteService) Create(input CreateProductInput) (*productdomain.Product,
 		WholesalePrices:      productdomain.WholesalePriceTiers{},
 		Images:               jsonslice.Strings(input.Images),
 		Tags:                 jsonslice.Strings(input.Tags),
-		PurchaseType:         purchaseType,
 		MinPurchaseQuantity:  minPurchaseQuantity,
 		MaxPurchaseQuantity:  maxPurchaseQuantity,
 		StockDisplayMode:     stockDisplayMode,

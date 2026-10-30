@@ -1,5 +1,5 @@
 <template>
-  <div class="flex min-h-[70vh] items-center justify-center px-4 py-12">
+  <div class="flex min-h-[70vh] items-center justify-center px-4 py-6 sm:py-12">
     <div class="w-full max-w-[480px]">
       <div class="mb-3.5 flex items-center justify-between px-1">
         <RouterLink to="/" class="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:text-primary">
@@ -8,7 +8,7 @@
         <Badge variant="neutral" size="sm" class="rounded-full">{{ t('auth.register.title') }}</Badge>
       </div>
 
-      <Card class="p-7 shadow-[var(--shadow-lg)] sm:p-9">
+      <Card class="p-4 shadow-[var(--shadow-lg)] sm:p-9">
         <div v-if="!registrationEnabled" class="py-7 text-center">
           <p class="text-sm text-muted-foreground">{{ t('auth.register.registrationDisabled') }}</p>
           <RouterLink to="/auth/login" class="mt-4 inline-block text-sm font-semibold text-primary hover:underline">
@@ -139,12 +139,12 @@
               <label class="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
                 <ShieldCheck class="h-3.5 w-3.5 opacity-70" /> {{ t('auth.register.codeLabel') }}
               </label>
-              <div class="flex gap-2.5">
+              <div class="flex flex-col gap-2.5 sm:flex-row">
                 <Input
                   v-model="code"
                   type="text"
                   required
-                  class="h-11 min-w-0 flex-1"
+                  class="h-11 min-w-0 flex-none sm:flex-1"
                   :placeholder="t('auth.register.codePlaceholder')"
                 />
                 <Button type="button" variant="secondary" class="h-11 shrink-0 whitespace-nowrap rounded-full px-5" :disabled="sending || countdown > 0" @click="handleSendCode">

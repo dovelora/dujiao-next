@@ -1,5 +1,5 @@
 <template>
-  <div class="mx-auto w-full max-w-[1180px] px-6 pb-6">
+  <div class="catalog-page mx-auto w-full max-w-[1180px] px-4 pb-6 sm:px-6">
     <nav class="flex items-center gap-1.5 py-5 pb-1 text-[13.5px] font-semibold text-muted-foreground">
       <RouterLink to="/" class="flex-none hover:text-primary">{{ t('nav.home') }}</RouterLink>
       <ChevronRight class="h-4 w-4 flex-none" />
@@ -7,33 +7,31 @@
     </nav>
     <h1 class="mb-3.5 break-words text-3xl font-extrabold">{{ pageTitle }}</h1>
 
-    <div class="grid items-start gap-7 py-1.5 pb-9 lg:grid-cols-[248px_1fr]">
-      <!-- 筛选侧栏：桌面竖排 + 移动端横向 chips -->
-      <div class="grid min-w-0 gap-3 lg:sticky lg:top-[88px] lg:gap-5">
-        <!-- 搜索框 -->
-        <div class="relative">
-          <Search class="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
-          <input
-            v-model="searchQuery"
-            class="h-11 w-full rounded-xl border border-border bg-card pl-10 pr-10 text-[15px] text-foreground transition-colors placeholder:text-muted-foreground hover:border-hairline-strong"
-            :placeholder="t('products.searchBoxPlaceholder')"
-            :aria-label="t('products.searchLabel')"
-          />
-          <button v-if="searchQuery" type="button" class="absolute right-2.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" :aria-label="t('blog.searchClear')" @click="clearSearch"><X class="h-3.5 w-3.5" /></button>
-        </div>
-
-        <!-- 分类：使用 VaultCategorySidebar，移动端自动变横向 chips -->
-        <VaultCategorySidebar
-          :category-groups="categoryGroups"
-          :selected-category="selectedCategory"
-          :expanded-parent-ids="expandedParentIds"
-          @select="selectCategory"
-          @toggle="toggleParentCategory"
+    <div class="catalog-search">
+      <!-- 搜索框 -->
+      <div class="relative">
+        <Search class="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
+        <input
+          v-model="searchQuery"
+          class="h-11 w-full rounded-xl border border-border bg-card pl-10 pr-10 text-base text-foreground sm:text-[15px] transition-colors placeholder:text-muted-foreground hover:border-hairline-strong"
+          :placeholder="t('products.searchBoxPlaceholder')"
+          :aria-label="t('products.searchLabel')"
         />
+        <button v-if="searchQuery" type="button" class="absolute right-0 top-0 grid h-11 w-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" :aria-label="t('blog.searchClear')" @click="clearSearch"><X class="h-3.5 w-3.5" /></button>
       </div>
+    </div>
+
+    <div class="mt-4 grid items-start gap-4 pb-9 lg:grid-cols-[232px_minmax(0,1fr)] lg:gap-6">
+      <VaultCategorySidebar
+        :category-groups="categoryGroups"
+        :selected-category="selectedCategory"
+        :expanded-parent-ids="expandedParentIds"
+        @select="selectCategory"
+        @toggle="toggleParentCategory"
+      />
 
       <!-- 商品区 -->
-      <section>
+      <section class="min-w-0">
         <div v-if="loading" class="grid gap-4 grid-cols-[repeat(auto-fill,minmax(228px,1fr))]">
           <div v-for="i in 9" :key="i" class="h-[280px] rounded-lg border bg-card"></div>
         </div>

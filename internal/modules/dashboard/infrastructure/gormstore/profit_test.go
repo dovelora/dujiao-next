@@ -29,7 +29,6 @@ func TestGetProfitOverviewDeductsRefundRecords(t *testing.T) {
 		Slug:            "dashboard-profit-refund-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "利润测试商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 	}
@@ -100,7 +99,6 @@ func TestGetProfitTrendsDeductsRefundRecords(t *testing.T) {
 		Slug:            "dashboard-profit-trend-refund-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "利润趋势测试商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 	}
@@ -177,7 +175,6 @@ func TestProfitStatisticsDeductSuccessfulExternalPaymentFees(t *testing.T) {
 		Slug:            "dashboard-profit-payment-fee-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "手续费利润测试商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 	}
@@ -258,7 +255,6 @@ func TestProfitStatisticsReverseReturnedPaymentFeeOnRefundDay(t *testing.T) {
 		Slug:            "dashboard-profit-refunded-payment-fee-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "退款手续费冲回测试商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 	}
@@ -330,7 +326,6 @@ func TestGetProfitOverviewDeductsInWindowRefundForOutOfWindowOrder(t *testing.T)
 		Slug:            "dashboard-profit-period-refund-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "周期退款测试商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 	}
@@ -438,7 +433,6 @@ func TestGetProfitTrendsIncludesRefundOnlyDayInWindow(t *testing.T) {
 		Slug:            "dashboard-profit-refund-only-day-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "退款单日测试商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 	}
@@ -544,7 +538,6 @@ func TestProfitMetricsIncludeZeroCostRevenueAndCalculateRefundedCost(t *testing.
 		Slug:            "dashboard-zero-cost-refund-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "零成本退款商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(49)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 	}
@@ -624,7 +617,6 @@ func TestRefundedCostUsesParentOrderChildrenCostBasis(t *testing.T) {
 		Slug:            "dashboard-parent-refund-cost-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "父订单退款成本商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 	}

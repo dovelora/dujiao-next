@@ -206,7 +206,6 @@ func mapError(err error) error {
 		{orderapp.ErrProductSKUInvalid, channeltransport.ErrProductSKUInvalid},
 		{orderapp.ErrInvalidOrderItem, channeltransport.ErrInvalidOrderItem},
 		{orderapp.ErrInvalidOrderAmount, channeltransport.ErrInvalidOrderAmount},
-		{orderapp.ErrProductPurchaseNotAllowed, channeltransport.ErrProductPurchaseNotAllowed},
 		{orderapp.ErrProductMaxPurchaseExceeded, channeltransport.ErrProductMaxPurchaseExceeded},
 		{orderapp.ErrProductMinPurchaseNotMet, channeltransport.ErrProductMinPurchaseNotMet},
 		{orderapp.ErrProductNotAvailable, channeltransport.ErrProductNotAvailable},

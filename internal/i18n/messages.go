@@ -124,9 +124,7 @@ var messages = map[string]map[string]string{
 		"error.admin_delete_protected":                   "默认超级管理员不允许删除",
 		"error.product_price_invalid":                    "商品价格或币种不合法",
 		"error.wholesale_price_invalid":                  "批发价配置不合法",
-		"error.product_purchase_invalid":                 "商品购买身份不合法",
 		"error.product_category_invalid":                 "当前分类不可直接挂载商品，请选择末级分类",
-		"error.product_purchase_not_allowed":             "当前商品仅限会员购买",
 		"error.product_max_purchase_exceeded":            "超出当前商品单次购买数量上限",
 		"error.product_min_purchase_not_met":             "未达到当前商品单次购买数量下限",
 		"error.product_purchase_limit_invalid":           "单次购买数量下限不能大于上限",
@@ -347,6 +345,7 @@ var messages = map[string]map[string]string{
 		"email.order_status.fulfillment_attachment_tip":  "交付内容较多，已作为附件发送，请查看邮件附件获取完整交付内容。",
 
 		// 通用校验规则
+		"validation.Items.len":     "每次只能购买一种商品，请分别下单",
 		"validation.rule.required": "不能为空",
 		"validation.rule.min":      "最小值为 %s",
 		"validation.rule.max":      "最大值为 %s",
@@ -501,9 +500,7 @@ var messages = map[string]map[string]string{
 		"error.admin_delete_protected":                   "預設超級管理員不允許刪除",
 		"error.product_price_invalid":                    "商品價格或幣種不合法",
 		"error.wholesale_price_invalid":                  "批發價配置不合法",
-		"error.product_purchase_invalid":                 "商品購買身份不合法",
 		"error.product_category_invalid":                 "當前分類不可直接掛載商品，請選擇末級分類",
-		"error.product_purchase_not_allowed":             "當前商品僅限會員購買",
 		"error.product_max_purchase_exceeded":            "超出當前商品單次購買數量上限",
 		"error.product_min_purchase_not_met":             "未達到當前商品單次購買數量下限",
 		"error.product_purchase_limit_invalid":           "單次購買數量下限不能大於上限",
@@ -724,6 +721,7 @@ var messages = map[string]map[string]string{
 		"email.order_status.fulfillment_attachment_tip":  "交付內容較多，已作為附件發送，請查看郵件附件獲取完整交付內容。",
 
 		// 通用校驗規則
+		"validation.Items.len":     "每次只能購買一種商品，請分別下單",
 		"validation.rule.required": "不能為空",
 		"validation.rule.min":      "最小值為 %s",
 		"validation.rule.max":      "最大值為 %s",
@@ -878,9 +876,7 @@ var messages = map[string]map[string]string{
 		"error.admin_delete_protected":                   "Default super admin cannot be deleted",
 		"error.product_price_invalid":                    "Invalid product price or currency",
 		"error.wholesale_price_invalid":                  "Invalid wholesale price configuration",
-		"error.product_purchase_invalid":                 "Invalid product purchase type",
 		"error.product_category_invalid":                 "This category cannot be assigned products directly; choose a leaf category",
-		"error.product_purchase_not_allowed":             "This product requires member purchase",
 		"error.product_max_purchase_exceeded":            "Purchase quantity exceeds the per-order limit for this product",
 		"error.product_min_purchase_not_met":             "Purchase quantity is below the per-order minimum for this product",
 		"error.product_purchase_limit_invalid":           "Minimum purchase quantity must not exceed the maximum",
@@ -1101,6 +1097,7 @@ var messages = map[string]map[string]string{
 		"email.order_status.fulfillment_attachment_tip":  "The delivery content is included as an attachment. Please check the email attachment for the full content.",
 
 		// Validation rules
+		"validation.Items.len":     "Purchase one product at a time; place separate orders for different products.",
 		"validation.rule.required": "is required",
 		"validation.rule.min":      "minimum is %s",
 		"validation.rule.max":      "maximum is %s",

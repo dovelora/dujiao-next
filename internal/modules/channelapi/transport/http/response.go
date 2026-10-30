@@ -41,7 +41,6 @@ var channelOrderCreateErrorRules = []mappedChannelError{
 	channelErrorRule(ErrProductSKUInvalid, http.StatusBadRequest, response.CodeBadRequest, "sku_not_found", "error.order_item_invalid"),
 	channelErrorRule(ErrInvalidOrderItem, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.order_item_invalid"),
 	channelErrorRule(ErrInvalidOrderAmount, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.order_amount_invalid"),
-	channelErrorRule(ErrProductPurchaseNotAllowed, http.StatusBadRequest, response.CodeBadRequest, "product_unavailable", "error.product_purchase_not_allowed"),
 	channelErrorRule(ErrProductMaxPurchaseExceeded, http.StatusBadRequest, response.CodeBadRequest, "quantity_limit_exceeded", "error.product_max_purchase_exceeded"),
 	channelErrorRule(ErrProductMinPurchaseNotMet, http.StatusBadRequest, response.CodeBadRequest, "quantity_below_minimum", "error.product_min_purchase_not_met"),
 	channelErrorRule(ErrProductNotAvailable, http.StatusBadRequest, response.CodeBadRequest, "product_unavailable", "error.product_not_available"),

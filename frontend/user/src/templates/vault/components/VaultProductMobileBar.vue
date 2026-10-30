@@ -9,27 +9,21 @@
   >
     <div
       v-if="visible"
-      class="theme-safe-bottom fixed bottom-0 left-0 right-0 z-40 border-t bg-card/95 shadow-[var(--shadow)] backdrop-blur-xl lg:hidden"
+      class="product-mobile-bar theme-safe-bottom fixed bottom-0 left-0 right-0 z-40 border-t bg-card/95 shadow-[var(--shadow)] backdrop-blur-xl lg:hidden"
     >
-      <div class="flex items-center gap-3 px-4 py-3">
+      <div class="grid items-center gap-2 px-4 py-3 grid-cols-[minmax(0,1fr)_auto]">
         <!-- 价格 -->
         <div class="min-w-0 flex-1">
-          <span v-if="showMemberPrice" class="block truncate text-xl font-extrabold tabular-nums text-[color:var(--gold-strong)]">{{ memberPriceDisplay }}</span>
-          <span v-else-if="showSkuPromotionPrice" class="block truncate text-xl font-extrabold tabular-nums text-primary">{{ skuPromotionPriceDisplay }}</span>
-          <span v-else-if="showSkuPrice" class="block truncate text-xl font-extrabold tabular-nums text-primary">{{ skuPriceDisplay }}</span>
-          <span v-else-if="showProductPromotionPrice" class="block truncate text-xl font-extrabold tabular-nums text-primary">{{ productPromotionPriceDisplay }}</span>
-          <span v-else class="block truncate text-xl font-extrabold tabular-nums text-primary">{{ productPriceDisplay }}</span>
+          <span v-if="showMemberPrice" class="block break-all text-lg font-semibold tabular-nums text-[color:var(--gold-strong)]">{{ memberPriceDisplay }}</span>
+          <span v-else-if="showSkuPromotionPrice" class="block break-all text-lg font-semibold tabular-nums text-primary">{{ skuPromotionPriceDisplay }}</span>
+          <span v-else-if="showSkuPrice" class="block break-all text-lg font-semibold tabular-nums text-primary">{{ skuPriceDisplay }}</span>
+          <span v-else-if="showProductPromotionPrice" class="block break-all text-lg font-semibold tabular-nums text-primary">{{ productPromotionPriceDisplay }}</span>
+          <span v-else class="block break-all text-lg font-semibold tabular-nums text-primary">{{ productPriceDisplay }}</span>
         </div>
         <!-- 操作 -->
-        <Button v-if="requiresLogin" size="lg" class="flex-none rounded-full font-bold" @click="$emit('goLogin')">{{ t('productDetail.loginToBuy') }}</Button>
-        <template v-else>
-          <Button variant="outline" size="lg" class="flex-none rounded-full font-bold" :disabled="!canPurchase" @click="$emit('addToCart')">
-            <ShoppingCart /> {{ t('productDetail.addToCart') }}
-          </Button>
-          <Button size="lg" class="flex-none rounded-full font-bold" :disabled="!canPurchase" @click="$emit('buyNow')">
-            <Zap /> {{ t('productDetail.buyNow') }}
-          </Button>
-        </template>
+        <Button size="lg" class="h-11 px-4 font-semibold" :disabled="!canPurchase" @click="$emit('buyNow')">
+          {{ t('productDetail.buyNow') }}
+        </Button>
       </div>
     </div>
   </Transition>
@@ -37,14 +31,12 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { ShoppingCart, Zap } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 
 const { t } = useI18n()
 
 defineProps<{
   visible: boolean
-  requiresLogin: boolean
   canPurchase: boolean
   showMemberPrice: boolean
   memberPriceDisplay: string
@@ -58,8 +50,6 @@ defineProps<{
 }>()
 
 defineEmits<{
-  addToCart: []
   buyNow: []
-  goLogin: []
 }>()
 </script>

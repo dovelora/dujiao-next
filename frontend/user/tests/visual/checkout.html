@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Single-page checkout regression checks</title></head>
+<body><pre id="results">Running</pre><div id="app"></div>
+<script type="module">
+import { createApp, h, nextTick } from 'vue'
+import { createPinia } from 'pinia'
+import { createHead } from '@unhead/vue/client'
+import { createRouter, createMemoryHistory } from 'vue-router'
+import i18n from '../../src/i18n/index.ts'
+import { useCheckout } from '../../src/composables/useCheckout.ts'
+import { useProductDetail } from '../../src/composables/useProductDetail.ts'
+import { refreshPurchaseSnapshot } from '../../src/utils/purchaseStock.ts'
+import { useBuyNowStore } from '../../src/stores/buyNow.ts'
+import { useAppStore } from '../../src/stores/app.ts'
+import { useUserAuthStore } from '../../src/stores/userAuth.ts'
+import { userOrderAPI, guestOrderAPI, productAPI, walletAPI } from '../../src/api/index.ts'
+
+// All requests are mocked; this fixture never creates an actual order or payment.
+window.fetch = () => Promise.reject(new Error('Unexpected network request in checkout fixture'))
+const storage = [localStorage, sessionStorage].map(store => ({store, values: new Map(Object.keys(store).map(key => [key, store.getItem(key)]))}))
+const response = data => ({data: {status_code: 0, data}})
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
+const results = []
+const check = (name, passed) => { results.push({name, passed: Boolean(passed)}); if (!passed) throw new Error(name) }
+const until = async predicate => { for (let n = 0; n < 100; n++) { if (predicate()) return; await pause(30) } throw new Error('Timed out waiting for checkout state') }
+const channel = {id: 1, name: 'Test payment', provider_type: 'epay', channel_type: 'alipay'}
+let catalogPaymentChannels = [2]
+let failPreview = false, slowQuantity = 0, extraPrice = 0, failCreate = false, createCalls = [], checkout, detail, buyNow, auth
+const preview = async payload => {
+  const quantity = payload.items.reduce((sum, item) => sum + item.quantity, 0)
+  const total = (quantity * 15 + extraPrice - (payload.coupon_code ? 5 : 0)).toFixed(2)
+  await pause(quantity === slowQuantity ? 500 : 20)
+  if (failPreview) throw new Error('Temporary preview failure')
+  return response({currency: 'CNY', original_amount: String(quantity * 15), total_amount: total, discount_amount: payload.coupon_code ? '5' : '0', payment_channels: [channel]})
+}
+const create = async (kind, payload) => {
+  createCalls.push({kind, payload})
+  await pause(50)
+  if (failCreate) throw new Error('Order creation failed')
+  return response({order_no: 'LOCAL-CHECKOUT', payment_error: 'Test provider unavailable'})
+}
+userOrderAPI.preview = guestOrderAPI.preview = preview
+userOrderAPI.getPaymentChannels = async () => response([channel])
+userOrderAPI.createAndPay = payload => create('member', payload)
+guestOrderAPI.createAndPay = payload => create('guest', payload)
+productAPI.detail = async slug => response(slug === 'legacy-member' ? {id: 90002, slug, title: {'zh-CN': 'Legacy member product'}, purchase_type: 'member', payment_channel_ids: catalogPaymentChannels, price_amount: '15', fulfillment_type: 'auto', stock_status: 'in_stock', auto_stock_available: 8, images: [], skus: [{id: 2, is_active: true, price_amount: '15', auto_stock_available: 8, stock_status: 'in_stock'}]} : null)
+walletAPI.account = async () => response({balance: '100'})
+const item = {productId: 90001, skuId: 1, slug: 'local-checkout-fixture', title: {'zh-CN': '测试商品'}, priceAmount: '15', quantity: 2, fulfillmentType: 'auto', skuAutoStockAvailable: 8, skuStockSnapshotAt: '2026-01-01'}
+const router = createRouter({history: createMemoryHistory(), routes: [{path: '/products/:slug', component: {render: () => null}}, {path: '/:pathMatch(.*)*', component: {render: () => null}}]})
+const app = createApp({setup() {
+  const config = useAppStore()
+  config.config = {currency: 'CNY', payment_channels: [channel], captcha: {provider: 'none'}}
+  auth = useUserAuthStore(); auth.token = 'local-fixture-only'
+  buyNow = useBuyNowStore(); buyNow.setItem({...item})
+  checkout = useCheckout()
+  detail = useProductDetail()
+  return () => h('div')
+}})
+app.use(createPinia()).use(router).use(i18n).use(createHead())
+try {
+  await router.push('/checkout'); await router.isReady(); app.mount('#app')
+  await until(() => checkout.paymentChannels.value.length)
+  checkout.selectedChannelId.value = 1
+  await until(() => checkout.canSubmit.value)
+  check('Current purchase can pay directly after a valid preview and payment selection', checkout.previewTotal.value === '30.00')
+  checkout.updateQuantity(buyNow.item, 3)
+  check('Quantity edit immediately blocks payment during debounce', !checkout.canSubmit.value)
+  await until(() => checkout.canSubmit.value)
+  check('Updated quantity is reflected in server total', checkout.previewTotal.value === '45.00')
+  slowQuantity = 4
+  checkout.updateQuantity(buyNow.item, 4); await pause(350)
+  checkout.updateQuantity(buyNow.item, 5); await pause(180)
+  check('An obsolete preview cannot re-enable payment', !checkout.canSubmit.value)
+  await until(() => checkout.canSubmit.value)
+  check('Latest quantity wins over slower response', checkout.previewTotal.value === '75.00')
+  checkout.couponCode.value = 'LOCAL'
+  check('Coupon edit immediately blocks payment', !checkout.canSubmit.value)
+  await until(() => checkout.canSubmit.value)
+  check('Coupon recalculates total before paying', checkout.previewTotal.value === '70.00')
+  failPreview = true; checkout.updateQuantity(buyNow.item, 2)
+  await until(() => checkout.previewError.value)
+  check('Preview failure blocks payment', !checkout.canSubmit.value)
+  failPreview = false; await checkout.retryPreview()
+  await until(() => checkout.paymentChannels.value.length)
+  checkout.selectedChannelId.value = 1
+  await until(() => checkout.canSubmit.value)
+  check('Preview failure can recover without editing purchase', checkout.previewTotal.value === '25.00')
+  extraPrice = 2
+  await checkout.handleSubmit()
+  check('Changed total requires another confirmation without creating order', createCalls.length === 0 && checkout.checkoutAlert.value?.message.includes('金额已更新'))
+  extraPrice = 0; await checkout.retryPreview()
+  failCreate = true; await checkout.handleSubmit()
+  check('Order creation failure retains editable purchase', buyNow.item !== null && !checkout.submitting.value)
+  failCreate = false; createCalls = []
+  await Promise.all([checkout.handleSubmit(), checkout.handleSubmit()]); await nextTick(); await pause(30)
+  check('Double click creates only one order', createCalls.length === 1)
+  check('Created order with provider failure opens payment recovery, not another checkout', router.currentRoute.value.path === '/pay' && router.currentRoute.value.query.order_no === 'LOCAL-CHECKOUT' && buyNow.item === null)
+  await router.push('/checkout'); buyNow.setItem({...item}); auth.token = ''
+  checkout.guestEmail.value = 'local@example.test'; checkout.guestPassword.value = 'local-only-password'
+  checkout.selectedChannelId.value = 1
+  await until(() => checkout.canSubmit.value)
+  check('All selected products allow guest checkout', checkout.canSubmit.value)
+  await until(() => checkout.canSubmit.value)
+  await checkout.handleSubmit(); await pause(30)
+  check('Guest pays in one submission with guest recovery route', createCalls.at(-1).kind === 'guest' && router.currentRoute.value.query.guest === '1')
+  auth.token = 'local-fixture-only'; buyNow.setItem({...item})
+  buyNow.setItem({...item, quantity: 1}); await router.push('/checkout')
+  checkout.useBalance.value = true
+  await until(() => checkout.canSubmit.value)
+  await checkout.handleSubmit(); await pause(30)
+  check('Balance-only buy-now pays without online channel', createCalls.at(-1).payload.use_balance && createCalls.at(-1).payload.channel_id === undefined)
+  check('Completed purchase is cleared', buyNow.item === null)
+  await router.push('/checkout'); checkout.useBalance.value = false; checkout.selectedChannelId.value = 1
+  buyNow.setItem({...item, quantity: 9}); await pause(400)
+  check('Insufficient stock blocks payment on combined page', !checkout.canSubmit.value)
+  auth.token = ''; buyNow.clear()
+  await router.push('/products/legacy-member')
+  await until(() => detail.canPurchase.value)
+  detail.buyNow(); await pause(30)
+  check('Buy-now goes directly to checkout without login or cart mode', router.currentRoute.value.path === '/checkout' && !router.currentRoute.value.query.mode && buyNow.item?.productId === 90002)
+  check('Selecting another product replaces the previous purchase', checkout.purchaseItems.value.length === 1 && checkout.purchaseItems.value[0].productId === 90002)
+  detail.product.value.is_sold_out = true
+  buyNow.clear(); detail.buyNow()
+  check('Single-product purchasing retains sold-out protection', buyNow.item === null)
+  await router.push('/checkout'); auth.token = 'local-fixture-only'
+  buyNow.setItem({...item, manualFormSchema: {fields: [{key: 'delivery', type: 'text', required: true, label: {'zh-CN': 'Delivery account'}}]}})
+  await pause(400)
+  check('Signed-in customers still need product-specific delivery data', checkout.manualFormProducts.value.length === 1 && !checkout.canSubmit.value)
+  localStorage.setItem('cart_items', JSON.stringify([item, {...item, productId: 90003}]))
+  buyNow.clear(); await nextTick()
+  check('Old multi-product cart cache is never used for checkout', checkout.purchaseItems.value.length === 0 && !checkout.canSubmit.value)
+  check('Every submitted order contains exactly one item', createCalls.every(call => call.payload.items.length === 1))
+  buyNow.setItem({...item})
+  const restored = useBuyNowStore(createPinia())
+  check('Current selection survives reload or login return in this session', restored.item?.productId === item.productId && restored.item?.quantity === item.quantity)
+  restored.$dispose()
+  sessionStorage.setItem('checkout_item', JSON.stringify([item, {...item, productId: 90003}]))
+  const invalidSelection = useBuyNowStore(createPinia())
+  check('A multi-item persisted selection is rejected', invalidSelection.item === null)
+  invalidSelection.$dispose()
+  const staleSelection = {...item, slug: 'legacy-member', skuId: 2, paymentChannelIds: [1]}
+  const refreshed = await refreshPurchaseSnapshot(staleSelection)
+  check('Restored selection uses current product payment channels', JSON.stringify(refreshed.paymentChannelIds) === '[2]')
+  catalogPaymentChannels = []
+  const unrestricted = await refreshPurchaseSnapshot(staleSelection)
+  check('Removing product channel limits clears a stale selection restriction', unrestricted.paymentChannelIds === undefined)
+
+
+
+} catch (error) {
+  results.push({name: String(error), passed: false})
+} finally {
+  app.unmount()
+  for (const {store, values} of storage) {
+    for (const key of Object.keys(store)) if (!values.has(key)) store.removeItem(key)
+    for (const [key, value] of values) store.setItem(key, value)
+  }
+}
+window.checkoutTestResult = {passed: results.filter(x => x.passed).length, failed: results.filter(x => !x.passed).length, results}
+document.documentElement.dataset.testStatus = window.checkoutTestResult.failed ? 'failed' : 'passed'
+document.querySelector('#results').textContent = JSON.stringify(window.checkoutTestResult, null, 2)
+</script>
+</body>
+</html>

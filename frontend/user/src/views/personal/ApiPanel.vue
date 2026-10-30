@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6 api-panel-enter">
-    <div class="rounded-2xl border bg-card p-7 shadow-sm">
+    <div class="rounded-2xl border bg-card p-4 shadow-sm sm:p-7">
       <div>
         <div>
           <PanelHeading :title="t('personalCenter.apiPanel.title')" :description="t('personalCenter.apiPanel.subtitle')" :icon="Key">

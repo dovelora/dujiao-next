@@ -9,12 +9,11 @@
       <CheckoutSteps
         class="mb-8"
         current-step="checkout"
-        :step-keys="isBuyNowMode ? ['checkout', 'payment'] : ['cart', 'checkout', 'payment']"
       />
 
       <EmptyState
-        v-if="cartItems.length === 0"
-        icon="cart"
+        v-if="purchaseItems.length === 0"
+        icon="package"
         :title="t('checkout.empty')"
         :action-label="t('checkout.emptyAction')"
         action-to="/products"
@@ -26,8 +25,8 @@
             <h2 class="mb-4 text-lg font-bold text-foreground">{{ t('checkout.itemsTitle') }}</h2>
             <div class="space-y-4">
               <div
-                v-for="item in cartItems"
-                :key="cartItemKey(item)"
+                v-for="item in purchaseItems"
+                :key="purchaseItemKey(item)"
                 class="rounded-xl border p-4"
                 :class="itemStockExceeded(item)
                   ? 'border-warning/40 bg-warning/10'
@@ -179,7 +178,7 @@
 
           <div class="mb-4 space-y-3 text-sm text-muted-foreground">
             <div class="flex items-center justify-between">
-              <span>{{ t('cart.itemsCount') }}</span>
+              <span>{{ t('checkout.itemsCount') }}</span>
               <span class="font-mono text-foreground">{{ totalItems }}</span>
             </div>
             <div class="flex items-center justify-between">
@@ -234,6 +233,7 @@
             :class="['mb-4', pageAlertToneClass(checkoutAlert.level)]"
           >
             <AlertDescription>{{ checkoutAlert.message }}</AlertDescription>
+            <Button v-if="previewError" type="button" variant="outline" size="sm" class="mt-2" :disabled="previewLoading || submitting" @click="retryPreview">{{ t('common.retry') }}</Button>
           </Alert>
 
           <!-- Payment Channel Selection -->
@@ -331,7 +331,7 @@ const { t } = useI18n()
 
 const {
   userAuthStore, getLocalizedText, formatPrice, getImageUrl,
-  isBuyNowMode, cartItems, totalItems, cartItemKey, checkoutItemImage, itemSkuDisplay,
+  purchaseItems, totalItems, purchaseItemKey, checkoutItemImage, itemSkuDisplay,
   itemStockExceeded, itemStockHint,
   checkoutItemCurrency, checkoutItemPriceParts, checkoutItemOriginalPriceParts, checkoutItemHasPriceDiscount,
   manualFormProducts, manualFormData, submitAttempted, getManualFieldLabel, getManualFieldPlaceholder, manualFieldError,
@@ -340,7 +340,7 @@ const {
   guestCaptchaEnabled, captchaProvider, guestCaptchaPayload, guestTurnstileToken, guestTurnstileSiteKey,
   guestImageCaptchaRef, guestTurnstileRef, handleGuestCaptchaConfigStale,
   previewCurrency, previewOriginal, previewCoupon, previewPromotion, previewWholesale, previewMemberDiscount, previewTotal,
-  previewLoading, couponRefreshing, previewStatusText, hasPositiveAmount, formatDiscountPrice, checkoutAlert,
+  previewLoading, previewError, retryPreview, couponRefreshing, previewStatusText, hasPositiveAmount, formatDiscountPrice, checkoutAlert,
   showBalanceOption, walletLoading, walletBalance, useBalance, walletOnlyPayment,
   expectedWalletPaidDisplay, expectedOnlinePayDisplay, expectedOnlinePayCents,
   requiresOnlineChannel, paymentChannels, selectedChannelId, isChannelDisabledForAmount, channelAmountLimitHint,

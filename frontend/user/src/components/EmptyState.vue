@@ -38,10 +38,10 @@
 <script setup lang="ts">
 import { computed, useSlots } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
-import { AlertCircle, ClipboardList, Inbox, Package, Search, ShoppingCart } from 'lucide-vue-next'
+import { AlertCircle, ClipboardList, Inbox, Package, Search } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 
-type IconName = 'package' | 'cart' | 'order' | 'search' | 'inbox' | 'alert'
+type IconName = 'package' | 'order' | 'search' | 'inbox' | 'alert'
 type Variant = 'default' | 'soft'
 type Size = 'sm' | 'md' | 'lg'
 
@@ -101,7 +101,6 @@ const descriptionClass = computed(() =>
 
 const icons: Record<IconName, typeof Inbox> = {
   package: Package,
-  cart: ShoppingCart,
   order: ClipboardList,
   search: Search,
   inbox: Inbox,

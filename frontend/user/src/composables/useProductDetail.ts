@@ -5,7 +5,6 @@ import { useHead } from '@unhead/vue'
 import { useAppStore } from '../stores/app'
 import { productAPI } from '../api'
 import { getImageUrl } from '../utils/image'
-import { useCartStore } from '../stores/cart'
 import { useBuyNowStore } from '../stores/buyNow'
 import { useUserAuthStore } from '../stores/userAuth'
 import { useUserProfileStore } from '../stores/userProfile'
@@ -13,7 +12,6 @@ import { debounceAsync } from '../utils/debounce'
 import { buildSkuDisplayText, normalizeSkuId } from '../utils/sku'
 import { resolveSkuAvailableStock, resolveSkuStockDisplay, type PublicStockDisplay } from '../utils/publicStock'
 import { useLocalized, useProductLabels } from './useProduct'
-import { toast } from './useToast'
 
 /**
  * 商品详情页的全部业务逻辑（数据加载、SKU/数量、促销/会员/批发定价、库存约束、
@@ -28,14 +26,13 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
   const router = useRouter()
   const { t } = useI18n()
   const appStore = useAppStore()
-  const cartStore = useCartStore()
   const buyNowStore = useBuyNowStore()
   const userAuthStore = useUserAuthStore()
   const userProfileStore = useUserProfileStore()
 
   const { getLocalizedText, siteCurrency, formatPrice } = useLocalized()
   const {
-    getPurchaseTypeLabel, getFulfillmentTypeLabel, getStockBadgeVariant, getStockStatusLabel,
+    getFulfillmentTypeLabel, getStockBadgeVariant, getStockStatusLabel,
     hasPromotionPrice, getPromotionPriceAmount, getPromotionSaveAmount,
     hasSkuPromotionPrice, getSkuPromotionPriceAmount, getSkuPromotionSaveAmount,
     hasPromotionRules, getPromotionRules, hasWholesalePrices, getWholesalePrices,
@@ -299,8 +296,6 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
     }
   }
 
-  const purchaseType = computed(() => product.value?.purchase_type || 'member')
-  const requiresLogin = computed(() => purchaseType.value === 'member' && !userAuthStore.isAuthenticated)
   const requiresSKUSelection = computed(() => activeSkus.value.length > 1 && !selectedSku.value)
   const stockBelowMinPurchase = computed(() => {
     const limit = quantityEffectiveLimit.value
@@ -319,7 +314,6 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
   })
   const cannotPurchaseReason = computed(() => {
     if (!product.value) return ''
-    if (requiresLogin.value) return ''
     if (requiresSKUSelection.value) return t('productDetail.skuRequired')
     if (stockBelowMinPurchase.value) return t('productDetail.stockBelowMinPurchase', { count: quantityEffectiveMin.value })
     if (canPurchase.value) return ''
@@ -398,15 +392,6 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
     selectedSkuId.value = normalizeSkuId(rows[0]?.id)
   }
 
-  const selectedCartQuantity = () => {
-    if (!product.value || !selectedSku.value) return 0
-    const productId = Number(product.value.id || 0)
-    const skuId = normalizeSkuId(selectedSku.value?.id)
-    if (productId <= 0 || skuId <= 0) return 0
-    const matched = cartStore.items.find((item) => item.productId === productId && normalizeSkuId(item.skuId) === skuId)
-    return Number(matched?.quantity || 0)
-  }
-
   const buildItemPayload = (sku: any) => ({
     productId: product.value.id,
     skuId: normalizeSkuId(sku?.id),
@@ -431,56 +416,16 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
     image: images.value[0],
     minPurchaseQuantity: normalizeOptionalLimitNumber(product.value.min_purchase_quantity) ?? undefined,
     maxPurchaseQuantity: normalizeOptionalLimitNumber(product.value.max_purchase_quantity) ?? undefined,
-    purchaseType: product.value.purchase_type,
     fulfillmentType: product.value.fulfillment_type,
     manualFormSchema: product.value.manual_form_schema || {},
     paymentChannelIds: Array.isArray(product.value.payment_channel_ids) && product.value.payment_channel_ids.length > 0 ? product.value.payment_channel_ids : undefined,
     quantity: quantity.value,
   })
 
-  const addToCart = () => {
-    if (!product.value) return
-    if (!canPurchase.value) return
-    purchaseWarning.value = ''
-    if (requiresLogin.value) {
-      router.push(`/auth/login?redirect=${encodeURIComponent(route.fullPath)}`)
-      return
-    }
-    const sku = selectedSku.value
-    const available = skuAvailableStock(sku)
-    const cartQty = selectedCartQuantity()
-    const nextQuantity = cartQty + quantity.value
-    const productLimit = normalizeOptionalLimitNumber(product.value?.max_purchase_quantity)
-    let effectiveLimit: number | null = productLimit
-    if (available !== null) {
-      effectiveLimit = effectiveLimit === null ? available : Math.min(effectiveLimit, available)
-    }
-    if (effectiveLimit !== null && nextQuantity > effectiveLimit) {
-      if (available !== null && effectiveLimit === available && (productLimit === null || available <= productLimit)) {
-        purchaseWarning.value = available > 0
-          ? (cartQty > 0
-              ? t('productDetail.addCartStockExceededWithCart', { count: available, cartCount: cartQty })
-              : t('productDetail.addCartStockExceeded', { count: available }))
-          : t('productDetail.stockUnavailable')
-        return
-      }
-      purchaseWarning.value = cartQty > 0
-        ? t('productDetail.addCartLimitExceededWithCart', { count: effectiveLimit, cartCount: cartQty })
-        : t('productDetail.addCartLimitExceeded', { count: effectiveLimit })
-      return
-    }
-    cartStore.addItem(buildItemPayload(sku), quantity.value)
-    toast.success(t('toast.addedToCart'))
-  }
-
   const buyNow = () => {
     purchaseWarning.value = ''
     if (!canPurchase.value) return
     if (!product.value) return
-    if (requiresLogin.value) {
-      router.push(`/auth/login?redirect=${encodeURIComponent(route.fullPath)}`)
-      return
-    }
 
     const sku = selectedSku.value
     const available = skuAvailableStock(sku)
@@ -491,13 +436,13 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
     }
     if (limit !== null && quantity.value > limit) {
       purchaseWarning.value = available !== null && limit === available
-        ? (available > 0 ? t('productDetail.addCartStockExceeded', { count: available }) : t('productDetail.stockUnavailable'))
-        : t('productDetail.addCartLimitExceeded', { count: limit })
+        ? (available > 0 ? t('productDetail.purchaseStockExceeded', { count: available }) : t('productDetail.stockUnavailable'))
+        : t('productDetail.purchaseLimitExceeded', { count: limit })
       return
     }
 
     buyNowStore.setItem(buildItemPayload(sku))
-    router.push('/checkout?mode=buynow')
+    router.push('/checkout')
   }
 
   // 移动端购买条价格展示
@@ -532,6 +477,7 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
   })
   const mobileBarSkuPriceDisplay = computed(() => {
     if (!selectedSku.value) return ''
+    if (hasSelectedSkuWholesalePrice.value) return formatPrice(selectedSkuWholesaleFinalPrice.value, siteCurrency.value)
     return formatPrice(selectedSku.value.price_amount, siteCurrency.value)
   })
   const mobileBarShowProductPromotionPrice = computed(() => {
@@ -547,32 +493,42 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
     return formatPrice(product.value.price_amount, siteCurrency.value)
   })
 
-  const goLogin = () => {
-    router.push(`/auth/login?redirect=${encodeURIComponent(route.fullPath)}`)
-  }
-
+  let productLoadSequence = 0
   const loadProduct = async () => {
+    const sequence = ++productLoadSequence
+    const slug = route.params.slug as string
     loading.value = true
     try {
-      const slug = route.params.slug as string
       const response = await productAPI.detail(slug)
+      if (sequence !== productLoadSequence || route.params.slug !== slug) return
       product.value = response.data.data || null
-      if (images.value.length > 0) {
-        currentImage.value = images.value[0] || ''
-      }
+      currentImage.value = images.value[0] || ''
       syncSelectedSku()
-      await nextTick()
-      options.onLoaded?.()
     } catch (error) {
+      if (sequence !== productLoadSequence || route.params.slug !== slug) return
       console.error('Failed to load product:', error)
       product.value = null
       selectedSkuId.value = 0
     } finally {
-      loading.value = false
+      if (sequence === productLoadSequence && route.params.slug === slug) loading.value = false
     }
+    await nextTick()
+    if (sequence === productLoadSequence && product.value) options.onLoaded?.()
   }
 
   const debouncedLoadProduct = debounceAsync(loadProduct, 300)
+
+  watch(() => route.params.slug, (slug, previous) => {
+    if (!slug || slug === previous) return
+    productLoadSequence += 1
+    loading.value = true
+    product.value = null
+    currentImage.value = ''
+    selectedSkuId.value = 0
+    quantity.value = 1
+    purchaseWarning.value = ''
+    debouncedLoadProduct()
+  })
 
   const canonicalUrl = computed(() => {
     if (!product.value?.slug) return ''
@@ -689,13 +645,14 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
   })
 
   onUnmounted(() => {
+    productLoadSequence += 1
     debouncedLoadProduct.cancel()
   })
 
   return {
     // 国际化/格式化（模板需要）
     getLocalizedText, siteCurrency, formatPrice,
-    getPurchaseTypeLabel, getFulfillmentTypeLabel, getStockBadgeVariant, getStockStatusLabel,
+    getFulfillmentTypeLabel, getStockBadgeVariant, getStockStatusLabel,
     hasPromotionPrice, getPromotionPriceAmount, getPromotionSaveAmount,
     hasSkuPromotionPrice, getSkuPromotionPriceAmount, getSkuPromotionSaveAmount,
     hasPromotionRules, getPromotionRules, hasWholesalePrices, getWholesalePrices,
@@ -714,11 +671,11 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
     isSkuPurchasable, skuDisplayText, skuStockText, skuStockBadgeClass,
     quantityEffectiveLimit, quantityEffectiveMin, handleQuantityInput,
     // 购买能力
-    purchaseType, requiresLogin, requiresSKUSelection, canPurchase, cannotPurchaseReason,
+    requiresSKUSelection, canPurchase, cannotPurchaseReason,
     categoryName, images,
     backToListTo,
     // 动作
-    addToCart, buyNow, goLogin, loadProduct,
+    buyNow, loadProduct,
     // 移动端购买条
     mobileBarShowMemberPrice, mobileBarMemberPriceDisplay,
     mobileBarShowSkuPromotionPrice, mobileBarSkuPromotionPriceDisplay,

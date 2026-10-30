@@ -98,7 +98,6 @@ type CreateProductInput struct {
 	WholesalePrices     *[]productdomain.WholesalePriceInput
 	Images              []string
 	Tags                []string
-	PurchaseType        string
 	MinPurchaseQuantity *int
 	MaxPurchaseQuantity *int
 	StockDisplayMode    string

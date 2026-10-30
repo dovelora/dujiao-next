@@ -42,7 +42,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check } from 'lucide-vue-next'
 
-type StepKey = 'cart' | 'checkout' | 'payment'
+type StepKey = 'checkout' | 'payment'
 type StepStatus = 'done' | 'current' | 'upcoming'
 
 const props = withDefaults(
@@ -51,7 +51,7 @@ const props = withDefaults(
     stepKeys?: StepKey[]
   }>(),
   {
-    stepKeys: () => ['cart', 'checkout', 'payment'],
+    stepKeys: () => ['checkout', 'payment'],
   },
 )
 

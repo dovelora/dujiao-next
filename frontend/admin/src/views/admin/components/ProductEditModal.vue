@@ -167,7 +167,6 @@ const form = reactive({
   cost_price_amount: 0,
   images: [] as string[],
   tags: [] as string[],
-  purchase_type: 'member',
   min_purchase_quantity: '' as number | '',
   max_purchase_quantity: '' as number | '',
   stock_display_mode: 'exact',
@@ -511,7 +510,6 @@ const resetForm = () => {
     cost_price_amount: 0,
     images: [],
     tags: [],
-    purchase_type: 'member',
     min_purchase_quantity: '',
     max_purchase_quantity: '',
     stock_display_mode: 'exact',
@@ -560,7 +558,6 @@ const populateForm = (product: AdminProduct) => {
     cost_price_amount: Number(product.cost_price_amount || 0),
     images: imagesList,
     tags: tagsList,
-    purchase_type: product.purchase_type || 'member',
     min_purchase_quantity: Number(product.min_purchase_quantity || 0) > 0 ? Math.floor(Number(product.min_purchase_quantity || 0)) : '',
     max_purchase_quantity: Number(product.max_purchase_quantity || 0) > 0 ? Math.floor(Number(product.max_purchase_quantity || 0)) : '',
     stock_display_mode: product.stock_display_mode || 'exact',
@@ -636,7 +633,6 @@ const handleSubmit = async () => {
       cost_price_amount: effectiveCostPrice,
       images: form.images,
       tags: form.tags,
-      purchase_type: form.purchase_type,
       min_purchase_quantity: minPurchaseQuantityValue,
       max_purchase_quantity: maxPurchaseQuantityValue,
       stock_display_mode: form.stock_display_mode,
@@ -802,19 +798,6 @@ watch(
               </SelectContent>
             </Select>
             <p class="mt-1 text-xs text-muted-foreground">{{ getCategoryLeafTip() }}</p>
-          </div>
-
-          <div class="col-span-1">
-            <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.products.form.purchaseType') }}</label>
-            <Select v-model="form.purchase_type">
-              <SelectTrigger class="h-9 w-full">
-                <SelectValue :placeholder="t('admin.products.purchaseType.member')" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="member">{{ t('admin.products.purchaseType.member') }}</SelectItem>
-                <SelectItem value="guest">{{ t('admin.products.purchaseType.guest') }}</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           <div class="col-span-1">

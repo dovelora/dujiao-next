@@ -7,7 +7,6 @@ import (
 	apicredentialgormstore "github.com/dujiao-next/internal/modules/apicredential/infrastructure/gormstore"
 	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/infrastructure/gormstore"
 	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
-	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
@@ -55,7 +54,6 @@ func (c *Container) initRepositories() error {
 	c.FulfillmentStore = fulfillmentgormstore.New(db)
 	c.ProductRepo = productgormstore.NewProductStore(db)
 	c.ProductSKURepo = productgormstore.NewSKUStore(db)
-	c.CartRepo = cartgormstore.New(db)
 	c.CouponRepo = coupongormstore.New(db)
 	c.CouponUsageRepo = coupongormstore.NewUsageStore(db)
 	c.PromotionRepo = promotiongormstore.New(db)

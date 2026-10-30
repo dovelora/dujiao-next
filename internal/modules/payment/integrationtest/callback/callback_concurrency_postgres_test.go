@@ -144,7 +144,6 @@ func newPostgresCallbackFixture(t *testing.T, walletAmount decimal.Decimal) *pos
 		Slug:              fmt.Sprintf("callback-product-%d", now.UnixNano()),
 		TitleJSON:         jsonmap.JSON{"en-US": "Callback test"},
 		PriceAmount:       money.FromDecimal(total),
-		PurchaseType:      constants.ProductPurchaseMember,
 		FulfillmentType:   constants.FulfillmentTypeManual,
 		ManualStockTotal:  9,
 		ManualStockLocked: 1,

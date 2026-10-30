@@ -1,12 +1,7 @@
 import { productAPI } from '../api'
-import type { CartItem } from '../stores/cart'
-import { resolveCartPricingSnapshot } from './cartPricingSnapshot'
+import type { PurchaseItem } from '../stores/buyNow'
+import { resolvePurchasePricingSnapshot } from './purchasePricingSnapshot'
 import { normalizeSkuId } from './sku'
-
-interface CartStoreLike {
-  items: CartItem[]
-  patchItem: (productId: number, skuId: number | undefined, patch: Partial<CartItem>) => void
-}
 
 const normalizeStockNumber = (value: unknown) => {
   const numberValue = Number(value)
@@ -32,12 +27,12 @@ const normalizeOptionalLimitNumber = (value: unknown) => {
   return integerValue
 }
 
-// cartItemPurchaseLimit 返回购物车项的单次最大购买上限（无限制时返回 null）。
-export const cartItemPurchaseLimit = (item: Pick<CartItem, 'maxPurchaseQuantity'>) =>
+// purchaseLimit 返回所选商品的单次最大购买上限（无限制时返回 null）。
+export const purchaseLimit = (item: Pick<PurchaseItem, 'maxPurchaseQuantity'>) =>
   normalizeOptionalLimitNumber(item.maxPurchaseQuantity) ?? null
 
-// cartItemPurchaseMin 返回购物车项的单次最小购买下限（默认 1）。
-export const cartItemPurchaseMin = (item: Pick<CartItem, 'minPurchaseQuantity'>) => {
+// purchaseMinimum 返回所选商品的单次最小购买下限（默认 1）。
+export const purchaseMinimum = (item: Pick<PurchaseItem, 'minPurchaseQuantity'>) => {
   const minimum = normalizeOptionalLimitNumber(item.minPurchaseQuantity)
   return minimum && minimum > 0 ? minimum : 1
 }
@@ -47,7 +42,7 @@ const resolveActiveSkus = (product: any) => {
   return rows.filter((sku: any) => Boolean(sku?.is_active))
 }
 
-const resolveMatchedSku = (item: CartItem, activeSkus: any[]) => {
+const resolveMatchedSku = (item: PurchaseItem, activeSkus: any[]) => {
   const skuId = normalizeSkuId(item.skuId)
   if (skuId > 0) {
     const matchedById = activeSkus.find((sku: any) => normalizeSkuId(sku?.id) === skuId)
@@ -79,43 +74,20 @@ const shouldEnforceSkuStock = (product: any, sku: any) => {
   return true
 }
 
-export const refreshCartStockSnapshots = async (cartStore: CartStoreLike) => {
-  const items = Array.isArray(cartStore.items) ? cartStore.items : []
-  if (items.length === 0) return
-
-  const slugSet = new Set<string>()
-  for (const item of items) {
-    const slug = String(item.slug || '').trim()
-    if (slug) slugSet.add(slug)
-  }
-  if (slugSet.size === 0) return
-
-  const productMap = new Map<string, any>()
-  const requests = Array.from(slugSet).map(async (slug) => {
-    try {
-      const response = await productAPI.detail(slug)
-      const product = response.data?.data
-      if (product) {
-        productMap.set(slug, product)
-      }
-    } catch {
-      // 忽略单个商品刷新失败，避免影响整体页面可用性
-    }
-  })
-
-  await Promise.all(requests)
-
-  for (const item of items) {
-    const slug = String(item.slug || '').trim()
-    if (!slug) continue
-    const product = productMap.get(slug)
-    if (!product) continue
-
+export const refreshPurchaseSnapshot = async (
+  item: PurchaseItem,
+  onProduct?: (product: { description?: Record<string, string>; content?: Record<string, string> }) => void,
+): Promise<Partial<PurchaseItem>> => {
+  try {
+    const response = await productAPI.detail(item.slug)
+    const product = response.data?.data
+    if (!product) return {}
+    onProduct?.(product)
     const activeSkus = resolveActiveSkus(product)
-    if (activeSkus.length === 0) continue
+    if (activeSkus.length === 0) return {}
 
     const matchedSku = resolveMatchedSku(item, activeSkus)
-    if (!matchedSku) continue
+    if (!matchedSku) return {}
 
     const manualStockTotal = normalizeManualStockTotal(matchedSku?.manual_stock_total)
     const manualStockLocked = normalizeStockNumber(matchedSku?.manual_stock_locked)
@@ -126,8 +98,8 @@ export const refreshCartStockSnapshots = async (cartStore: CartStoreLike) => {
     const stockRangeMin = normalizeStockNumber(matchedSku?.stock_range_min)
     const stockRangeMax = normalizeStockNumber(matchedSku?.stock_range_max)
 
-    cartStore.patchItem(item.productId, item.skuId, {
-      ...resolveCartPricingSnapshot(product, matchedSku),
+    return {
+      ...resolvePurchasePricingSnapshot(product, matchedSku),
       skuCode: String(matchedSku?.sku_code || item.skuCode || ''),
       skuSpecValues: (matchedSku?.spec_values && typeof matchedSku.spec_values === 'object')
         ? matchedSku.spec_values
@@ -149,6 +121,11 @@ export const refreshCartStockSnapshots = async (cartStore: CartStoreLike) => {
       maxPurchaseQuantity: normalizeOptionalLimitNumber(product?.max_purchase_quantity),
       fulfillmentType: String(product?.fulfillment_type || item.fulfillmentType || ''),
       manualFormSchema: product?.manual_form_schema || {},
-    })
+      paymentChannelIds: Array.isArray(product?.payment_channel_ids) && product.payment_channel_ids.length > 0
+        ? product.payment_channel_ids.map(Number)
+        : undefined,
+    }
+  } catch {
+    return {}
   }
 }

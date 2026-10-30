@@ -9,7 +9,6 @@ import (
 	apicredentialtransport "github.com/dujiao-next/internal/modules/apicredential/transport/http"
 	auditlogtransport "github.com/dujiao-next/internal/modules/auditlog/transport/http"
 	captchatransport "github.com/dujiao-next/internal/modules/captcha/transport/http"
-	carttransport "github.com/dujiao-next/internal/modules/cart/transport/http"
 	categoryhttp "github.com/dujiao-next/internal/modules/catalog/category/transport/http"
 	producthttp "github.com/dujiao-next/internal/modules/catalog/product/transport/http"
 	contenttransport "github.com/dujiao-next/internal/modules/content/transport/http"
@@ -53,7 +52,6 @@ func registerStorefrontRoutes(
 	user2FAHandler *userauthtransport.User2FAHandler,
 	userInviteHandler *userauthtransport.UserInviteHandler,
 	publicConfigHandler *publicconfigtransport.Handler,
-	userCartHandler *carttransport.UserHandler,
 	userOrderHandler *ordertransport.UserHandler,
 	guestOrderHandler *ordertransport.GuestHandler,
 	orderPreviewHandler *ordertransport.PreviewHandler,
@@ -141,7 +139,6 @@ func registerStorefrontRoutes(
 		)
 		userauthtransport.RegisterUserEmailRoutes(user, userEmailHandler)
 		userauthtransport.RegisterUser2FARoutes(user, user2FAHandler)
-		carttransport.RegisterUserRoutes(user, userCartHandler)
 		ordertransport.RegisterUserCreateRoute(user, orderCreateHandler)
 		ordertransport.RegisterUserCreateAndPayRoute(user, orderCreateHandler)
 		ordertransport.RegisterUserPreviewRoute(user, orderPreviewHandler)

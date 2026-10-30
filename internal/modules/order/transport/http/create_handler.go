@@ -58,7 +58,7 @@ type OrderPaymentCreator interface {
 
 // CreateOrderAndPayRequest 创建订单并发起支付请求
 type CreateOrderAndPayRequest struct {
-	Items               []OrderItemRequest      `json:"items" binding:"required"`
+	Items               []OrderItemRequest      `json:"items" binding:"required,len=1"`
 	CouponCode          string                  `json:"coupon_code"`
 	AffiliateCode       string                  `json:"affiliate_code"`
 	AffiliateVisitorKey string                  `json:"affiliate_visitor_key"`
@@ -71,7 +71,7 @@ type CreateOrderAndPayRequest struct {
 type CreateGuestOrderAndPayRequest struct {
 	Email               string                            `json:"email" binding:"required"`
 	OrderPassword       string                            `json:"order_password" binding:"required"`
-	Items               []OrderItemRequest                `json:"items" binding:"required"`
+	Items               []OrderItemRequest                `json:"items" binding:"required,len=1"`
 	CouponCode          string                            `json:"coupon_code"`
 	AffiliateCode       string                            `json:"affiliate_code"`
 	AffiliateVisitorKey string                            `json:"affiliate_visitor_key"`

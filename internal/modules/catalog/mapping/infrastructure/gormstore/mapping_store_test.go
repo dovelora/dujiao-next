@@ -59,7 +59,6 @@ func createMappedProduct(t *testing.T, db *gorm.DB, slug, title string) *product
 		Slug:            slug,
 		TitleJSON:       jsonmap.JSON{"zh-CN": title},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeUpstream,
 		IsMapped:        true,
 		IsActive:        true,

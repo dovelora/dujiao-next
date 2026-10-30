@@ -40,7 +40,7 @@
           role="dialog"
           aria-modal="true"
           class="
-            w-full max-h-[85vh] flex flex-col
+            quick-buy-dialog w-full max-h-[85vh] flex flex-col
             rounded-t-2xl md:rounded-2xl
             bg-card/95 backdrop-blur-xl text-card-foreground border-t md:border
             shadow-2xl
@@ -56,7 +56,7 @@
           <!-- Desktop header bar -->
           <div class="hidden md:flex items-center justify-between px-5 pt-4 pb-0 shrink-0">
             <h2 class="text-sm font-semibold text-foreground">{{ t('quickBuy.title') }}</h2>
-            <Button type="button" variant="ghost" size="icon" class="-mr-1 text-muted-foreground" @click="close">
+            <Button type="button" variant="ghost" size="icon" class="-mr-1 text-muted-foreground" :aria-label="t('announcement.close')" @click="close">
               <X />
             </Button>
           </div>
@@ -168,7 +168,7 @@
             <div class="h-px bg-border -mx-4 md:-mx-5 mb-4" />
 
             <!-- Product description -->
-            <p v-if="productDescription" class="mb-4 text-xs leading-relaxed text-muted-foreground line-clamp-3">
+            <p v-if="productDescription" class="mb-4 whitespace-pre-line text-xs leading-relaxed text-muted-foreground line-clamp-3">
               {{ productDescription }}
             </p>
 
@@ -250,6 +250,7 @@
                 <button
                   type="button"
                   class="w-9 h-9 flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-30"
+                  :aria-label="t('checkout.decreaseQuantity')"
                   :disabled="quantity <= effectiveMin"
                   @click="quantity = Math.max(effectiveMin, quantity - 1)"
                 >
@@ -258,6 +259,7 @@
                 <input
                   type="text"
                   inputmode="numeric"
+                  :aria-label="t('quickBuy.quantity')"
                   class="w-12 h-9 text-center text-sm font-semibold text-foreground border-x bg-transparent outline-none tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   :value="quantity"
                   @change="handleQuantityInput($event)"
@@ -266,6 +268,7 @@
                 <button
                   type="button"
                   class="w-9 h-9 flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-30"
+                  :aria-label="t('checkout.increaseQuantity')"
                   :disabled="effectiveLimit !== null && quantity >= effectiveLimit"
                   @click="quantity = quantity + 1"
                 >
@@ -285,14 +288,7 @@
 
           <!-- Actions (sticky bottom) -->
           <div class="shrink-0 px-4 md:px-5 pt-3 pb-3 md:pb-5 border-t theme-safe-bottom">
-            <Button
-              v-if="requiresLogin"
-              class="w-full py-3 h-auto min-h-[44px] rounded-xl text-sm font-semibold"
-              @click="goLogin"
-            >
-              {{ t('quickBuy.loginToBuy') }}
-            </Button>
-            <div v-else-if="isSoldOut(product)" class="flex gap-3">
+            <div v-if="isSoldOut(product)" class="flex gap-3">
               <Button
                 variant="secondary"
                 class="flex-1 py-3 h-auto min-h-[44px] rounded-xl text-sm font-semibold"
@@ -302,15 +298,6 @@
               </Button>
             </div>
             <div v-else class="flex gap-3">
-              <Button
-                variant="secondary"
-                :disabled="!canPurchase"
-                class="flex-1 py-3 h-auto min-h-[44px] rounded-xl text-sm font-semibold gap-1.5"
-                @click="handleAddToCart"
-              >
-                <ShoppingCart class="w-4 h-4" />
-                {{ t('quickBuy.addToCart') }}
-              </Button>
               <Button
                 :disabled="!canPurchase"
                 class="flex-1 py-3 h-auto min-h-[44px] rounded-xl text-sm font-semibold"
@@ -329,10 +316,10 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { getProductDescriptionText } from '../utils/productDescription'
 import { useAppStore } from '../stores/app'
-import { useCartStore } from '../stores/cart'
 import { useBuyNowStore } from '../stores/buyNow'
 import { useUserAuthStore } from '../stores/userAuth'
 import { useUserProfileStore } from '../stores/userProfile'
@@ -340,8 +327,7 @@ import { getFirstImageUrl, getImageUrl } from '../utils/image'
 import { normalizeSkuId, buildSkuDisplayText } from '../utils/sku'
 import { resolveSkuAvailableStock, resolveSkuStockDisplay, type PublicStockDisplay } from '../utils/publicStock'
 import { useLocalized, useProductLabels } from '../composables/useProduct'
-import { toast } from '../composables/useToast'
-import { X, Image as ImageIcon, Tag, Minus, Plus, ShoppingCart } from 'lucide-vue-next'
+import { X, Image as ImageIcon, Tag, Minus, Plus } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
@@ -355,10 +341,8 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
-const route = useRoute()
 const { t } = useI18n()
 const appStore = useAppStore()
-const cartStore = useCartStore()
 const buyNowStore = useBuyNowStore()
 const userAuthStore = useUserAuthStore()
 const userProfileStore = useUserProfileStore()
@@ -385,7 +369,7 @@ const quantity = ref(1)
 const purchaseWarning = ref('')
 
 const productTitle = computed(() => getLocalizedText(props.product?.title))
-const productDescription = computed(() => getLocalizedText(props.product?.description))
+const productDescription = computed(() => getProductDescriptionText(getLocalizedText(props.product?.description)))
 
 const formatPromotionRule = (rule: any) => {
   const amount = formatPrice(rule.min_amount, siteCurrency.value)
@@ -653,8 +637,6 @@ const effectiveLimit = computed(() => {
   return limit
 })
 
-const purchaseType = computed(() => props.product?.purchase_type || 'member')
-const requiresLogin = computed(() => purchaseType.value === 'member' && !userAuthStore.isAuthenticated)
 const requiresSKUSelection = computed(() => activeSkus.value.length > 1 && !selectedSku.value)
 const stockBelowMinPurchase = computed(() => {
   const limit = effectiveLimit.value
@@ -671,15 +653,6 @@ const canPurchase = computed(() => {
   if (stockBelowMinPurchase.value) return false
   return true
 })
-
-const selectedCartQuantity = () => {
-  if (!props.product || !selectedSku.value) return 0
-  const productId = Number(props.product.id || 0)
-  const skuId = normalizeSkuId(selectedSku.value?.id)
-  if (productId <= 0 || skuId <= 0) return 0
-  const matched = cartStore.items.find((item) => item.productId === productId && normalizeSkuId(item.skuId) === skuId)
-  return Number(matched?.quantity || 0)
-}
 
 const handleQuantityInput = (event: Event) => {
   const input = event.target as HTMLInputElement
@@ -720,69 +693,6 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeydown)
 })
 
-const handleAddToCart = () => {
-  if (!props.product || !canPurchase.value) return
-  purchaseWarning.value = ''
-
-  const sku = selectedSku.value
-  const available = skuAvailableStock(sku)
-  const cartQty = selectedCartQuantity()
-  const nextQuantity = cartQty + quantity.value
-  const productLimit = normalizeOptionalLimitNumber(props.product?.max_purchase_quantity)
-  let limit: number | null = productLimit
-  if (available !== null) {
-    limit = limit === null ? available : Math.min(limit, available)
-  }
-  if (limit !== null && nextQuantity > limit) {
-    if (available !== null && limit === available && (productLimit === null || available <= productLimit)) {
-      purchaseWarning.value = available > 0
-        ? (cartQty > 0
-            ? t('productDetail.addCartStockExceededWithCart', { count: available, cartCount: cartQty })
-            : t('productDetail.addCartStockExceeded', { count: available }))
-        : t('productDetail.stockUnavailable')
-      return
-    }
-    purchaseWarning.value = cartQty > 0
-      ? t('productDetail.addCartLimitExceededWithCart', { count: limit, cartCount: cartQty })
-      : t('productDetail.addCartLimitExceeded', { count: limit })
-    return
-  }
-
-  const images = getProductImages()
-  cartStore.addItem({
-    productId: props.product.id,
-    skuId: normalizeSkuId(sku?.id),
-    skuCode: String(sku?.sku_code || ''),
-    skuSpecValues: (sku?.spec_values && typeof sku.spec_values === 'object') ? sku.spec_values : undefined,
-    skuManualStockTotal: normalizeManualStockTotal(sku?.manual_stock_total),
-    skuManualStockLocked: normalizeStockNumber(sku?.manual_stock_locked),
-    skuManualStockSold: normalizeStockNumber(sku?.manual_stock_sold),
-    skuAutoStockAvailable: normalizeStockNumber(sku?.auto_stock_available),
-    skuUpstreamStock: normalizeManualStockTotal(sku?.upstream_stock),
-    skuStockStatus: String(sku?.stock_status || ''),
-    skuStockDisplayMode: String(sku?.stock_display_mode || props.product?.stock_display_mode || ''),
-    skuStockDisplay: String(sku?.stock_display || ''),
-    skuStockRangeMin: normalizeStockNumber(sku?.stock_range_min) || undefined,
-    skuStockRangeMax: normalizeStockNumber(sku?.stock_range_max) || undefined,
-    skuStockQuantityHidden: Boolean(sku?.stock_quantity_hidden || props.product?.stock_quantity_hidden),
-    skuStockEnforced: shouldEnforceSkuStock(sku),
-    slug: props.product.slug,
-    title: props.product.title,
-    priceAmount: String(sku?.price_amount || props.product.price_amount || '0.00'),
-    wholesalePrices: Array.isArray(props.product.wholesale_prices) ? props.product.wholesale_prices : undefined,
-    image: images[0] || '',
-    minPurchaseQuantity: normalizeOptionalLimitNumber(props.product.min_purchase_quantity) ?? undefined,
-    maxPurchaseQuantity: normalizeOptionalLimitNumber(props.product.max_purchase_quantity) ?? undefined,
-    purchaseType: props.product.purchase_type,
-    fulfillmentType: props.product.fulfillment_type,
-    manualFormSchema: props.product.manual_form_schema || {},
-    paymentChannelIds: Array.isArray(props.product.payment_channel_ids) && props.product.payment_channel_ids.length > 0 ? props.product.payment_channel_ids : undefined,
-    quantity: 1,
-  }, quantity.value)
-  toast.success(t('toast.addedToCart'))
-  close()
-}
-
 const handleBuyNow = () => {
   purchaseWarning.value = ''
   if (!canPurchase.value) return
@@ -797,8 +707,8 @@ const handleBuyNow = () => {
   }
   if (limit !== null && quantity.value > limit) {
     purchaseWarning.value = available !== null && limit === available && (productLimit === null || available <= productLimit)
-      ? (available > 0 ? t('productDetail.addCartStockExceeded', { count: available }) : t('productDetail.stockUnavailable'))
-      : t('productDetail.addCartLimitExceeded', { count: limit })
+      ? (available > 0 ? t('productDetail.purchaseStockExceeded', { count: available }) : t('productDetail.stockUnavailable'))
+      : t('productDetail.purchaseLimitExceeded', { count: limit })
     return
   }
 
@@ -827,19 +737,13 @@ const handleBuyNow = () => {
     image: images[0] || '',
     minPurchaseQuantity: normalizeOptionalLimitNumber(props.product.min_purchase_quantity) ?? undefined,
     maxPurchaseQuantity: normalizeOptionalLimitNumber(props.product.max_purchase_quantity) ?? undefined,
-    purchaseType: props.product.purchase_type,
     fulfillmentType: props.product.fulfillment_type,
     manualFormSchema: props.product.manual_form_schema || {},
     paymentChannelIds: Array.isArray(props.product.payment_channel_ids) && props.product.payment_channel_ids.length > 0 ? props.product.payment_channel_ids : undefined,
     quantity: quantity.value,
   })
   close()
-  router.push('/checkout?mode=buynow')
-}
-
-const goLogin = () => {
-  close()
-  router.push(`/auth/login?redirect=${encodeURIComponent(route.fullPath)}`)
+  router.push('/checkout')
 }
 
 const goToDetail = () => {
@@ -860,6 +764,12 @@ const getProductImages = () => {
 </script>
 
 <style scoped>
+.quick-buy-dialog {
+  --font-head: var(--ui-font-family);
+  --font-body: var(--ui-font-family);
+  font-family: var(--ui-font-family);
+}
+
 /* Mobile: slide up from bottom */
 .quick-buy-enter-active {
   transition: transform 280ms cubic-bezier(0.32, 0.72, 0, 1), opacity 280ms ease-out;
