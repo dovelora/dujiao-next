@@ -225,7 +225,6 @@ type CreateProductRequest struct {
 	WholesalePrices     *[]WholesalePriceRequest `json:"wholesale_prices"`
 	Images              []string                 `json:"images"`
 	Tags                []string                 `json:"tags"`
-	PurchaseType        string                   `json:"purchase_type"`
 	MinPurchaseQuantity *int                     `json:"min_purchase_quantity"`
 	MaxPurchaseQuantity *int                     `json:"max_purchase_quantity"`
 	StockDisplayMode    string                   `json:"stock_display_mode"`
@@ -298,7 +297,6 @@ func (h *AdminProductHandler) CreateProduct(c *gin.Context) {
 		WholesalePrices:      toWholesalePriceInputs(req.WholesalePrices),
 		Images:               req.Images,
 		Tags:                 req.Tags,
-		PurchaseType:         req.PurchaseType,
 		MinPurchaseQuantity:  req.MinPurchaseQuantity,
 		MaxPurchaseQuantity:  req.MaxPurchaseQuantity,
 		StockDisplayMode:     req.StockDisplayMode,
@@ -317,10 +315,6 @@ func (h *AdminProductHandler) CreateProduct(c *gin.Context) {
 		}
 		if errors.Is(err, productcontract.ErrProductPriceInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_price_invalid", nil)
-			return
-		}
-		if errors.Is(err, productcontract.ErrProductPurchaseInvalid) {
-			ginutil.RespondError(c, response.CodeBadRequest, "error.product_purchase_invalid", nil)
 			return
 		}
 		if errors.Is(err, productcontract.ErrProductCategoryInvalid) {
@@ -390,7 +384,6 @@ func (h *AdminProductHandler) UpdateProduct(c *gin.Context) {
 		WholesalePrices:      toWholesalePriceInputs(req.WholesalePrices),
 		Images:               req.Images,
 		Tags:                 req.Tags,
-		PurchaseType:         req.PurchaseType,
 		MinPurchaseQuantity:  req.MinPurchaseQuantity,
 		MaxPurchaseQuantity:  req.MaxPurchaseQuantity,
 		StockDisplayMode:     req.StockDisplayMode,
@@ -413,10 +406,6 @@ func (h *AdminProductHandler) UpdateProduct(c *gin.Context) {
 		}
 		if errors.Is(err, productcontract.ErrProductPriceInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_price_invalid", nil)
-			return
-		}
-		if errors.Is(err, productcontract.ErrProductPurchaseInvalid) {
-			ginutil.RespondError(c, response.CodeBadRequest, "error.product_purchase_invalid", nil)
 			return
 		}
 		if errors.Is(err, productcontract.ErrProductCategoryInvalid) {

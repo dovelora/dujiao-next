@@ -67,16 +67,6 @@ func TestManualSKUStockPolicyPreservesLegacyDefaultFallback(t *testing.T) {
 }
 
 func TestProductConfigurationNormalizersKeepDefaultsAndRejectUnknownValues(t *testing.T) {
-	if got := NormalizePurchaseType(""); got != constants.ProductPurchaseMember {
-		t.Fatalf("empty purchase type want %q got %q", constants.ProductPurchaseMember, got)
-	}
-	if got := NormalizePurchaseType(constants.ProductPurchaseGuest); got != constants.ProductPurchaseGuest {
-		t.Fatalf("guest purchase type want %q got %q", constants.ProductPurchaseGuest, got)
-	}
-	if got := NormalizePurchaseType("invalid"); got != "" {
-		t.Fatalf("invalid purchase type must be rejected, got %q", got)
-	}
-
 	if got := NormalizeFulfillmentType(""); got != constants.FulfillmentTypeManual {
 		t.Fatalf("empty fulfillment type want %q got %q", constants.FulfillmentTypeManual, got)
 	}

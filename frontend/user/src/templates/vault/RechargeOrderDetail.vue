@@ -1,15 +1,15 @@
 <template>
-  <div class="mx-auto w-full max-w-[1180px] px-6 pb-8">
-    <div class="my-5 flex items-start justify-between gap-4">
+  <div class="mx-auto w-full max-w-[1180px] px-4 pb-8 sm:px-6">
+    <div class="my-5 flex flex-col items-start justify-between gap-3 sm:flex-row sm:gap-4">
       <div>
         <h1 class="mb-1.5 text-3xl font-extrabold">{{ t('rechargeOrder.title') }}</h1>
         <p class="text-muted-foreground">{{ t('rechargeOrder.subtitle') }}</p>
       </div>
-      <RouterLink class="text-[13px] font-semibold text-muted-foreground transition-colors hover:text-primary" to="/me/orders">{{ t('rechargeOrder.backList') }}</RouterLink>
+      <RouterLink class="shrink-0 text-[13px] font-semibold text-muted-foreground transition-colors hover:text-primary" to="/me/orders">{{ t('rechargeOrder.backList') }}</RouterLink>
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="rounded-xl border bg-card p-[22px]">
+    <div v-if="loading" class="rounded-xl border bg-card p-4 sm:p-[22px]">
       <div class="mb-4 h-5 w-[35%] rounded bg-secondary"></div>
       <div class="h-[180px] rounded-md bg-secondary"></div>
     </div>
@@ -23,10 +23,10 @@
 
     <template v-else>
       <!-- 头部 -->
-      <div class="mb-[18px] flex flex-wrap items-start justify-between gap-[18px] rounded-xl border bg-card p-[22px]">
+      <div class="mb-[18px] flex flex-wrap items-start justify-between gap-[18px] rounded-xl border bg-card p-4 sm:p-[22px]">
         <div>
           <div class="text-[11px] uppercase tracking-[0.06em] text-muted-foreground">{{ t('personalCenter.wallet.rechargeNoLabel') }}</div>
-          <div class="mt-1 font-bold">{{ recharge.recharge_no }}</div>
+          <div class="mt-1 break-all font-bold">{{ recharge.recharge_no }}</div>
           <div class="mt-1.5 text-[13px] text-muted-foreground">{{ t('rechargeOrder.createdAtLabel') }}：{{ formatDate(recharge.created_at) }}</div>
         </div>
         <div>
@@ -37,7 +37,7 @@
       </div>
 
       <!-- 金额明细 -->
-      <section class="mb-[18px] rounded-xl border bg-card p-[22px]">
+      <section class="mb-[18px] rounded-xl border bg-card p-4 sm:p-[22px]">
         <h2 class="mb-4 text-lg font-bold">{{ t('rechargeOrder.amountTitle') }}</h2>
         <div class="grid gap-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
           <div class="rounded-md border bg-secondary px-3.5 py-3">
@@ -56,7 +56,7 @@
       </section>
 
       <!-- 时间 -->
-      <section class="mb-[18px] rounded-xl border bg-card p-[22px]">
+      <section class="mb-[18px] rounded-xl border bg-card p-4 sm:p-[22px]">
         <h2 class="mb-4 text-lg font-bold">{{ t('rechargeOrder.timeTitle') }}</h2>
         <div class="grid gap-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
           <div class="rounded-md border bg-secondary px-3.5 py-3">
@@ -75,13 +75,13 @@
       </section>
 
       <!-- 备注 -->
-      <section v-if="recharge.remark" class="mb-[18px] rounded-xl border bg-card p-[22px]">
+      <section v-if="recharge.remark" class="mb-[18px] rounded-xl border bg-card p-4 sm:p-[22px]">
         <h2 class="mb-4 text-lg font-bold">{{ t('rechargeOrder.remarkLabel') }}</h2>
         <p class="text-muted-foreground">{{ recharge.remark }}</p>
       </section>
 
       <!-- 支付区域 -->
-      <section v-if="isPending" class="mb-[18px] rounded-xl border bg-card p-[22px]">
+      <section v-if="isPending" class="mb-[18px] rounded-xl border bg-card p-4 sm:p-[22px]">
         <h2 class="mb-4 text-lg font-bold">{{ t('rechargeOrder.paymentTitle') }}</h2>
         <div class="mb-3.5 text-[13px] text-muted-foreground">{{ t('personalCenter.wallet.pendingHint') }}</div>
         <div class="grid gap-[18px] md:grid-cols-2">
@@ -113,7 +113,7 @@
       </section>
 
       <!-- 成功 -->
-      <section v-if="recharge.status === 'success'" class="mb-[18px] flex items-center gap-3 rounded-xl border border-l-4 border-l-[color:var(--teal-strong)] bg-card p-[22px]">
+      <section v-if="recharge.status === 'success'" class="mb-[18px] flex items-center gap-3 rounded-xl border border-l-4 border-l-[color:var(--teal-strong)] bg-card p-4 sm:p-[22px]">
         <CheckCircle2 class="h-[26px] w-[26px] flex-none text-[color:var(--teal-strong)]" />
         <p class="font-bold text-foreground">{{ t('personalCenter.wallet.rechargeSuccess') }}</p>
       </section>

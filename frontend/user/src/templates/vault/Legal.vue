@@ -1,10 +1,10 @@
 <template>
-  <div class="mx-auto w-full max-w-[860px] px-6 pb-10 pt-2">
+  <div class="mx-auto w-full max-w-[860px] px-4 pb-10 pt-2 sm:px-6">
     <div v-if="loading" class="flex justify-center py-20">
       <Loader2 class="h-10 w-10 animate-spin text-primary motion-reduce:animate-none" />
     </div>
 
-    <Card v-else class="mt-7 p-7 sm:p-9">
+    <Card v-else class="mt-5 p-4 sm:mt-7 sm:p-9">
       <h1 class="mb-6 border-b pb-5 text-3xl font-extrabold">{{ title }}</h1>
       <div
         v-if="content"

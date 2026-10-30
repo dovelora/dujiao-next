@@ -33,7 +33,6 @@ func TestProductServiceUpdateKeepsMappedProductFulfillmentUpstream(t *testing.T)
 		Slug:             "mapped-product",
 		TitleJSON:        jsonmap.JSON{"zh-CN": "mapped-product"},
 		PriceAmount:      money.FromDecimal(decimal.NewFromInt(10)),
-		PurchaseType:     constants.ProductPurchaseMember,
 		FulfillmentType:  constants.FulfillmentTypeUpstream,
 		ManualStockTotal: 0,
 		IsMapped:         true,
@@ -59,7 +58,6 @@ func TestProductServiceUpdateKeepsMappedProductFulfillmentUpstream(t *testing.T)
 		Slug:            "mapped-product-updated",
 		TitleJSON:       map[string]interface{}{"zh-CN": "mapped-product-updated"},
 		PriceAmount:     decimal.NewFromInt(20),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		ManualStockTotal: func() *int {
 			value := 0
@@ -103,7 +101,6 @@ func TestProductServiceUpdateFiltersUnavailablePaymentChannels(t *testing.T) {
 		Slug:              "payment-channel-update",
 		TitleJSON:         jsonmap.JSON{"zh-CN": "payment-channel-update"},
 		PriceAmount:       money.FromDecimal(decimal.NewFromInt(10)),
-		PurchaseType:      constants.ProductPurchaseMember,
 		FulfillmentType:   constants.FulfillmentTypeAuto,
 		PaymentChannelIDs: productdomain.EncodePaymentChannelIDs([]uint{deletedChannel.ID}),
 		IsActive:          true,
@@ -117,7 +114,6 @@ func TestProductServiceUpdateFiltersUnavailablePaymentChannels(t *testing.T) {
 		Slug:              product.Slug,
 		TitleJSON:         map[string]interface{}{"zh-CN": "payment-channel-update"},
 		PriceAmount:       decimal.NewFromInt(10),
-		PurchaseType:      constants.ProductPurchaseMember,
 		FulfillmentType:   constants.FulfillmentTypeAuto,
 		PaymentChannelIDs: []uint{deletedChannel.ID},
 		IsActive: func() *bool {
@@ -148,7 +144,6 @@ func TestProductServiceUpdateRejectsInvalidPurchaseLimits(t *testing.T) {
 		Slug:                "valid-limit-product",
 		TitleJSON:           map[string]interface{}{"zh-CN": "valid"},
 		PriceAmount:         decimal.NewFromInt(10),
-		PurchaseType:        constants.ProductPurchaseMember,
 		FulfillmentType:     constants.FulfillmentTypeManual,
 		ManualStockTotal:    intPtr(1),
 		MinPurchaseQuantity: intPtr(2),
@@ -163,7 +158,6 @@ func TestProductServiceUpdateRejectsInvalidPurchaseLimits(t *testing.T) {
 		Slug:                "valid-limit-product",
 		TitleJSON:           map[string]interface{}{"zh-CN": "valid"},
 		PriceAmount:         decimal.NewFromInt(10),
-		PurchaseType:        constants.ProductPurchaseMember,
 		FulfillmentType:     constants.FulfillmentTypeManual,
 		ManualStockTotal:    intPtr(1),
 		MaxPurchaseQuantity: intPtr(1), // 已存在 min=2，新设 max=1 应触发校验

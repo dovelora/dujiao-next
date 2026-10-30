@@ -78,6 +78,7 @@
 }
 
 :root {
+  --ui-font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -699,4 +700,64 @@ html[data-telegram-mini-app="true"] body {
 .theme-prose p:has(> img) + p:has(> img),
 .theme-prose p:has(> img) + p:has(> img) > img {
   margin-top: 0;
+}
+
+/* Mobile storefront typography shared by both templates and account pages. */
+@media (width < 640px) {
+  #app,
+  #app .vault-scope,
+  body.vault-tokens {
+    --font-head: var(--ui-font-family);
+    --font-body: var(--ui-font-family);
+    font-family: var(--ui-font-family);
+    font-size: 14px;
+  }
+
+  #app :is(h1, h2, h3, h4, button, input, select, textarea) {
+    font-family: var(--ui-font-family);
+  }
+
+  #app main h1 {
+    font-size: 22px;
+    line-height: 1.4;
+    letter-spacing: 0.005em;
+    overflow-wrap: anywhere;
+  }
+
+  #app .prose {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+
+  #app .prose :is(h1, h2) {
+    font-size: 18px;
+    line-height: 1.5;
+  }
+
+  #app .prose :is(h1, h2, h3) {
+    margin-top: 1.5em;
+    margin-bottom: 0.6em;
+  }
+
+  #app .prose > :first-child {
+    margin-top: 0;
+  }
+
+  #app .prose p {
+    margin-block: 0.9em;
+  }
+
+  #app .prose :is(pre, table) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+
+@layer utilities {
+  @media (width < 640px) {
+    #app main h1 {
+      font-weight: 600 !important;
+    }
+  }
 }

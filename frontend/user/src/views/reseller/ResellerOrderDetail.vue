@@ -88,8 +88,8 @@
             <ResellerRecordCard v-for="(item, index) in detail.items" :key="index">
               <template #header>
                 <div class="min-w-0">
-                  <div class="truncate text-sm font-semibold text-foreground">{{ localized(item.title) }}</div>
-                  <div class="mt-0.5 truncate text-xs text-muted-foreground">{{ skuText(item) }}</div>
+                  <div class="break-words text-sm font-semibold text-foreground">{{ localized(item.title) }}</div>
+                  <div class="mt-0.5 break-words text-xs text-muted-foreground">{{ skuText(item) }}</div>
                 </div>
               </template>
               <div>

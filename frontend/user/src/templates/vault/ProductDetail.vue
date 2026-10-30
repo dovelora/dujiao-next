@@ -1,8 +1,8 @@
 <template>
-  <div class="mx-auto w-full max-w-[1180px] px-6 pb-6">
+  <div class="product-detail-page mx-auto w-full max-w-[1180px] px-4 pb-24 sm:px-6 lg:pb-6">
     <!-- Loading -->
-    <div v-if="loading" class="grid gap-11 py-2.5 lg:grid-cols-2">
-      <div class="h-[380px] rounded-xl bg-[linear-gradient(135deg,#3a3950,var(--ink))] opacity-50"></div>
+    <div v-if="loading" class="grid gap-5 py-2.5 sm:gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-10">
+      <div class="h-44 rounded-xl sm:h-[320px] bg-[linear-gradient(135deg,#3a3950,var(--ink))] opacity-50"></div>
       <div class="grid content-start gap-4 pt-2">
         <div class="h-7 w-3/5 rounded-md border bg-card"></div>
         <div class="h-12 w-2/5 rounded-md border bg-card"></div>
@@ -12,26 +12,29 @@
 
     <!-- Content -->
     <template v-else-if="product">
-      <nav class="flex flex-wrap items-center gap-1.5 py-5 pb-2 text-[13.5px] font-semibold text-muted-foreground">
+      <nav class="flex flex-wrap items-center gap-1.5 py-4 pb-2 text-[13.5px] font-semibold text-muted-foreground">
         <RouterLink to="/" class="hover:text-primary">{{ t('nav.home') }}</RouterLink>
         <ChevronRight class="h-4 w-4 flex-none" />
         <RouterLink to="/products" class="hover:text-primary">{{ t('nav.products') }}</RouterLink>
-        <ChevronRight class="h-4 w-4 flex-none" />
-        <span class="text-foreground">{{ getLocalizedText(product.title) }}</span>
+        <ChevronRight class="hidden h-4 w-4 flex-none sm:block" />
+        <span class="hidden min-w-0 break-words text-foreground sm:inline">{{ getLocalizedText(product.title) }}</span>
       </nav>
 
-      <section class="grid gap-11 py-2.5 lg:grid-cols-2">
+      <section class="grid gap-5 py-2.5 sm:gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-10">
         <!-- 图区 -->
         <div>
-          <div class="relative grid h-[380px] place-items-center overflow-hidden rounded-xl" :class="images.length ? '' : 'bg-[linear-gradient(135deg,#7b74f2,var(--red))]'">
-            <img v-if="currentImage" :src="currentImage" :alt="getLocalizedText(product.title)" class="absolute inset-0 h-full w-full object-cover" />
-            <Package v-else class="h-[110px] w-[110px] text-white/95" />
+          <div class="product-detail-image relative grid h-44 place-items-center overflow-hidden rounded-xl bg-card sm:h-[320px]" :class="images.length ? '' : 'bg-[linear-gradient(135deg,#7b74f2,var(--red))]'">
+            <img v-if="currentImage" :src="currentImage" :alt="getLocalizedText(product.title)" class="absolute inset-0 h-full w-full object-contain p-4 sm:p-6" />
+            <Package v-else class="h-16 w-16 text-white/95 sm:h-[110px] sm:w-[110px]" />
           </div>
-          <div v-if="images.length > 1" class="mt-3.5 flex flex-wrap gap-3">
+          <div v-if="images.length > 1" class="mt-3 flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:gap-3 sm:overflow-visible">
             <button
               v-for="(img, idx) in images"
               :key="idx"
-              class="h-[60px] w-[74px] overflow-hidden rounded-md border-2 bg-secondary"
+              type="button"
+              :aria-label="`${getLocalizedText(product.title)} ${idx + 1}`"
+              :aria-pressed="img === currentImage"
+              class="h-12 w-12 flex-none sm:h-[60px] sm:w-[74px] overflow-hidden rounded-md border-2 bg-secondary"
               :class="img === currentImage ? 'border-primary' : 'border-border'"
               @click="currentImage = img"
             >
@@ -43,7 +46,7 @@
         <!-- 购买区 -->
         <div>
           <span v-if="categoryName" class="block truncate text-[13px] font-semibold text-muted-foreground">{{ categoryName }}</span>
-          <h1 class="my-2 mb-3 text-[32px] font-extrabold">{{ getLocalizedText(product.title) }}</h1>
+          <h1 class="mt-1 mb-3 text-[28px] font-semibold leading-[1.4]">{{ getLocalizedText(product.title) }}</h1>
 
           <div class="mb-1.5 flex flex-wrap gap-2">
             <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-semibold" :class="stockPillTone">{{ getStockStatusLabel(product) }}</span>
@@ -51,10 +54,7 @@
               <component :is="product.fulfillment_type === 'auto' ? Zap : Pencil" class="h-3.5 w-3.5" />
               {{ getFulfillmentTypeLabel(product.fulfillment_type) }}
             </span>
-            <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-semibold" :class="product.purchase_type === 'guest' ? 'bg-[color:var(--gold-soft)] text-[color:var(--gold-strong)]' : 'bg-[color:var(--teal-soft)] text-[color:var(--teal-strong)]'">
-              <component :is="product.purchase_type === 'guest' ? UserPlus : Lock" class="h-3.5 w-3.5" />
-              {{ getPurchaseTypeLabel(product.purchase_type) }}
-            </span>
+
           </div>
 
           <div v-if="product.tags && product.tags.length" class="mb-1 flex flex-wrap gap-1.5">
@@ -62,7 +62,7 @@
           </div>
 
           <!-- 价格 -->
-          <div class="my-5 border-b pb-5">
+          <div class="detail-price my-3 border-b pb-3">
             <div class="mb-2.5 flex flex-wrap items-center gap-2">
               <span class="text-[13px] font-semibold text-muted-foreground">{{ t('products.price') }}</span>
               <span v-if="(selectedSku && hasSkuPromotionPrice(selectedSku)) || (!selectedSku && hasPromotionPrice(product))" class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-[12.5px] font-semibold text-primary">{{ t('products.promotionTag') }}</span>
@@ -73,7 +73,7 @@
             <!-- 1. SKU 批发价 -->
             <template v-if="selectedSku && hasSelectedSkuWholesalePrice">
               <div class="flex flex-wrap items-baseline gap-3">
-                <span class="text-[40px] font-extrabold tabular-nums" :class="selectedSkuWholesaleFinalIsMember ? 'text-[color:var(--gold-strong)]' : 'text-[color:var(--teal-strong)]'">{{ formatPrice(selectedSkuWholesaleFinalPrice!, siteCurrency) }}</span>
+                <span class="detail-price-value text-[28px] font-bold tabular-nums sm:text-[34px] sm:font-semibold" :class="selectedSkuWholesaleFinalIsMember ? 'text-[color:var(--gold-strong)]' : 'text-[color:var(--teal-strong)]'">{{ formatPrice(selectedSkuWholesaleFinalPrice!, siteCurrency) }}</span>
                 <span class="font-semibold text-muted-foreground line-through">{{ formatPrice(selectedSku.price_amount, siteCurrency) }}</span>
               </div>
               <p class="mt-2 text-sm font-semibold" :class="selectedSkuWholesaleFinalIsMember ? 'text-[color:var(--gold-strong)]' : 'text-[color:var(--teal-strong)]'">
@@ -83,8 +83,8 @@
             <!-- 2. SKU 促销价 -->
             <template v-else-if="selectedSku && hasSkuPromotionPrice(selectedSku)">
               <div class="flex flex-wrap items-baseline gap-3">
-                <span v-if="selectedSkuPromotionFinalIsMember" class="text-[40px] font-extrabold tabular-nums text-[color:var(--gold-strong)]">{{ formatPrice(selectedSkuPromotionFinalPrice!, siteCurrency) }}</span>
-                <span v-else class="text-[40px] font-extrabold tabular-nums text-primary">{{ formatPrice(selectedSkuPromotionPrice!, siteCurrency) }}</span>
+                <span v-if="selectedSkuPromotionFinalIsMember" class="detail-price-value text-[28px] font-bold tabular-nums sm:text-[34px] sm:font-semibold text-[color:var(--gold-strong)]">{{ formatPrice(selectedSkuPromotionFinalPrice!, siteCurrency) }}</span>
+                <span v-else class="detail-price-value text-[28px] font-bold tabular-nums sm:text-[34px] sm:font-semibold text-primary">{{ formatPrice(selectedSkuPromotionPrice!, siteCurrency) }}</span>
                 <span class="font-semibold text-muted-foreground line-through">{{ formatPrice(selectedSku.price_amount, siteCurrency) }}</span>
               </div>
               <p v-if="selectedSkuPromotionFinalIsMember" class="mt-2 text-sm font-semibold text-[color:var(--gold-strong)]">{{ t('products.memberPriceTag') }} · {{ t('products.saveAmount') }} {{ formatPrice(Number(selectedSku.price_amount) - Number(selectedSkuPromotionFinalPrice), siteCurrency) }}</p>
@@ -93,26 +93,26 @@
             <!-- 3. SKU 会员价 -->
             <template v-else-if="selectedSku && hasMemberPrice">
               <div class="flex flex-wrap items-baseline gap-3">
-                <span class="text-[40px] font-extrabold tabular-nums text-[color:var(--gold-strong)]">{{ formatPrice(selectedSkuMemberPrice!, siteCurrency) }}</span>
+                <span class="detail-price-value text-[28px] font-bold tabular-nums sm:text-[34px] sm:font-semibold text-[color:var(--gold-strong)]">{{ formatPrice(selectedSkuMemberPrice!, siteCurrency) }}</span>
                 <span class="font-semibold text-muted-foreground line-through">{{ formatPrice(selectedSku.price_amount, siteCurrency) }}</span>
               </div>
               <p class="mt-2 text-sm font-semibold text-[color:var(--gold-strong)]">{{ t('products.memberPriceTag') }} · {{ t('products.saveAmount') }} {{ formatPrice(Number(selectedSku.price_amount) - selectedSkuMemberPrice!, siteCurrency) }}</p>
             </template>
             <!-- 4. SKU 原价 -->
             <div v-else-if="selectedSku" class="flex flex-wrap items-baseline gap-3">
-              <span class="text-[40px] font-extrabold tabular-nums text-primary">{{ formatPrice(selectedSku.price_amount, siteCurrency) }}</span>
+              <span class="detail-price-value text-[28px] font-bold tabular-nums sm:text-[34px] sm:font-semibold text-primary">{{ formatPrice(selectedSku.price_amount, siteCurrency) }}</span>
             </div>
             <!-- 5. 产品级促销 -->
             <template v-else-if="hasPromotionPrice(product)">
               <div class="flex flex-wrap items-baseline gap-3">
-                <span class="text-[40px] font-extrabold tabular-nums text-primary">{{ formatPrice(getPromotionPriceAmount(product), siteCurrency) }}</span>
+                <span class="detail-price-value text-[28px] font-bold tabular-nums sm:text-[34px] sm:font-semibold text-primary">{{ formatPrice(getPromotionPriceAmount(product), siteCurrency) }}</span>
                 <span class="font-semibold text-muted-foreground line-through">{{ formatPrice(product.price_amount, siteCurrency) }}</span>
               </div>
               <p class="mt-2 text-sm font-semibold text-destructive">{{ t('products.saveAmount') }} {{ formatPrice(getPromotionSaveAmount(product), siteCurrency) }}</p>
             </template>
             <!-- 6. 产品级原价 -->
             <div v-else class="flex flex-wrap items-baseline gap-3">
-              <span class="text-[40px] font-extrabold tabular-nums text-primary">{{ formatPrice(product.price_amount, siteCurrency) }}</span>
+              <span class="detail-price-value text-[28px] font-bold tabular-nums sm:text-[34px] sm:font-semibold text-primary">{{ formatPrice(product.price_amount, siteCurrency) }}</span>
             </div>
           </div>
 
@@ -133,8 +133,8 @@
           </div>
 
           <!-- 规格 -->
-          <div v-if="activeSkus.length" class="my-5">
-            <div class="mb-2.5 text-[13px] font-bold uppercase tracking-[0.04em] text-muted-foreground">{{ t('productDetail.skuTitle') }}</div>
+          <div v-if="activeSkus.length" class="my-3">
+            <div class="mb-2 text-[13px] font-bold uppercase tracking-[0.04em] text-muted-foreground">{{ t('productDetail.skuTitle') }}</div>
             <div class="flex flex-wrap gap-2.5">
               <button
                 v-for="sku in activeSkus"
@@ -156,8 +156,8 @@
           </div>
 
           <!-- 数量 -->
-          <div class="my-5">
-            <div class="mb-2.5 text-[13px] font-bold uppercase tracking-[0.04em] text-muted-foreground">{{ t('productDetail.quantity') }}</div>
+          <div class="my-3">
+            <div class="mb-2 text-[13px] font-bold uppercase tracking-[0.04em] text-muted-foreground">{{ t('productDetail.quantity') }}</div>
             <div class="inline-flex items-center overflow-hidden rounded-full border-2 border-hairline-strong">
               <button type="button" class="grid h-11 w-[42px] place-items-center bg-card text-foreground disabled:opacity-35" :aria-label="t('productDetail.quantity')" :disabled="quantity <= quantityEffectiveMin" @click="quantity = Math.max(quantityEffectiveMin, quantity - 1)"><Minus class="h-[17px] w-[17px]" /></button>
               <input inputmode="numeric" class="h-11 w-[50px] border-x bg-card text-center font-bold tabular-nums outline-none" :value="quantity" :aria-label="t('productDetail.quantity')" @change="handleQuantityInput($event)" @keydown.enter.prevent="($event.target as HTMLInputElement)?.blur()" />
@@ -170,12 +170,8 @@
           <div v-if="purchaseWarning" class="my-3.5 rounded-sm bg-warning/10 px-3.5 py-2.5 text-sm font-semibold text-warning">{{ purchaseWarning }}</div>
 
           <!-- 操作 -->
-          <div ref="purchaseActionsRef" class="mt-[18px] flex flex-wrap gap-3">
-            <Button v-if="requiresLogin" class="h-12 w-full rounded-full text-[17px] font-bold" @click="goLogin">{{ t('productDetail.loginToBuy') }}</Button>
-            <template v-else>
-              <Button class="h-12 flex-1 rounded-full text-[17px] font-bold" :disabled="!canPurchase" @click="buyNow"><Zap /> {{ t('productDetail.buyNow') }}</Button>
-              <Button variant="outline" class="h-12 rounded-full text-[17px] font-bold" :disabled="!canPurchase" @click="addToCart"><ShoppingCart /> {{ t('productDetail.addToCart') }}</Button>
-            </template>
+          <div ref="purchaseActionsRef" class="purchase-actions mt-3 flex flex-wrap gap-3">
+            <Button class="h-11 min-w-0 flex-1 rounded-xl px-3 text-sm font-semibold" :disabled="!canPurchase" @click="buyNow"><Zap /> {{ t('productDetail.buyNow') }}</Button>
           </div>
 
           <div class="mt-4 flex items-center gap-3 rounded-md bg-[color:var(--teal-soft)] px-[18px] py-3.5 text-[color:var(--teal-strong)]">
@@ -183,21 +179,22 @@
             <span class="text-sm font-semibold">{{ product.fulfillment_type === 'manual' ? t('productDetail.deliveryReassuranceManual') : t('productDetail.deliveryReassurance') }}</span>
           </div>
         </div>
+
       </section>
 
       <!-- 描述 / 详情 -->
-      <section v-if="getLocalizedText(product.description) || product.content" class="py-9">
+      <section v-if="productDescription || product.content" class="py-6 sm:py-9">
         <div class="mb-[22px] mt-3 flex gap-[26px] border-b-2">
           <span class="-mb-0.5 border-b-[3px] border-primary py-3.5 text-base font-bold text-foreground">{{ t('productDetail.details') }}</span>
         </div>
         <div class="prose max-w-none dark:prose-invert prose-a:text-primary prose-img:rounded-md">
-          <p v-if="getLocalizedText(product.description)">{{ getLocalizedText(product.description) }}</p>
+          <p v-if="productDescription" class="whitespace-pre-line">{{ productDescription }}</p>
           <div v-if="product.content" v-html="processHtmlForDisplay(getLocalizedText(product.content))"></div>
         </div>
       </section>
 
       <!-- 相关文章 -->
-      <section v-if="relatedPosts.length" class="py-9">
+      <section v-if="relatedPosts.length" class="py-6 sm:py-9">
         <div class="mb-[22px]"><h2 class="text-2xl font-extrabold">{{ t('productDetail.relatedPosts') }}</h2></div>
         <div class="grid gap-4 grid-cols-[repeat(auto-fill,minmax(228px,1fr))]">
           <RouterLink v-for="rp in relatedPosts" :key="rp.id" class="block h-full rounded-lg border bg-card p-[22px] transition hover:-translate-y-[3px] hover:border-hairline-strong hover:shadow-[var(--shadow)]" :to="`/blog/${rp.slug}`">
@@ -216,7 +213,7 @@
       <!-- 移动端固定购买条 -->
       <VaultProductMobileBar
         :visible="showMobileBar && !!product && !loading"
-        :requires-login="requiresLogin"
+
         :can-purchase="canPurchase"
         :show-member-price="mobileBarShowMemberPrice"
         :member-price-display="mobileBarMemberPriceDisplay"
@@ -227,9 +224,9 @@
         :show-product-promotion-price="mobileBarShowProductPromotionPrice"
         :product-promotion-price-display="mobileBarProductPromotionPriceDisplay"
         :product-price-display="mobileBarProductPriceDisplay"
-        @add-to-cart="addToCart"
+
         @buy-now="buyNow"
-        @go-login="goLogin"
+
       />
     </template>
 
@@ -249,11 +246,12 @@
 import { computed, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-  AlertCircle, ArrowLeft, ChevronRight, Lock, Minus, Package, Pencil, Plus,
-  RotateCw, ShoppingCart, Tag, TicketCheck, UserPlus, Zap,
+  AlertCircle, ArrowLeft, ChevronRight, Minus, Package, Pencil, Plus,
+  RotateCw, Tag, TicketCheck, Zap,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { processHtmlForDisplay } from '../../utils/content'
+import { getProductDescriptionText } from '../../utils/productDescription'
 import { useProductDetail } from '../../composables/useProductDetail'
 import VaultProductMobileBar from './components/VaultProductMobileBar.vue'
 
@@ -279,7 +277,7 @@ const setupMobileBarObserver = () => {
 
 const {
   getLocalizedText, siteCurrency, formatPrice,
-  getFulfillmentTypeLabel, getPurchaseTypeLabel, getStockStatusLabel, getStockBadgeVariant,
+  getFulfillmentTypeLabel, getStockStatusLabel, getStockBadgeVariant,
   hasPromotionPrice, getPromotionPriceAmount, getPromotionSaveAmount,
   hasSkuPromotionPrice, getSkuPromotionSaveAmount,
   hasPromotionRules, getPromotionRules,
@@ -293,15 +291,17 @@ const {
   showSelectedSkuMemberBadge,
   isSkuPurchasable, skuDisplayText, skuStockText,
   quantityEffectiveLimit, quantityEffectiveMin, handleQuantityInput,
-  requiresLogin, requiresSKUSelection, canPurchase, cannotPurchaseReason,
+  requiresSKUSelection, canPurchase, cannotPurchaseReason,
   categoryName, images,
   backToListTo,
-  addToCart, buyNow, goLogin, loadProduct,
+  buyNow, loadProduct,
   mobileBarShowMemberPrice, mobileBarMemberPriceDisplay,
   mobileBarShowSkuPromotionPrice, mobileBarSkuPromotionPriceDisplay,
   mobileBarShowSkuPrice, mobileBarSkuPriceDisplay,
   mobileBarShowProductPromotionPrice, mobileBarProductPromotionPriceDisplay, mobileBarProductPriceDisplay,
 } = useProductDetail({ onLoaded: () => setupMobileBarObserver() })
+
+const productDescription = computed(() => getProductDescriptionText(getLocalizedText(product.value?.description)))
 
 const stockPillTone = computed(() => {
   const variant = getStockBadgeVariant(product.value?.stock_status)
@@ -317,3 +317,10 @@ onUnmounted(() => {
   }
 })
 </script>
+
+<style scoped>
+.detail-price-value {
+  font-family: "Rubik", var(--ui-font-family);
+  line-height: 1.2;
+}
+</style>

@@ -8,7 +8,6 @@ var (
 	ErrSlugExists                   = errors.New("slug exists")
 	ErrProductCategoryInvalid       = errors.New("product category invalid")
 	ErrProductPriceInvalid          = errors.New("product price invalid")
-	ErrProductPurchaseInvalid       = errors.New("product purchase invalid")
 	ErrProductPurchaseLimitInvalid  = errors.New("product purchase limit invalid")
 	ErrProductStockDisplayInvalid   = errors.New("product stock display invalid")
 	ErrFulfillmentInvalid           = errors.New("fulfillment invalid")

@@ -6,7 +6,6 @@ import (
 	apicredentialdomain "github.com/dujiao-next/internal/modules/apicredential/domain"
 	auditlogdomain "github.com/dujiao-next/internal/modules/auditlog/domain"
 	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
-	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -43,6 +42,9 @@ import (
 // AutoMigrate owns the application-wide schema registry and ordered data migrations.
 func AutoMigrate() error {
 	db := gormdb.DB
+	if err := retireCartForeignKeyConstraints(); err != nil {
+		return err
+	}
 	if err := ensureUpstreamReferenceColumnTypes(db); err != nil {
 		return err
 	}
@@ -67,7 +69,6 @@ func AutoMigrate() error {
 		&orderdomain.OrderItem{},
 		&orderdomain.OrderRefundRecord{},
 		&orderriskdomain.LockKey{},
-		&cartdomain.Item{},
 		&paymentdomain.PaymentChannel{},
 		&paymentdomain.Payment{},
 		&cardsecretdomain.Secret{},
@@ -112,9 +113,6 @@ func AutoMigrate() error {
 	if err := resellerstore.Migrate(db); err != nil {
 		return err
 	}
-	if err := migrateCartSKUUniqueIndex(); err != nil {
-		return err
-	}
 	if err := ensureProductSKUMigration(); err != nil {
 		return err
 	}
@@ -137,9 +135,6 @@ func AutoMigrate() error {
 		return err
 	}
 	if err := ensureOrderItemOriginalPriceMigration(); err != nil {
-		return err
-	}
-	if err := ensureCartForeignKeyConstraints(); err != nil {
 		return err
 	}
 	if err := ensureProcurementOrderForeignKeyConstraint(); err != nil {

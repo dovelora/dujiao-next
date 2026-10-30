@@ -1566,10 +1566,6 @@ const messages = {
           normal: '库存正常',
           unlimited: '库存不限',
         },
-        purchaseType: {
-          member: '会员购买',
-          guest: '游客购买',
-        },
         fulfillmentType: {
           manual: '人工交付',
           auto: '自动交付',
@@ -1631,7 +1627,6 @@ const messages = {
           seoMetaDescriptionTip: '用于 meta description 标签',
           category: '分类 *',
           categoryPlaceholder: '选择分类...',
-          purchaseType: '购买身份',
           minPurchaseQuantity: '单次最小购买数量',
           minPurchaseQuantityPlaceholder: '留空表示不限制',
           minPurchaseQuantityTip: '可选填写；未设置或为 0 时表示无下限',
@@ -6128,10 +6123,6 @@ const messages = {
           normal: '庫存正常',
           unlimited: '庫存不限',
         },
-        purchaseType: {
-          member: '會員購買',
-          guest: '訪客購買',
-        },
         fulfillmentType: {
           manual: '人工交付',
           auto: '自動交付',
@@ -6193,7 +6184,6 @@ const messages = {
           seoMetaDescriptionTip: '用於 meta description 標籤',
           category: '分類 *',
           categoryPlaceholder: '選擇分類...',
-          purchaseType: '購買身份',
           minPurchaseQuantity: '單次最小購買數量',
           minPurchaseQuantityPlaceholder: '留空表示不限制',
           minPurchaseQuantityTip: '可選填；未設定或為 0 時表示無下限',
@@ -10690,10 +10680,6 @@ const messages = {
           normal: 'In stock',
           unlimited: 'Unlimited stock',
         },
-        purchaseType: {
-          member: 'Members only',
-          guest: 'Guest purchase',
-        },
         fulfillmentType: {
           manual: 'Manual',
           auto: 'Auto',
@@ -10755,7 +10741,6 @@ const messages = {
           seoMetaDescriptionTip: 'Used for meta description tag',
           category: 'Category *',
           categoryPlaceholder: 'Select category...',
-          purchaseType: 'Purchase type',
           minPurchaseQuantity: 'Min purchase quantity',
           minPurchaseQuantityPlaceholder: 'Leave empty for no minimum',
           minPurchaseQuantityTip: 'Optional. Leave unset or 0 for no minimum quantity per order.',

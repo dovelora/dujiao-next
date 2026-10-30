@@ -9,7 +9,6 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
-	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
@@ -187,7 +186,6 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
 		&orderdomain.OrderItem{},
-		&cartdomain.Item{},
 		&cardsecretdomain.Secret{},
 		&cardsecretdomain.Batch{},
 		&settingsstore.SettingRecord{},
@@ -200,7 +198,6 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 		Slug:              "sku-migration-legacy",
 		TitleJSON:         jsonmap.JSON{"zh-CN": "历史商品"},
 		PriceAmount:       money.FromDecimal(decimal.NewFromInt(128)),
-		PurchaseType:      "member",
 		FulfillmentType:   "manual",
 		ManualStockTotal:  20,
 		ManualStockLocked: 3,
@@ -226,19 +223,6 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 	}
 	if err := db.Create(orderItem).Error; err != nil {
 		t.Fatalf("create order item failed: %v", err)
-	}
-
-	cartItem := &cartdomain.Item{
-		UserID:          1001,
-		ProductID:       product.ID,
-		SKUID:           0,
-		Quantity:        2,
-		FulfillmentType: "manual",
-		CreatedAt:       now,
-		UpdatedAt:       now,
-	}
-	if err := db.Create(cartItem).Error; err != nil {
-		t.Fatalf("create cart item failed: %v", err)
 	}
 
 	batch := &cardsecretdomain.Batch{
@@ -290,14 +274,6 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 		t.Fatalf("order item sku_id want %d got %d", sku.ID, gotOrderItem.SKUID)
 	}
 
-	var gotCartItem cartdomain.Item
-	if err := db.First(&gotCartItem, cartItem.ID).Error; err != nil {
-		t.Fatalf("reload cart item failed: %v", err)
-	}
-	if gotCartItem.SKUID != sku.ID {
-		t.Fatalf("cart item sku_id want %d got %d", sku.ID, gotCartItem.SKUID)
-	}
-
 	var gotBatch cardsecretdomain.Batch
 	if err := db.First(&gotBatch, batch.ID).Error; err != nil {
 		t.Fatalf("reload card secret batch failed: %v", err)
@@ -324,29 +300,6 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 	}
 	if skuCount != 1 {
 		t.Fatalf("idempotent check failed: sku count want 1 got %d", skuCount)
-	}
-}
-
-func TestMigrateCartSKUUniqueIndex(t *testing.T) {
-	db := setupSKUMigrationTestDB(t)
-	if err := db.AutoMigrate(&cartdomain.Item{}); err != nil {
-		t.Fatalf("auto migrate cart item failed: %v", err)
-	}
-
-	// 构造历史唯一索引，验证迁移函数会移除该索引并保留新索引。
-	if err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_cart_user_product ON cart_items(user_id, product_id)").Error; err != nil {
-		t.Fatalf("create legacy index failed: %v", err)
-	}
-
-	if err := migrateCartSKUUniqueIndex(); err != nil {
-		t.Fatalf("migrate cart unique index failed: %v", err)
-	}
-
-	if db.Migrator().HasIndex(&cartdomain.Item{}, "idx_cart_user_product") {
-		t.Fatalf("legacy unique index idx_cart_user_product should be dropped")
-	}
-	if !db.Migrator().HasIndex(&cartdomain.Item{}, "idx_cart_user_product_sku") {
-		t.Fatalf("new unique index idx_cart_user_product_sku should exist")
 	}
 }
 
@@ -522,13 +475,8 @@ func TestAutoMigrateOwnsResellerSchemaAndCrossModuleConstraints(t *testing.T) {
 			t.Errorf("central AutoMigrate did not create reseller index %s", index.name)
 		}
 	}
-	for _, constraint := range []string{
-		cartProductForeignKeyConstraint,
-		cartSKUForeignKeyConstraint,
-	} {
-		if !db.Migrator().HasConstraint(&cartItemConstraintSchema{}, constraint) {
-			t.Errorf("central AutoMigrate did not create cart constraint %s", constraint)
-		}
+	if db.Migrator().HasTable("cart_items") {
+		t.Error("central AutoMigrate must not create retired cart table")
 	}
 	if !db.Migrator().HasConstraint(&procurementdomain.Order{}, procurementOrderForeignKeyConstraint) {
 		t.Errorf("central AutoMigrate did not create procurement constraint %s", procurementOrderForeignKeyConstraint)
@@ -574,84 +522,6 @@ func TestBackfillPendingOrderRiskIPsHandlesLegacyNullsAndIPv6(t *testing.T) {
 	}
 	if gotPaid.RiskIP != "" {
 		t.Fatalf("paid history must not be backfilled, got %q", gotPaid.RiskIP)
-	}
-}
-
-func TestEnsureCartForeignKeyConstraintsPreservesRowsAndEnforcesReferences(t *testing.T) {
-	db := setupRegistryMigrationTestDB(t)
-	for _, statement := range []string{
-		`CREATE TABLE products (id integer PRIMARY KEY)`,
-		`CREATE TABLE product_skus (id integer PRIMARY KEY)`,
-		`INSERT INTO products (id) VALUES (1)`,
-		`INSERT INTO product_skus (id) VALUES (2)`,
-	} {
-		if err := db.Exec(statement).Error; err != nil {
-			t.Fatalf("prepare cart schema: %v", err)
-		}
-	}
-	if err := db.AutoMigrate(&cartdomain.Item{}); err != nil {
-		t.Fatalf("prepare indexed cart schema: %v", err)
-	}
-	if err := db.Exec(`INSERT INTO cart_items (id, user_id, product_id, sku_id, quantity) VALUES (3, 4, 1, 2, 1)`).Error; err != nil {
-		t.Fatalf("prepare cart row: %v", err)
-	}
-	assertModelIndexesExist(t, db, &cartdomain.Item{})
-
-	if err := ensureCartForeignKeyConstraints(); err != nil {
-		t.Fatalf("ensure cart constraints: %v", err)
-	}
-	assertModelIndexesExist(t, db, &cartdomain.Item{})
-	var rowCount int64
-	if err := db.Table("cart_items").Where("id = ?", 3).Count(&rowCount).Error; err != nil {
-		t.Fatalf("count preserved cart rows: %v", err)
-	}
-	if rowCount != 1 {
-		t.Fatalf("cart constraint migration lost existing row: count=%d", rowCount)
-	}
-	if err := db.Exec(`INSERT INTO cart_items (id, user_id, product_id, sku_id, quantity) VALUES (5, 6, 999, 2, 1)`).Error; err == nil {
-		t.Fatal("cart product foreign key did not reject missing product")
-	}
-	if err := db.Exec(`INSERT INTO cart_items (id, user_id, product_id, sku_id, quantity) VALUES (7, 8, 1, 999, 1)`).Error; err == nil {
-		t.Fatal("cart SKU foreign key did not reject missing SKU")
-	}
-
-	dropModelIndexes(t, db, &cartdomain.Item{})
-	if err := ensureCartForeignKeyConstraints(); err != nil {
-		t.Fatalf("repair cart indexes with existing constraints: %v", err)
-	}
-	assertModelIndexesExist(t, db, &cartdomain.Item{})
-	for _, constraint := range []string{cartProductForeignKeyConstraint, cartSKUForeignKeyConstraint} {
-		if !db.Migrator().HasConstraint(&cartItemConstraintSchema{}, constraint) {
-			t.Errorf("cart index repair removed constraint %s", constraint)
-		}
-	}
-	if err := db.Exec(`INSERT INTO cart_items (id, user_id, product_id, sku_id, quantity) VALUES (9, 4, 1, 2, 1)`).Error; err == nil {
-		t.Fatal("repaired cart unique index did not reject duplicate user/product/SKU")
-	}
-}
-
-func TestEnsureCartForeignKeyConstraintsRejectsOrphansBeforeSchemaChanges(t *testing.T) {
-	db := setupRegistryMigrationTestDB(t)
-	for _, statement := range []string{
-		`CREATE TABLE products (id integer PRIMARY KEY)`,
-		`CREATE TABLE product_skus (id integer PRIMARY KEY)`,
-		`CREATE TABLE cart_items (id integer PRIMARY KEY, user_id integer NOT NULL, product_id integer NOT NULL, sku_id integer NOT NULL, quantity integer NOT NULL)`,
-		`INSERT INTO product_skus (id) VALUES (2)`,
-		`INSERT INTO cart_items (id, user_id, product_id, sku_id, quantity) VALUES (3, 4, 999, 2, 1)`,
-	} {
-		if err := db.Exec(statement).Error; err != nil {
-			t.Fatalf("prepare orphaned cart schema: %v", err)
-		}
-	}
-
-	err := ensureCartForeignKeyConstraints()
-	if err == nil || !strings.Contains(err.Error(), cartProductForeignKeyConstraint) {
-		t.Fatalf("expected descriptive product reference error, got %v", err)
-	}
-	for _, constraint := range []string{cartProductForeignKeyConstraint, cartSKUForeignKeyConstraint} {
-		if db.Migrator().HasConstraint(&cartItemConstraintSchema{}, constraint) {
-			t.Fatalf("orphan preflight left partial constraint %s", constraint)
-		}
 	}
 }
 
@@ -716,5 +586,65 @@ func TestAutoMigrateReplacesSupersededProcurementConstraintName(t *testing.T) {
 	assertModelIndexesExist(t, db, &procurementdomain.Order{})
 	if !db.Migrator().HasConstraint(&procurementdomain.Order{}, procurementOrderForeignKeyConstraint) {
 		t.Errorf("procurement index repair removed canonical constraint %s", procurementOrderForeignKeyConstraint)
+	}
+}
+
+func TestRetireCartConstraintsPreservesRowsAndOtherReferences(t *testing.T) {
+	db := setupRegistryMigrationTestDB(t)
+	for _, statement := range []string{
+		`CREATE TABLE products (id integer PRIMARY KEY)`,
+		`CREATE TABLE product_skus (id integer PRIMARY KEY)`,
+		`CREATE TABLE cart_items (id integer PRIMARY KEY, product_id integer NOT NULL, sku_id integer NOT NULL, quantity integer NOT NULL, CONSTRAINT fk_cart_items_product FOREIGN KEY (product_id) REFERENCES products(id), CONSTRAINT fk_cart_items_sku FOREIGN KEY (sku_id) REFERENCES product_skus(id))`,
+		`CREATE TABLE order_items (id integer PRIMARY KEY, product_id integer NOT NULL, CONSTRAINT fk_order_items_product FOREIGN KEY (product_id) REFERENCES products(id))`,
+		`INSERT INTO products (id) VALUES (1)`,
+		`INSERT INTO product_skus (id) VALUES (2)`,
+		`INSERT INTO cart_items (id, product_id, sku_id, quantity) VALUES (3, 1, 2, 4)`,
+		`INSERT INTO order_items (id, product_id) VALUES (4, 1)`,
+	} {
+		if err := db.Exec(statement).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.Exec(`DELETE FROM product_skus WHERE id = 2`).Error; err == nil {
+		t.Fatal("cart SKU foreign key must initially prevent deletion")
+	}
+	if err := retireCartForeignKeyConstraints(); err != nil {
+		t.Fatal(err)
+	}
+	if err := retireCartForeignKeyConstraints(); err != nil {
+		t.Fatalf("repeat retirement: %v", err)
+	}
+	if err := db.Exec(`DELETE FROM product_skus WHERE id = 2`).Error; err != nil {
+		t.Fatalf("retired cart must not block SKU deletion: %v", err)
+	}
+	if err := db.Exec(`DELETE FROM products WHERE id = 1`).Error; err == nil {
+		t.Fatal("order foreign key must remain enforced")
+	}
+	if err := db.Exec(`DELETE FROM order_items WHERE id = 4`).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec(`DELETE FROM products WHERE id = 1`).Error; err != nil {
+		t.Fatalf("retired cart must not block product deletion: %v", err)
+	}
+	var row struct {
+		ProductID uint
+		SKUID     uint `gorm:"column:sku_id"`
+		Quantity  int
+	}
+	if err := db.Table("cart_items").Where("id = 3").Take(&row).Error; err != nil {
+		t.Fatal(err)
+	}
+	if row.ProductID != 1 || row.SKUID != 2 || row.Quantity != 4 {
+		t.Fatalf("retired cart data changed: %+v", row)
+	}
+}
+
+func TestRetireCartConstraintsWithoutCartTable(t *testing.T) {
+	db := setupRegistryMigrationTestDB(t)
+	if err := retireCartForeignKeyConstraints(); err != nil {
+		t.Fatal(err)
+	}
+	if db.Migrator().HasTable("cart_items") {
+		t.Fatal("retirement must not create a cart table")
 	}
 }

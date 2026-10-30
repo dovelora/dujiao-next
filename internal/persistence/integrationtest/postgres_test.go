@@ -106,7 +106,6 @@ func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 		TitleJSON:        jsonmap.JSON{"zh-CN": "火箭会员"},
 		DescriptionJSON:  jsonmap.JSON{"en-US": "rocket booster package"},
 		PriceAmount:      money.FromDecimal(decimal.NewFromInt(99)),
-		PurchaseType:     constants.ProductPurchaseMember,
 		FulfillmentType:  constants.FulfillmentTypeManual,
 		ManualStockTotal: 10,
 		IsActive:         true,
@@ -309,7 +308,6 @@ func TestPostgresProductListActiveStateFilter(t *testing.T) {
 			Slug:             slug,
 			TitleJSON:        jsonmap.JSON{"zh-CN": "上架状态商品"},
 			PriceAmount:      money.FromDecimal(decimal.NewFromInt(50)),
-			PurchaseType:     constants.ProductPurchaseMember,
 			FulfillmentType:  constants.FulfillmentTypeManual,
 			ManualStockTotal: 5,
 			IsActive:         isActive,
@@ -400,7 +398,6 @@ func TestPostgresDashboardQueries(t *testing.T) {
 		Slug:            "pg-dashboard-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "仪表盘商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(120)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 	}

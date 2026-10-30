@@ -62,7 +62,6 @@ func createManualProduct(t *testing.T, repo *ProductStore, slug string, total in
 		Slug:              slug,
 		TitleJSON:         jsonmap.JSON{"zh-CN": "测试商品"},
 		PriceAmount:       money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:      constants.ProductPurchaseMember,
 		FulfillmentType:   constants.FulfillmentTypeManual,
 		ManualStockTotal:  total,
 		ManualStockLocked: locked,
@@ -106,7 +105,6 @@ func createAutoProduct(t *testing.T, repo *ProductStore, slug string) *productdo
 		Slug:            slug,
 		TitleJSON:       jsonmap.JSON{"zh-CN": "自动发货商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
 	}
@@ -479,7 +477,6 @@ func TestProductRepositoryListSupportsNumericIDSearch(t *testing.T) {
 		Slug:            "numeric-id-search-target",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "数字搜索目标"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
 	}
@@ -492,7 +489,6 @@ func TestProductRepositoryListSupportsNumericIDSearch(t *testing.T) {
 		Slug:            "numeric-id-search-other",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "另一个商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
 	}
@@ -535,7 +531,6 @@ func TestProductRepositoryListFiltersWholesalePrices(t *testing.T) {
 		TitleJSON:       jsonmap.JSON{"zh-CN": "有批发价"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
 		WholesalePrices: productdomain.WholesalePriceTiers{{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))}},
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
 	}
@@ -548,7 +543,6 @@ func TestProductRepositoryListFiltersWholesalePrices(t *testing.T) {
 		Slug:            "without-wholesale",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "无批发价"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
 	}
@@ -589,7 +583,6 @@ func createActiveStateProduct(t *testing.T, repo *ProductStore, slug string, tit
 		Slug:             slug,
 		TitleJSON:        jsonmap.JSON{"zh-CN": title},
 		PriceAmount:      money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:     constants.ProductPurchaseMember,
 		FulfillmentType:  constants.FulfillmentTypeManual,
 		ManualStockTotal: 10,
 		IsActive:         isActive,

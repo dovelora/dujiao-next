@@ -226,12 +226,6 @@ const (
 	PostTypeNotice = "notice"
 )
 
-// 商品购买身份常量
-const (
-	ProductPurchaseGuest  = "guest"
-	ProductPurchaseMember = "member"
-)
-
 // 商品库存状态常量
 const (
 	ProductStockStatusUnlimited  = "unlimited"

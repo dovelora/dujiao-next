@@ -45,10 +45,6 @@ type MemberLevelPriceDeleteRepository interface {
 	DeleteByProduct(productID uint) error
 }
 
-type CartDeleteRepository interface {
-	DeleteByProduct(productID uint) error
-}
-
 type ProductMappingDeleteRepository interface {
 	DeleteByLocalProduct(productID uint) error
 }
@@ -60,7 +56,6 @@ type DeleteRepositories struct {
 	CardSecretBatches CardSecretBatchDeleteRepository
 	SKUs              SKUDeleteRepository
 	MemberLevelPrices MemberLevelPriceDeleteRepository
-	Carts             CartDeleteRepository
 	ProductMappings   ProductMappingDeleteRepository
 }
 

@@ -200,8 +200,6 @@
     "relatedPosts": "Related Articles",
     "deliveryReassurance": "After payment, your code is delivered instantly to the order page and your email — visible only to you.",
     "deliveryReassuranceManual": "After payment, your order is handled manually. Progress and results are posted to the order page and your email.",
-    "loginToBuy": "Login to buy",
-    "addToCart": "Add to cart",
     "buyNow": "Buy now",
     "categoryLabel": "Category",
     "fulfillmentLabel": "Fulfillment",
@@ -218,26 +216,17 @@
     "skuStockRangePlus": "{min}+ left",
     "stockUnavailable": "This product is currently out of stock and cannot be purchased",
     "stockBelowMinPurchase": "Available stock is below the minimum purchase quantity ({count})",
-    "addCartStockExceeded": "Insufficient stock for this SKU. You can purchase up to {count}",
-    "addCartStockExceededWithCart": "Insufficient stock for this SKU. You can purchase up to {count} ({cartCount} already in cart)",
-    "addCartLimitExceeded": "This product can be purchased up to {count} per order",
-    "addCartLimitExceededWithCart": "This product can be purchased up to {count} per order ({cartCount} already in cart)"
+    "purchaseStockExceeded": "Insufficient stock for this SKU. You can purchase up to {count}",
+    "purchaseLimitExceeded": "This product can be purchased up to {count} per order"
   },
   "quickBuy": {
     "title": "Quick Buy",
     "selectSku": "Select SKU",
     "quantity": "Quantity",
     "stock": "Stock",
-    "addToCart": "Add to Cart",
     "buyNow": "Buy Now",
-    "loginToBuy": "Login to Buy",
     "soldOut": "Sold Out",
     "viewDetail": "View Details"
-  },
-  "productPurchase": {
-    "label": "Purchase type",
-    "member": "Members only",
-    "guest": "Guest purchase"
   },
   "blog": {
     "browseProducts": "Browse products by category",
@@ -276,7 +265,6 @@
     "contactText": "If you have any questions about our products or services, please feel free to contact us via:"
   },
   "navbar": {
-    "cart": "Cart",
     "login": "Login",
     "personalCenter": "Personal Center",
     "guestOrders": "Guest Lookup",
@@ -285,12 +273,10 @@
     "more": "More"
   },
   "toast": {
-    "addedToCart": "Added to cart"
   },
   "bottomNav": {
     "home": "Home",
     "products": "Products",
-    "cart": "Cart",
     "me": "Me"
   },
   "personalCenter": {
@@ -1145,31 +1131,25 @@
       "refunded": "Refunded"
     }
   },
-  "cart": {
-    "title": "Cart",
-    "subtitle": "Review items before checkout",
-    "empty": "Your cart is empty",
-    "emptyAction": "Browse products",
-    "priceLabel": "Price",
-    "skuLabel": "SKU",
-    "remove": "Remove",
-    "removed": "Removed from cart",
-    "undo": "Undo",
-    "summaryTitle": "Summary",
-    "itemsCount": "Items",
-    "totalLabel": "Total",
-    "disclaimer": "Final amount is calculated on checkout (promotions/coupons on server)",
-    "checkout": "Checkout",
-    "stockOut": "This SKU is out of stock. Please reduce quantity or remove it",
-    "stockRemaining": "{count} left for this SKU",
-    "stockExceeded": "Insufficient stock for this SKU. Cart quantity can be up to {count}",
-    "maxPurchaseExceeded": "This product can be purchased up to {count} per order",
-    "minPurchaseNotMet": "This product requires at least {count} per order"
-  },
   "checkout": {
+    "detailsEmpty": "No additional product details available.",
+    "itemsCount": "Items",
+    "decreaseQuantity": "Decrease quantity",
+    "increaseQuantity": "Increase quantity",
+    "stockOut": "This SKU is sold out. Return to the product page to choose another.",
+    "stockRemaining": "{count} left for this SKU",
+    "stockExceeded": "You can buy up to {count} units of this SKU.",
+    "maxPurchaseExceeded": "This product can be purchased up to {count} per order",
+    "minPurchaseNotMet": "This product requires at least {count} per order",
+    "accountLoginHint": "Already have an account?",
+    "guestEmailLabel": "Order email",
+    "guestPasswordLabel": "Password ({count}+ characters)",
+    "guestDetailsHint": "Keep your email and order password to look up your order and retrieve your items.",
+    "totalChanged": "Your total has changed. Review the updated amount, then click Pay again.",
+    "payNow": "Pay now",
     "title": "Checkout",
     "subtitle": "Review order and submit",
-    "empty": "Your cart is empty",
+    "empty": "No product selected",
     "emptyAction": "Shop now",
     "itemsTitle": "Items",
     "quantityLabel": "Qty",
@@ -1220,7 +1200,7 @@
     "submitButton": "Place Order & Pay",
     "submitting": "Submitting...",
     "errors": {
-      "emptyCart": "Your cart is empty",
+      "emptyPurchase": "No product selected",
       "missingGuest": "Please enter email and order password",
       "guestPasswordTooShort": "Order password must be at least {count} characters",
       "loginOrGuest": "Please login or use guest checkout",
@@ -1608,11 +1588,11 @@
     "rechargePayable": "Payable amount",
     "rechargeFilters": {
       "keyword": "Recharge No",
-      "rechargeNoPlaceholder": "Filter by recharge number"
+      "rechargeNoPlaceholder": "Recharge number"
     },
     "filters": {
       "keyword": "Order No",
-      "orderNoPlaceholder": "Filter by order number",
+      "orderNoPlaceholder": "Order number",
       "status": "Status",
       "statusAll": "All statuses",
       "search": "Search",
@@ -1622,8 +1602,8 @@
       "current": "Current filters: Order No {orderNo}, Status {status}"
     },
     "stats": {
-      "totalMatched": "Total matched orders",
-      "currentPage": "Orders on current page",
+      "totalMatched": "Matched orders",
+      "currentPage": "On this page",
       "pendingPayment": "Pending payment",
       "finished": "Delivered / completed"
     }

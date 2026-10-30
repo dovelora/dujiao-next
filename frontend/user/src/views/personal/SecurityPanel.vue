@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <div class="rounded-2xl border bg-card p-7 shadow-sm">
+    <div class="rounded-2xl border bg-card p-4 shadow-sm sm:p-7">
       <PanelHeading
         :title="t('personalCenter.security.title')"
         :description="requiresOldEmailCode ? t('personalCenter.security.subtitle') : t('personalCenter.security.subtitleBindOnly')"

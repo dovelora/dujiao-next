@@ -347,7 +347,7 @@ func TestUpdateMappedProductPreservesUpstreamManualForm(t *testing.T) {
 			}})
 			product, err := service.Update("101", CreateProductInput{
 				Slug: "mapped", PriceAmount: decimal.NewFromInt(40),
-				FulfillmentType: displayType, PurchaseType: constants.ProductPurchaseMember,
+				FulfillmentType:  displayType,
 				StockDisplayMode: constants.ProductStockDisplayStatus, ManualFormSchemaJSON: inputSchema,
 			})
 			if err != nil {

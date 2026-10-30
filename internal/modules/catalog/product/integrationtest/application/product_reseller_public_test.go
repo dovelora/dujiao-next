@@ -33,8 +33,6 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
-	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
@@ -62,7 +60,6 @@ func newProductServiceForResellerPublicTest(t *testing.T) (catalogproductbootstr
 		&cardsecretdomain.Secret{},
 		&cardsecretdomain.Batch{},
 		&memberleveldomain.MemberLevelPrice{},
-		&cartdomain.Item{},
 		&mappingdomain.Mapping{},
 		&mappingdomain.SKUMapping{},
 		&orderdomain.Order{},
@@ -81,7 +78,6 @@ func newProductServiceForResellerPublicTest(t *testing.T) (catalogproductbootstr
 		CardSecretBatches: cardsecretgormstore.NewBatch(db),
 		Categories:        categorygormstore.NewCategoryStore(db),
 		MemberLevelPrices: memberlevelgormstore.NewPriceStore(db),
-		Carts:             cartgormstore.New(db),
 		ProductMappings:   mappinggormstore.NewMappingStore(db),
 		Orders:            ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes"),
 		PaymentChannels:   paymentgormstore.NewChannelStore(db),
@@ -96,7 +92,6 @@ func seedResellerPublicProduct(t *testing.T, db *gorm.DB, categoryID uint, slug 
 		Slug:            slug,
 		TitleJSON:       jsonmap.JSON{"zh-CN": slug},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 		SortOrder:       10,

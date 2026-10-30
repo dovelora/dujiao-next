@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Product description regression checks</title></head>
+<body>
+<pre id="results">Running</pre>
+<div id="rendered"></div>
+<script type="module">
+import { getProductDescriptionText } from '../../src/utils/productDescription.ts'
+
+const cases = [
+  ['empty', '', ''],
+  ['null input', null, ''],
+  ['number input', 42, ''],
+  ['object input', {}, ''],
+  ['plain text', 'Account — password — 2FA', 'Account — password — 2FA'],
+  ['comparison operators', '1 < 2 && 3 > 2', '1 < 2 && 3 > 2'],
+  ['unknown placeholders', 'Use <token> and <account_id>; retain <p-token>.', 'Use <token> and <account_id>; retain <p-token>.'],
+  ['plain entities', 'A &amp; B &#x4E2D;&#25991; &lt;token&gt;', 'A & B 中文 <token>'],
+  ['plain line breaks', 'First\r\nSecond\n\nThird', 'First\nSecond\n\nThird'],
+  ['upstream rich text', '<p><span style="background-color:white;font-family:serif">格式：账号----密码----2fa----cookie</span></p>', '格式：账号----密码----2fa----cookie'],
+  ['paragraph boundaries', '<p>First</p><p>Second<br>Third</p>', 'First\n\nSecond\nThird'],
+  ['nested blocks and lists', '<div><p>Intro</p><ul><li>One</li><li>Two</li></ul></div>', 'Intro\n\nOne\n\nTwo'],
+  ['inline formatting', '<p>A <strong>bold</strong> &amp; <em>clear</em> sentence.</p>', 'A bold & clear sentence.'],
+  ['no tag-name prefix matching', 'Use <price> and <span_id> as field names.', 'Use <price> and <span_id> as field names.'],
+  ['script removed', '<p>Safe<script>window.__descriptionExecuted = true</scr' + 'ipt> text</p>', 'Safe text'],
+  ['style removed', '<style>body{display:none}</style><p>Visible</p>', 'Visible'],
+  ['event attributes removed', '<p onclick="window.__descriptionExecuted = true">Safe<img src="/__description_test_should_not_load__" onerror="window.__descriptionExecuted = true"></p>', 'Safe'],
+  ['dangerous link kept as text', '<a href="javascript:window.__descriptionExecuted=true">Readable link</a>', 'Readable link'],
+  ['embedded content removed', '<p>Before</p><iframe srcdoc="<script>alert(1)</scr' + 'ipt>">hidden</iframe><object>hidden</object><p>After</p>', 'Before\n\nAfter'],
+  ['svg and math removed', '<svg onload="window.__descriptionExecuted=true"><text>hidden</text></svg><math><mtext>hidden</mtext></math><p>Visible</p>', 'Visible'],
+  ['encoded markup stays literal', '&lt;img src=x onerror=alert(1)&gt;', '<img src=x onerror=alert(1)>'],
+  ['escaped placeholder within HTML', '<p>Enter &lt;token&gt; &amp; keep &lt;account_id&gt;.</p>', 'Enter <token> & keep <account_id>.'],
+  ['template removed', '<template><img src=x onerror="window.__descriptionExecuted=true">hidden</template><p>Shown</p>', 'Shown'],
+  ['unclosed script removed', '<script>window.__descriptionExecuted=true', ''],
+  ['HTML comments removed', '<!-- importer note --><p>Shown</p>', 'Shown'],
+  ['malformed but parseable HTML', '<DIV>First<br/>Second<p>Third', 'First\nSecond\nThird'],
+]
+
+const results = cases.map(([name, input, expected]) => {
+  try {
+    const actual = getProductDescriptionText(input)
+    const rendered = document.createElement('p')
+    rendered.textContent = actual
+    document.querySelector('#rendered').append(rendered)
+    return { name, passed: actual === expected && rendered.children.length === 0, expected, actual }
+  } catch (error) {
+    return { name, passed: false, error: String(error) }
+  }
+})
+results.push({ name: 'no payload execution', passed: window.__descriptionExecuted !== true })
+const failed = results.filter(result => !result.passed)
+window.descriptionTestResult = { passed: results.length - failed.length, failed: failed.length, results }
+document.documentElement.dataset.testStatus = failed.length ? 'failed' : 'passed'
+document.querySelector('#results').textContent = JSON.stringify(window.descriptionTestResult, null, 2)
+if (failed.length) throw new Error(`Product description regression checks failed: ${failed.map(result => result.name).join(', ')}`)
+</script>
+</body>
+</html>

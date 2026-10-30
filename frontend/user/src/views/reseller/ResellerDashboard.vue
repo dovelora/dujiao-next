@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-6">
+  <div class="reseller-dashboard space-y-4">
     <ResellerSectionHeader
       :title="t('resellerConsole.dashboard.title')"
       :description="t('resellerConsole.dashboard.description')"
@@ -43,7 +43,7 @@
 
     <template v-else>
       <!-- 概览头 -->
-      <Card class="p-5">
+      <Card class="p-4 shadow-none sm:p-5">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div class="min-w-0">
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{{ t('resellerConsole.dashboard.storeLabel') }}</p>
@@ -57,15 +57,45 @@
       </Card>
 
       <!-- 指标卡 -->
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <ResellerMetricCard :label="t('resellerConsole.dashboard.orderTotal')" :value="stats?.total || 0" :icon="ShoppingBag" tone="accent" />
-        <ResellerMetricCard :label="t('resellerConsole.orders.paidOrders')" :value="paidCount" :hint="paidRatioText" :icon="CheckCircle2" tone="success" />
-        <ResellerMetricCard :label="t('personalCenter.reseller.primaryAvailable')" :value="primaryBalanceText" :hint="primaryBalanceHint" :icon="Banknote" tone="info" />
-        <ResellerMetricCard :label="t('resellerConsole.dashboard.domainCount')" :value="profileSnapshot?.domains?.length || 0" :icon="Globe" tone="neutral" />
-      </div>
+      <dl class="reseller-dashboard-metrics grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl border bg-card p-4 lg:grid-cols-4">
+        <div class="row-span-2 grid min-w-0 grid-rows-subgrid">
+          <dt class="text-xs leading-5 text-muted-foreground">{{ t('resellerConsole.dashboard.orderTotal') }}</dt>
+          <dd class="break-words text-lg font-semibold tabular-nums">{{ stats?.total || 0 }}</dd>
+        </div>
+        <div class="row-span-2 grid min-w-0 grid-rows-subgrid">
+          <dt class="text-xs leading-5 text-muted-foreground">{{ t('resellerConsole.orders.paidOrders') }}</dt>
+          <dd class="break-words text-lg font-semibold tabular-nums">{{ paidCount }} <span v-if="paidRatioText" class="ml-1 text-xs font-normal text-muted-foreground">{{ paidRatioText }}</span></dd>
+        </div>
+        <div class="row-span-2 grid min-w-0 grid-rows-subgrid">
+          <dt class="text-xs leading-5 text-muted-foreground">{{ t('personalCenter.reseller.primaryAvailable') }}</dt>
+          <dd class="break-words text-lg font-semibold tabular-nums text-primary">{{ primaryBalanceText }}<span v-if="primaryBalanceHint" class="mt-1 block text-xs font-normal text-muted-foreground">{{ primaryBalanceHint }}</span></dd>
+        </div>
+        <div class="row-span-2 grid min-w-0 grid-rows-subgrid">
+          <dt class="text-xs leading-5 text-muted-foreground">{{ t('resellerConsole.dashboard.domainCount') }}</dt>
+          <dd class="break-words text-lg font-semibold tabular-nums">{{ profileSnapshot?.domains?.length || 0 }}</dd>
+        </div>
+      </dl>
+
+      <!-- 快捷入口 -->
+      <section>
+        <h3 class="mb-3 text-sm font-bold text-foreground">{{ t('resellerConsole.dashboard.quickActions') }}</h3>
+        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <RouterLink
+            v-for="action in quickActions"
+            :key="action.to"
+            :to="action.to"
+            class="group flex min-w-0 items-center gap-2.5 rounded-xl border bg-card p-3 transition-shadow hover:shadow-sm sm:gap-3 sm:p-4"
+          >
+            <span class="flex h-7 w-7 shrink-0 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-105">
+              <component :is="action.icon" class="h-4 w-4 sm:h-5 sm:w-5" />
+            </span>
+            <span class="min-w-0 text-sm font-semibold text-foreground">{{ action.label }}</span>
+          </RouterLink>
+        </div>
+      </section>
 
       <!-- 开店清单 -->
-      <Card class="p-5">
+      <Card class="p-4 shadow-none sm:p-5">
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 class="text-sm font-bold text-foreground">{{ t('resellerConsole.dashboard.setup.title') }}</h3>
@@ -93,67 +123,24 @@
             v-for="item in setupChecklist"
             :key="item.to"
             :to="item.to"
-            class="group flex min-h-[124px] flex-col justify-between rounded-xl border bg-card p-4 transition-shadow hover:shadow-md"
+            class="group grid grid-cols-[28px_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 rounded-xl border bg-card p-3 lg:flex lg:min-h-[124px] lg:flex-col lg:justify-between lg:p-4 transition-shadow hover:shadow-md"
           >
-            <div class="flex items-start justify-between gap-3">
-              <span class="flex h-9 w-9 items-center justify-center rounded-xl" :class="item.done ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'">
-                <component :is="item.icon" class="h-5 w-5" />
+            <div class="contents lg:flex lg:w-full lg:items-start lg:justify-between lg:gap-3">
+              <span class="col-start-1 row-start-1 row-span-2 flex h-7 w-7 items-center justify-center rounded-lg lg:h-9 lg:w-9" :class="item.done ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'">
+                <component :is="item.icon" class="h-4 w-4 lg:h-5 lg:w-5" />
               </span>
-              <ResellerStatusBadge :label="item.done ? t('resellerConsole.dashboard.setup.ready') : t('resellerConsole.dashboard.setup.pending')" :tone="item.done ? 'success' : 'warning'" />
+              <ResellerStatusBadge class="col-start-3 row-start-1" :label="item.done ? t('resellerConsole.dashboard.setup.ready') : t('resellerConsole.dashboard.setup.pending')" :tone="item.done ? 'success' : 'warning'" />
             </div>
-            <div>
-              <div class="mt-4 text-sm font-semibold text-foreground">{{ item.label }}</div>
+            <div class="col-start-2 row-start-1 min-w-0 [overflow-wrap:anywhere]">
+              <div class="text-sm font-semibold lg:mt-4 text-foreground">{{ item.label }}</div>
               <p class="mt-1 text-xs text-muted-foreground">{{ item.description }}</p>
             </div>
           </RouterLink>
         </div>
       </Card>
 
-      <!-- 可视化:订单状态分布 + 多币种余额 -->
-      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card class="p-5">
-          <h3 class="mb-4 text-sm font-bold text-foreground">{{ t('resellerConsole.dashboard.orderDistribution') }}</h3>
-          <ResellerDonut
-            v-if="statusSegments.length"
-            :segments="statusSegments"
-            :center-value="stats?.total || 0"
-            :center-label="t('resellerConsole.dashboard.orderTotal')"
-          />
-          <p v-else class="py-6 text-center text-sm text-muted-foreground">{{ t('resellerConsole.orders.empty') }}</p>
-        </Card>
-
-        <Card class="p-5">
-          <h3 class="mb-4 text-sm font-bold text-foreground">{{ t('resellerConsole.dashboard.balanceOverview') }}</h3>
-          <ResellerDonut
-            v-if="balanceSegments.length"
-            :segments="balanceSegments"
-            :center-value="balances.length"
-            :center-label="t('personalCenter.reseller.currencyCount')"
-          />
-          <p v-else class="py-6 text-center text-sm text-muted-foreground">{{ t('personalCenter.reseller.balanceEmpty') }}</p>
-        </Card>
-      </div>
-
-      <!-- 快捷入口 -->
-      <section>
-        <h3 class="mb-3 text-sm font-bold text-foreground">{{ t('resellerConsole.dashboard.quickActions') }}</h3>
-        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <RouterLink
-            v-for="action in quickActions"
-            :key="action.to"
-            :to="action.to"
-            class="group flex items-center gap-3 rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
-          >
-            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-105">
-              <component :is="action.icon" class="h-5 w-5" />
-            </span>
-            <span class="min-w-0 text-sm font-semibold text-foreground">{{ action.label }}</span>
-          </RouterLink>
-        </div>
-      </section>
-
       <!-- 最近订单 -->
-      <Card class="p-5">
+      <Card class="p-4 shadow-none sm:p-5">
         <div class="mb-4 flex items-center justify-between gap-3">
           <h3 class="text-base font-bold text-foreground">{{ t('resellerConsole.orders.title') }}</h3>
           <RouterLink to="/reseller/orders" class="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
@@ -213,6 +200,37 @@
           </div>
         </template>
       </Card>
+      <!-- 订单状态与分币种余额 -->
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card class="p-4 shadow-none sm:p-5">
+          <h3 class="mb-4 text-sm font-bold text-foreground">{{ t('resellerConsole.dashboard.orderDistribution') }}</h3>
+          <ResellerDonut
+            v-if="statusSegments.length"
+            :segments="statusSegments"
+            :center-value="stats?.total || 0"
+            :center-label="t('resellerConsole.dashboard.orderTotal')"
+          />
+          <p v-else class="py-6 text-center text-sm text-muted-foreground">{{ t('resellerConsole.orders.empty') }}</p>
+        </Card>
+
+        <Card class="p-4 shadow-none sm:p-5">
+          <h3 class="mb-4 text-sm font-bold text-foreground">{{ t('resellerConsole.dashboard.balanceOverview') }}</h3>
+          <ul v-if="balanceList.length" class="reseller-currency-balances divide-y">
+            <li v-for="balance in balanceList" :key="balance.currency" class="py-3 first:pt-0 last:pb-0">
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <span class="text-sm font-semibold">{{ balance.currency }} <span class="text-xs font-normal text-muted-foreground">{{ t('personalCenter.reseller.availableAmount') }}</span></span>
+                <span class="break-all text-base font-semibold tabular-nums">{{ formatResellerConsoleAmount(balance.available_amount, balance.currency) }}</span>
+              </div>
+              <dl class="mt-2 grid grid-cols-2 gap-3 text-xs">
+                <div><dt class="text-muted-foreground">{{ t('personalCenter.reseller.lockedAmount') }}</dt><dd class="mt-1 break-all tabular-nums">{{ formatResellerConsoleAmount(balance.locked_amount, balance.currency) }}</dd></div>
+                <div><dt class="text-muted-foreground">{{ t('personalCenter.reseller.negativeAmount') }}</dt><dd class="mt-1 break-all tabular-nums">{{ formatResellerConsoleAmount(balance.negative_amount, balance.currency) }}</dd></div>
+              </dl>
+            </li>
+          </ul>
+          <p v-else class="py-6 text-center text-sm text-muted-foreground">{{ t('personalCenter.reseller.balanceEmpty') }}</p>
+        </Card>
+      </div>
+
     </template>
   </div>
 </template>
@@ -221,7 +239,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-  Banknote,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -242,7 +259,6 @@ import { resellerAPI } from '../../api'
 import type { ResellerDomainData, ResellerSiteConfigSnapshotData } from '../../api/types'
 import ResellerDataTable from '../../components/reseller-console/ResellerDataTable.vue'
 import ResellerDonut from '../../components/reseller-console/ResellerDonut.vue'
-import ResellerMetricCard from '../../components/reseller-console/ResellerMetricCard.vue'
 import ResellerPageState from '../../components/reseller-console/ResellerPageState.vue'
 import ResellerRecordCard from '../../components/reseller-console/ResellerRecordCard.vue'
 import ResellerSectionHeader from '../../components/reseller-console/ResellerSectionHeader.vue'
@@ -257,7 +273,6 @@ import {
 import {
   formatResellerConsoleAmount,
   formatResellerConsoleDate,
-  resellerCurrencyColor,
   resellerOrderStatusColor,
   resellerOrderStatusTone,
 } from '../../utils/resellerConsole'
@@ -322,12 +337,6 @@ const statusSegments = computed(() => {
     .filter(([, count]) => count > 0)
     .map(([status, count]) => ({ value: count, color: resellerOrderStatusColor(status), label: statusLabel(status) }))
 })
-
-const balanceSegments = computed(() =>
-  balances.value
-    .map((b, i) => ({ value: Number(b.available_amount) || 0, color: resellerCurrencyColor(i), label: b.currency }))
-    .filter((s) => s.value > 0),
-)
 
 const siteBrandConfigured = computed(() => {
   const cfg = siteSnapshot.value?.config

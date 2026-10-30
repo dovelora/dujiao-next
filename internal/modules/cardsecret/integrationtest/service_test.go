@@ -111,7 +111,6 @@ func TestCreateCardSecretBatchAutoMultiSKURequiresExplicitSKU(t *testing.T) {
 		Slug:            "card-secret-product-default",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(20)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
 	}
@@ -167,7 +166,6 @@ func TestCreateCardSecretBatchAutoSingleActiveFallsBackToOnlyActiveSKU(t *testin
 		Slug:            "card-secret-product-single-active",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(20)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
 	}
@@ -229,7 +227,6 @@ func TestCreateCardSecretBatchDeduplicateOption(t *testing.T) {
 		Slug:            "card-secret-deduplicate-option",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密去重商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(20)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
 	}
@@ -313,7 +310,6 @@ func TestImportCardSecretCSVKeepsDuplicatesWhenDeduplicateDisabled(t *testing.T)
 		Slug:            "card-secret-csv-deduplicate-option",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "CSV 卡密去重商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(20)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
 	}
@@ -383,7 +379,6 @@ func TestCardSecretServiceSupportsBatchTargetOperations(t *testing.T) {
 		Slug:            "card-secret-batch-ops",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密批次商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(50)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
 	}
@@ -532,7 +527,6 @@ func TestExportCardSecretsWithEmptyFilterExportsCurrentResults(t *testing.T) {
 		Slug:            "card-secret-export-empty-filter",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密导出商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(20)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
 	}
@@ -585,7 +579,6 @@ func TestCardSecretServiceSupportsKeywordAndBatchNoFilters(t *testing.T) {
 		Slug:            "card-secret-search",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密搜索商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(30)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
 	}
@@ -662,7 +655,6 @@ func TestCardSecretServiceListBatchesReturnsRealtimeCounts(t *testing.T) {
 		Slug:            "card-secret-batch-summary",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密批次统计商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(88)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
 	}
@@ -754,7 +746,6 @@ func TestExportAvailableCardSecretsMarksUsed(t *testing.T) {
 		Slug:            "export-available-used",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "出库导出商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(88)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
 	}
@@ -829,7 +820,6 @@ func TestExportAvailableCardSecretsDeletesAfterExport(t *testing.T) {
 		Slug:            "export-available-delete",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "导出删除商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(88)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
 	}

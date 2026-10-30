@@ -65,15 +65,6 @@ func (s *WriteService) Update(id string, input CreateProductInput) (*productdoma
 	if input.IsAffiliateEnabled != nil {
 		product.IsAffiliateEnabled = *input.IsAffiliateEnabled
 	}
-	rawPurchaseType := strings.TrimSpace(input.PurchaseType)
-	if rawPurchaseType == "" {
-		rawPurchaseType = product.PurchaseType
-	}
-	purchaseType := productdomain.NormalizePurchaseType(rawPurchaseType)
-	if purchaseType == "" {
-		return nil, productcontract.ErrProductPurchaseInvalid
-	}
-	product.PurchaseType = purchaseType
 	if input.MaxPurchaseQuantity != nil {
 		product.MaxPurchaseQuantity = productdomain.NormalizePurchaseQuantityLimit(*input.MaxPurchaseQuantity)
 	}

@@ -55,9 +55,7 @@
         </Badge>
 
         <!-- Desktop: all badges -->
-        <Badge class="hidden sm:inline-flex" size="xs" :variant="product.purchase_type === 'guest' ? 'warning' : 'success'">
-          {{ getPurchaseTypeLabel(product.purchase_type) }}
-        </Badge>
+
         <Badge class="hidden sm:inline-flex" size="xs" :variant="product.fulfillment_type === 'auto' ? 'info' : 'neutral'">
           {{ getFulfillmentTypeLabel(product.fulfillment_type) }}
         </Badge>
@@ -93,7 +91,7 @@
         </div>
       </div>
 
-      <!-- Quick buy cart icon -->
+      <!-- Quick buy icon -->
       <Button
         type="button"
         variant="outline"
@@ -102,7 +100,7 @@
         :disabled="isSoldOut(product)"
         @click.stop="$emit('quickBuy', product)"
       >
-        <ShoppingCart class="h-4 w-4" />
+        <ShoppingBag class="h-4 w-4" />
       </Button>
 
       <!-- Arrow -->
@@ -114,7 +112,7 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { ChevronRight, Image as ImageIcon, ShoppingCart } from 'lucide-vue-next'
+import { ChevronRight, Image as ImageIcon, ShoppingBag } from 'lucide-vue-next'
 import { getFirstImageUrl, getImageUrl } from '../utils/image'
 import { useLocalized, useProductLabels } from '../composables/useProduct'
 import { Badge } from '@/components/ui/badge'
@@ -137,5 +135,5 @@ defineEmits<{
 
 const { t } = useI18n()
 const { getLocalizedText, siteCurrency, formatPrice } = useLocalized()
-const { getPurchaseTypeLabel, getFulfillmentTypeLabel, getStockBadgeVariant, getStockStatusLabel, isSoldOut, hasPromotionPrice, getPromotionPriceAmount, hasPromotionRules, hasWholesalePrices } = useProductLabels()
+const { getFulfillmentTypeLabel, getStockBadgeVariant, getStockStatusLabel, isSoldOut, hasPromotionPrice, getPromotionPriceAmount, hasPromotionRules, hasWholesalePrices } = useProductLabels()
 </script>

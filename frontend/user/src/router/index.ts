@@ -13,7 +13,6 @@ type RouteComponentLoader = () => Promise<unknown>
 const homeViewLoader: RouteComponentLoader = () => Promise.resolve(HomeView)
 const productsViewLoader: RouteComponentLoader = () => import('../views/Products.vue')
 const productDetailViewLoader: RouteComponentLoader = () => import('../views/ProductDetail.vue')
-const cartViewLoader: RouteComponentLoader = () => import('../views/Cart.vue')
 const checkoutViewLoader: RouteComponentLoader = () => import('../views/Checkout.vue')
 const paymentViewLoader: RouteComponentLoader = () => import('../views/Payment.vue')
 const blogViewLoader: RouteComponentLoader = () => import('../views/Blog.vue')
@@ -67,11 +66,6 @@ const router = createRouter({
             path: '/products/:slug',
             name: 'product-detail',
             component: templateView('ProductDetail', productDetailViewLoader),
-        },
-        {
-            path: '/cart',
-            name: 'cart',
-            component: templateView('Cart', cartViewLoader),
         },
         {
             path: '/checkout',

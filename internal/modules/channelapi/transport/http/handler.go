@@ -35,7 +35,6 @@ var (
 	ErrProductSKUInvalid             = errors.New("product sku invalid")
 	ErrInvalidOrderItem              = errors.New("invalid order item")
 	ErrInvalidOrderAmount            = errors.New("invalid order amount")
-	ErrProductPurchaseNotAllowed     = errors.New("product purchase not allowed")
 	ErrProductMaxPurchaseExceeded    = errors.New("product max purchase exceeded")
 	ErrProductMinPurchaseNotMet      = errors.New("product min purchase not met")
 	ErrProductNotAvailable           = errors.New("product not available")

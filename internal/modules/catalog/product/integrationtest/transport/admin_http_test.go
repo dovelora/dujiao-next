@@ -25,8 +25,6 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
-	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
-	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
@@ -74,7 +72,6 @@ type productAdminUoW struct {
 	cardSecrets       *cardsecretgormstore.Store
 	cardSecretBatches *cardsecretgormstore.BatchStore
 	memberLevelPrices *memberlevelgormstore.PriceStore
-	carts             *cartgormstore.Store
 	productMappings   *mappinggormstore.MappingStore
 }
 
@@ -89,7 +86,6 @@ func (unit *productAdminUoW) WithinTransaction(fn func(productadmin.DeleteReposi
 			CardSecretBatches: unit.cardSecretBatches.BindTx(tx),
 			SKUs:              unit.productSKUs.BindTx(tx),
 			MemberLevelPrices: memberlevelgormstore.NewPriceStore(tx),
-			Carts:             unit.carts.WithTx(tx),
 			ProductMappings:   unit.productMappings.WithTx(tx),
 		})
 	})
@@ -130,7 +126,6 @@ func setupAdminProductHandlerTest(t *testing.T) (*producthttp.AdminProductHandle
 		&cardsecretdomain.Secret{},
 		&cardsecretdomain.Batch{},
 		&memberleveldomain.MemberLevelPrice{},
-		&cartdomain.Item{},
 		&mappingdomain.Mapping{},
 		&mappingdomain.SKUMapping{},
 		&orderdomain.Order{},
@@ -148,7 +143,6 @@ func setupAdminProductHandlerTest(t *testing.T) (*producthttp.AdminProductHandle
 	memberLevelPriceStore := memberlevelgormstore.NewPriceStore(db)
 	mappingStore := mappinggormstore.NewMappingStore(db)
 	skuMappingStore := mappinggormstore.NewSKUMappingStore(db)
-	cartStore := cartgormstore.New(db)
 
 	facade := &productHandlerFacade{
 		Service: productapplication.NewService(productapplication.Options{
@@ -167,7 +161,6 @@ func setupAdminProductHandlerTest(t *testing.T) (*producthttp.AdminProductHandle
 				cardSecrets:       cardSecretStore,
 				cardSecretBatches: cardSecretBatchStore,
 				memberLevelPrices: memberLevelPriceStore,
-				carts:             cartStore,
 				productMappings:   mappingStore,
 			},
 		}),

@@ -1,15 +1,17 @@
 <template>
-  <div class="space-y-4">
-    <PanelHeading :title="t('orders.title')" :description="t('orders.subtitle')" :icon="ShoppingBag">
-      <template #actions>
-        <Badge variant="neutral" size="sm" class="rounded-full">
+  <div class="orders-panel space-y-4">
+    <header class="flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <h2 class="text-xl font-semibold text-foreground">{{ t('orders.title') }}</h2>
+        <p v-if="activePagination.total > 0" class="mt-1 text-xs text-muted-foreground">
+          <span class="hidden sm:inline">{{ t('orders.subtitle') }} · </span>
           {{ t('orders.pageInfo', { page: activePagination.page, total: activePagination.total_page }) }}
-        </Badge>
-        <Button as-child variant="ghost" size="sm" class="rounded-full">
-          <router-link to="/products">{{ t('orders.continueShopping') }}</router-link>
-        </Button>
-      </template>
-    </PanelHeading>
+        </p>
+      </div>
+      <Button as-child variant="ghost" size="sm" class="shrink-0 rounded-lg">
+        <router-link to="/products">{{ t('orders.continueShopping') }}</router-link>
+      </Button>
+    </header>
 
     <!-- Tab 切换 -->
     <div class="flex rounded-xl border bg-card overflow-hidden">
@@ -31,18 +33,18 @@
       </button>
     </div>
 
+    <dl class="orders-summary grid gap-x-3 gap-y-1 rounded-xl border bg-card p-3 sm:p-4" :class="activeTab === 'product' ? 'grid-cols-4' : 'grid-cols-3'">
+      <div v-for="stat in orderSummary" :key="stat.label" class="row-span-2 grid grid-rows-subgrid">
+        <dt class="break-words text-xs leading-5 text-muted-foreground">{{ stat.label }}</dt>
+        <dd class="text-lg font-semibold leading-6 tabular-nums">{{ stat.value }}</dd>
+      </div>
+    </dl>
+
     <!-- 普通订单 Tab -->
     <template v-if="activeTab === 'product'">
-      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard :label="t('orders.stats.totalMatched')" :value="orderPagination.total" :icon="ShoppingBag" tone="info" mono />
-        <StatCard :label="t('orders.stats.currentPage')" :value="orders.length" :icon="Layers" tone="neutral" mono />
-        <StatCard :label="t('orders.stats.pendingPayment')" :value="pendingPaymentCount" :icon="Clock" tone="warning" mono />
-        <StatCard :label="t('orders.stats.finished')" :value="finishedCount" :icon="CheckCircle2" tone="success" mono />
-      </div>
-
-      <div class="rounded-2xl border bg-card p-4 shadow-sm">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
-          <div class="w-full lg:max-w-sm">
+      <div class="orders-filters rounded-xl border bg-card p-3 sm:p-4">
+        <div class="grid grid-cols-2 items-end gap-3 lg:flex lg:items-end">
+          <div class="min-w-0 w-full lg:max-w-sm">
             <Label class="mb-1 block text-xs font-semibold text-muted-foreground">{{ t('orders.filters.keyword') }}</Label>
             <Input
               v-model="orderFilters.orderNo"
@@ -54,7 +56,7 @@
             />
           </div>
 
-          <div class="w-full lg:w-56">
+          <div class="min-w-0 w-full lg:w-56">
             <Label class="mb-1 block text-xs font-semibold text-muted-foreground">{{ t('orders.filters.status') }}</Label>
             <Select v-model="orderStatusProxy">
               <SelectTrigger class="h-11 w-full"><SelectValue /></SelectTrigger>
@@ -66,14 +68,14 @@
             </Select>
           </div>
 
-          <div class="flex w-full flex-wrap items-center gap-2 lg:w-auto">
-            <Button type="button" class="h-11 font-bold" @click="applyOrderFilters">
+          <div class="col-span-2 flex w-full items-center gap-2 lg:w-auto">
+            <Button type="button" class="h-11 min-w-0 flex-1 px-3 text-[13px] font-semibold lg:flex-none" @click="applyOrderFilters">
               {{ t('orders.filters.search') }}
             </Button>
-            <Button type="button" variant="outline" class="h-11 font-semibold" @click="resetOrderFilters">
+            <Button type="button" variant="outline" class="h-11 min-w-0 flex-1 px-3 text-[13px] font-semibold lg:flex-none" @click="resetOrderFilters">
               {{ t('orders.filters.reset') }}
             </Button>
-            <Button type="button" variant="outline" class="h-11 font-semibold" @click="refreshOrdersCurrentPage">
+            <Button type="button" variant="outline" class="h-11 min-w-0 flex-1 px-3 text-[13px] font-semibold lg:flex-none" @click="refreshOrdersCurrentPage">
               {{ t('orders.filters.refresh') }}
             </Button>
           </div>
@@ -97,39 +99,30 @@
       />
 
       <div v-else class="space-y-4">
-        <div
-          v-for="order in orders"
-          :key="order.order_no"
-          class="rounded-2xl border bg-card p-6 shadow-sm transition-all transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
-        >
-          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div class="text-xs uppercase tracking-[0.16em] text-muted-foreground">{{ t('orders.orderNo') }}：{{ order.order_no }}</div>
-              <div class="mt-2 text-lg font-bold text-foreground">{{ formatMoney(order.total_amount, order.currency) }}</div>
-              <div v-if="hasDiscount(order)" class="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                <Badge v-if="hasDiscountAmount(order.discount_amount)" variant="success" size="sm">
-                  {{ t('orderDetail.couponDiscountLabel') }}：{{ formatDiscountMoney(order.discount_amount, order.currency) }}
-                </Badge>
-                <Badge v-if="hasDiscountAmount(order.promotion_discount_amount)" variant="danger" size="sm">
-                  {{ t('orderDetail.promotionDiscountLabel') }}：{{ formatDiscountMoney(order.promotion_discount_amount, order.currency) }}
-                </Badge>
-              </div>
-              <div class="mt-2 text-xs text-muted-foreground">{{ formatDate(order.created_at) }}</div>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-3">
-              <Badge :variant="statusVariant(order.status)" size="sm">
-                {{ statusLabel(order.status) }}
+        <article v-for="order in orders" :key="order.order_no" class="order-list-card grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-xl border bg-card p-3 transition hover:border-primary/30 sm:p-4">
+          <div class="min-w-0 break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">{{ t('orders.orderNo') }}：{{ order.order_no }}</div>
+          <Badge :variant="statusVariant(order.status)" size="sm" class="justify-self-end">{{ statusLabel(order.status) }}</Badge>
+          <div class="order-list-details min-w-0">
+            <div class="break-words text-base font-semibold tabular-nums text-foreground">{{ formatMoney(order.total_amount, order.currency) }}</div>
+            <div v-if="hasDiscount(order)" class="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+              <Badge v-if="hasDiscountAmount(order.discount_amount)" variant="success" size="sm">
+                {{ t('orderDetail.couponDiscountLabel') }}：{{ formatDiscountMoney(order.discount_amount, order.currency) }}
               </Badge>
-              <Button as-child variant="outline" size="sm">
-                <router-link :to="`/orders/${order.order_no}`">{{ t('orders.viewDetails') }}</router-link>
-              </Button>
-              <Button v-if="order.status === 'pending_payment'" as-child size="sm">
-                <router-link :to="`/pay?order_no=${order.order_no}`">{{ t('orders.payNow') }}</router-link>
-              </Button>
+              <Badge v-if="hasDiscountAmount(order.promotion_discount_amount)" variant="danger" size="sm">
+                {{ t('orderDetail.promotionDiscountLabel') }}：{{ formatDiscountMoney(order.promotion_discount_amount, order.currency) }}
+              </Badge>
             </div>
+            <div class="mt-1 break-words text-xs leading-5 text-muted-foreground">{{ formatDate(order.created_at) }}</div>
           </div>
-        </div>
+          <div class="order-list-actions flex flex-col items-end gap-2 min-[380px]:flex-row min-[380px]:items-center">
+            <Button as-child variant="outline" size="sm">
+              <router-link :to="`/orders/${order.order_no}`">{{ t('orders.viewDetails') }}</router-link>
+            </Button>
+            <Button v-if="order.status === 'pending_payment'" as-child size="sm">
+              <router-link :to="`/pay?order_no=${order.order_no}`">{{ t('orders.payNow') }}</router-link>
+            </Button>
+          </div>
+        </article>
       </div>
 
       <PaginationNav
@@ -143,15 +136,9 @@
 
     <!-- 充值订单 Tab -->
     <template v-if="activeTab === 'recharge'">
-      <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <StatCard :label="t('orders.stats.totalMatched')" :value="rechargePagination.total" :icon="Wallet" tone="info" mono />
-        <StatCard :label="t('orders.stats.currentPage')" :value="rechargeOrders.length" :icon="Layers" tone="neutral" mono />
-        <StatCard :label="t('orders.stats.pendingPayment')" :value="rechargePendingCount" :icon="Clock" tone="warning" mono />
-      </div>
-
-      <div class="rounded-2xl border bg-card p-4 shadow-sm">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
-          <div class="w-full lg:max-w-sm">
+      <div class="orders-filters rounded-xl border bg-card p-3 sm:p-4">
+        <div class="grid grid-cols-2 items-end gap-3 lg:flex lg:items-end">
+          <div class="min-w-0 w-full lg:max-w-sm">
             <Label class="mb-1 block text-xs font-semibold text-muted-foreground">{{ t('orders.rechargeFilters.keyword') }}</Label>
             <Input
               v-model="rechargeFilters.rechargeNo"
@@ -163,7 +150,7 @@
             />
           </div>
 
-          <div class="w-full lg:w-56">
+          <div class="min-w-0 w-full lg:w-56">
             <Label class="mb-1 block text-xs font-semibold text-muted-foreground">{{ t('orders.filters.status') }}</Label>
             <Select v-model="rechargeStatusProxy">
               <SelectTrigger class="h-11 w-full"><SelectValue /></SelectTrigger>
@@ -175,14 +162,14 @@
             </Select>
           </div>
 
-          <div class="flex w-full flex-wrap items-center gap-2 lg:w-auto">
-            <Button type="button" class="h-11 font-bold" @click="applyRechargeFilters">
+          <div class="col-span-2 flex w-full items-center gap-2 lg:w-auto">
+            <Button type="button" class="h-11 min-w-0 flex-1 px-3 text-[13px] font-semibold lg:flex-none" @click="applyRechargeFilters">
               {{ t('orders.filters.search') }}
             </Button>
-            <Button type="button" variant="outline" class="h-11 font-semibold" @click="resetRechargeFilters">
+            <Button type="button" variant="outline" class="h-11 min-w-0 flex-1 px-3 text-[13px] font-semibold lg:flex-none" @click="resetRechargeFilters">
               {{ t('orders.filters.reset') }}
             </Button>
-            <Button type="button" variant="outline" class="h-11 font-semibold" @click="refreshRechargeCurrentPage">
+            <Button type="button" variant="outline" class="h-11 min-w-0 flex-1 px-3 text-[13px] font-semibold lg:flex-none" @click="refreshRechargeCurrentPage">
               {{ t('orders.filters.refresh') }}
             </Button>
           </div>
@@ -202,31 +189,22 @@
       />
 
       <div v-else class="space-y-4">
-        <div
-          v-for="ro in rechargeOrders"
-          :key="ro.recharge_no"
-          class="rounded-2xl border bg-card p-6 shadow-sm transition-all transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
-        >
-          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div class="text-xs uppercase tracking-[0.16em] text-muted-foreground">{{ t('personalCenter.wallet.rechargeNoLabel') }}：{{ ro.recharge_no }}</div>
-              <div class="mt-2 text-lg font-bold text-foreground">{{ formatMoney(ro.amount, ro.currency) }}</div>
-              <div class="mt-2 text-xs text-muted-foreground">{{ formatDate(ro.created_at) }}</div>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-3">
-              <Badge :variant="rechargeStatusVariant(ro.status)" size="sm">
-                {{ rechargeStatusText(ro.status) }}
-              </Badge>
-              <Button as-child variant="outline" size="sm">
-                <router-link :to="`/recharge-orders/${ro.recharge_no}`">{{ t('orders.viewDetails') }}</router-link>
-              </Button>
-              <Button v-if="ro.status === 'pending'" as-child size="sm">
-                <router-link :to="`/recharge-orders/${ro.recharge_no}`">{{ t('orders.payNow') }}</router-link>
-              </Button>
-            </div>
+        <article v-for="ro in rechargeOrders" :key="ro.recharge_no" class="order-list-card grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-xl border bg-card p-3 transition hover:border-primary/30 sm:p-4">
+          <div class="min-w-0 break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">{{ t('personalCenter.wallet.rechargeNoLabel') }}：{{ ro.recharge_no }}</div>
+          <Badge :variant="rechargeStatusVariant(ro.status)" size="sm" class="justify-self-end">{{ rechargeStatusText(ro.status) }}</Badge>
+          <div class="order-list-details min-w-0">
+            <div class="break-words text-base font-semibold tabular-nums text-foreground">{{ formatMoney(ro.amount, ro.currency) }}</div>
+            <div class="mt-1 break-words text-xs leading-5 text-muted-foreground">{{ formatDate(ro.created_at) }}</div>
           </div>
-        </div>
+          <div class="order-list-actions flex flex-col items-end gap-2 min-[380px]:flex-row min-[380px]:items-center">
+            <Button as-child variant="outline" size="sm">
+              <router-link :to="`/recharge-orders/${ro.recharge_no}`">{{ t('orders.viewDetails') }}</router-link>
+            </Button>
+            <Button v-if="ro.status === 'pending'" as-child size="sm">
+              <router-link :to="`/recharge-orders/${ro.recharge_no}`">{{ t('orders.payNow') }}</router-link>
+            </Button>
+          </div>
+        </article>
       </div>
 
       <PaginationNav
@@ -243,7 +221,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ShoppingBag, Layers, Clock, CheckCircle2, Wallet } from 'lucide-vue-next'
 import { userOrderAPI } from '../../api'
 import { walletAPI } from '../../api/wallet'
 import { orderStatusVariant, orderStatusLabel, type BadgeTone } from '../../utils/status'
@@ -256,8 +233,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input'
 import EmptyState from '../../components/EmptyState.vue'
 import PaginationNav from '../../components/PaginationNav.vue'
-import PanelHeading from '../../components/shared/PanelHeading.vue'
-import StatCard from '../../components/shared/StatCard.vue'
 
 const { t } = useI18n()
 
@@ -457,6 +432,17 @@ const rechargeStatusVariant = (status?: string): BadgeTone => {
   if (normalized === 'failed' || normalized === 'expired') return 'danger'
   return 'warning'
 }
+
+const orderSummary = computed(() => {
+  const recharge = activeTab.value === 'recharge'
+  const stats = [
+    { label: t('orders.stats.totalMatched'), value: activePagination.value.total },
+    { label: t('orders.stats.currentPage'), value: recharge ? rechargeOrders.value.length : orders.value.length },
+    { label: t('orders.stats.pendingPayment'), value: recharge ? rechargePendingCount.value : pendingPaymentCount.value },
+  ]
+  if (!recharge) stats.push({ label: t('orders.stats.finished'), value: finishedCount.value })
+  return stats
+})
 
 // ========== 共用工具 ==========
 const formatMoney = (amount?: string, currency?: string) => {

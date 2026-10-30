@@ -103,13 +103,6 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 		if err := productdomain.ValidatePurchaseQuantity(product, item.Quantity); err != nil {
 			return nil, err
 		}
-		purchaseType := strings.TrimSpace(product.PurchaseType)
-		if purchaseType == "" {
-			purchaseType = constants.ProductPurchaseMember
-		}
-		if input.IsGuest && purchaseType == constants.ProductPurchaseMember {
-			return nil, ErrProductPurchaseNotAllowed
-		}
 		sku, err := resolveProductOrderSKU(s.productSKURepo, product, item.SKUID)
 		if err != nil {
 			return nil, err

@@ -9,7 +9,6 @@ import (
 
 	"github.com/dujiao-next/internal/logger"
 	cardsecretapp "github.com/dujiao-next/internal/modules/cardsecret/application"
-	cartapp "github.com/dujiao-next/internal/modules/cart/application"
 	contentapp "github.com/dujiao-next/internal/modules/content/application"
 	"github.com/dujiao-next/internal/modules/content/infrastructure/gormstore"
 	couponapp "github.com/dujiao-next/internal/modules/coupon/application"
@@ -72,7 +71,6 @@ func (c *Container) initApplicationServices() {
 		panic(err)
 	}
 	c.SitemapService = sitemapService
-	c.CartService = cartapp.NewService(c.CartRepo, c.ProductRepo, c.ProductSKURepo, c.PromotionRepo, c.SettingService)
 	c.WalletService = walletapp.NewService(walletapp.Options{
 		Repository: c.WalletRepo, Transactions: c.WalletRepo,
 	})

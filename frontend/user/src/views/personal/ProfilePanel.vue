@@ -1,5 +1,5 @@
 <template>
-  <div class="rounded-2xl border bg-card p-7 shadow-sm">
+  <div class="rounded-2xl border bg-card p-4 shadow-sm sm:p-7">
     <PanelHeading :title="t('personalCenter.profile.title')" :description="t('personalCenter.profile.subtitle')" :icon="UserCircle">
       <template #actions>
         <Badge variant="accent" size="sm">{{ t('personalCenter.tabs.profile') }}</Badge>

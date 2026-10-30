@@ -9,8 +9,6 @@ import (
 
 	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
 	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
-
-	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
 	mappingcontract "github.com/dujiao-next/internal/modules/catalog/mapping/contract"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
@@ -66,7 +64,6 @@ type Dependencies struct {
 	CardSecretBatches CardSecretBatchStore
 	Categories        categorycontract.Repository
 	MemberLevelPrices memberLevelPriceCleaner
-	Carts             *cartgormstore.Store
 	ProductMappings   MappingStore
 	Orders            OrderReader
 	PaymentChannels   paymentcontract.ChannelStore
@@ -129,7 +126,6 @@ type productAdminUnitOfWork struct {
 	cardSecrets       CardSecretStore
 	cardSecretBatches CardSecretBatchStore
 	memberLevelPrices memberLevelPriceCleaner
-	carts             *cartgormstore.Store
 	productMappings   MappingStore
 }
 
@@ -139,7 +135,6 @@ func newProductAdminUnitOfWork(
 	cardSecrets CardSecretStore,
 	cardSecretBatches CardSecretBatchStore,
 	memberLevelPrices memberLevelPriceCleaner,
-	carts *cartgormstore.Store,
 	productMappings MappingStore,
 ) productadmin.UnitOfWork {
 	return &productAdminUnitOfWork{
@@ -148,7 +143,6 @@ func newProductAdminUnitOfWork(
 		cardSecrets:       cardSecrets,
 		cardSecretBatches: cardSecretBatches,
 		memberLevelPrices: memberLevelPrices,
-		carts:             carts,
 		productMappings:   productMappings,
 	}
 }
@@ -167,7 +161,6 @@ func (unit *productAdminUnitOfWork) WithinTransaction(fn func(productadmin.Delet
 			CardSecretBatches: unit.cardSecretBatches.BindTx(tx),
 			SKUs:              unit.productSKUs.BindTx(tx),
 			MemberLevelPrices: memberLevelPriceDeleteAdapter{tx: tx, cleaner: unit.memberLevelPrices},
-			Carts:             unit.carts.WithTx(tx),
 			ProductMappings:   bindMappingDeleteTx(unit.productMappings, tx),
 		})
 	})
@@ -201,7 +194,7 @@ func New(dependencies Dependencies) Services {
 		Categories:   dependencies.Categories,
 		CardSecrets:  dependencies.CardSecrets,
 		Orders:       dependencies.Orders,
-		Transactions: newProductAdminUnitOfWork(dependencies.Products, dependencies.SKUs, dependencies.CardSecrets, dependencies.CardSecretBatches, dependencies.MemberLevelPrices, dependencies.Carts, dependencies.ProductMappings),
+		Transactions: newProductAdminUnitOfWork(dependencies.Products, dependencies.SKUs, dependencies.CardSecrets, dependencies.CardSecretBatches, dependencies.MemberLevelPrices, dependencies.ProductMappings),
 	})
 	write := productwrite.NewWriteService(productwrite.Options{
 		Products:        dependencies.Products,

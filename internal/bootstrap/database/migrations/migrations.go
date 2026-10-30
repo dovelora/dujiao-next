@@ -8,7 +8,6 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
-	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
@@ -130,88 +129,20 @@ func (userOAuthIdentityUserProviderIndexSchema) TableName() string {
 	return "user_oauth_identities"
 }
 
-type cartItemConstraintSchema struct {
-	cartdomain.Item
-	Product *cartProductReference    `gorm:"foreignKey:ProductID;references:ID;constraint:fk_cart_items_product"`
-	SKU     *cartProductSKUReference `gorm:"foreignKey:SKUID;references:ID;constraint:fk_cart_items_sku"`
-}
-
-func (cartItemConstraintSchema) TableName() string { return "cart_items" }
-
-type cartProductReference struct {
-	ID uint `gorm:"primarykey"`
-}
-
-func (cartProductReference) TableName() string { return "products" }
-
-type cartProductSKUReference struct {
-	ID uint `gorm:"primarykey"`
-}
-
-func (cartProductSKUReference) TableName() string { return "product_skus" }
-
-func ensureCartForeignKeyConstraints() error {
+// retireCartForeignKeyConstraints detaches the unused cart table without deleting its data.
+func retireCartForeignKeyConstraints() error {
 	if gormdb.DB == nil {
 		return errors.New("database is not initialized")
 	}
 	migrator := gormdb.DB.Migrator()
-	missing := make([]struct {
-		name     string
-		relation string
-	}, 0, 2)
-	for _, constraint := range []struct {
-		name     string
-		relation string
-	}{
-		{name: cartProductForeignKeyConstraint, relation: "Product"},
-		{name: cartSKUForeignKeyConstraint, relation: "SKU"},
-	} {
-		if migrator.HasConstraint(&cartItemConstraintSchema{}, constraint.name) {
-			continue
-		}
-		missing = append(missing, constraint)
+	if !migrator.HasTable("cart_items") {
+		return nil
 	}
-	if len(missing) > 0 {
-		if err := validateCartForeignKeyReferences(); err != nil {
-			return err
-		}
-		for _, constraint := range missing {
-			if err := migrator.CreateConstraint(&cartItemConstraintSchema{}, constraint.relation); err != nil {
+	for _, name := range []string{cartProductForeignKeyConstraint, cartSKUForeignKeyConstraint} {
+		if migrator.HasConstraint("cart_items", name) {
+			if err := migrator.DropConstraint("cart_items", name); err != nil {
 				return err
 			}
-		}
-	}
-
-	// SQLite 通过重建表来增加外键，重建过程不会保留原表索引。
-	// 即使外键已经存在也要执行，以修复曾被旧迁移版本移除的索引。
-	return gormdb.DB.AutoMigrate(&cartdomain.Item{})
-}
-
-func validateCartForeignKeyReferences() error {
-	for _, reference := range []struct {
-		constraint string
-		table      string
-		column     string
-	}{
-		{constraint: cartProductForeignKeyConstraint, table: "products", column: "product_id"},
-		{constraint: cartSKUForeignKeyConstraint, table: "product_skus", column: "sku_id"},
-	} {
-		var orphanCount int64
-		query := fmt.Sprintf(
-			"SELECT COUNT(*) FROM cart_items AS cart LEFT JOIN %s AS target ON target.id = cart.%s WHERE target.id IS NULL",
-			reference.table,
-			reference.column,
-		)
-		if err := gormdb.DB.Raw(query).Scan(&orphanCount).Error; err != nil {
-			return err
-		}
-		if orphanCount > 0 {
-			return fmt.Errorf(
-				"cannot create %s: %d cart_items rows reference missing %s",
-				reference.constraint,
-				orphanCount,
-				reference.table,
-			)
 		}
 	}
 	return nil
@@ -504,25 +435,6 @@ func ensureOrderItemOriginalPriceMigration() error {
 	})
 }
 
-// migrateCartSKUUniqueIndex 迁移购物车唯一索引为 user_id + product_id + sku_id 维度。
-func migrateCartSKUUniqueIndex() error {
-	migrator := gormdb.DB.Migrator()
-
-	// 历史唯一索引会阻止同一商品不同 SKU 共存，迁移时必须移除。
-	if migrator.HasIndex(&cartdomain.Item{}, "idx_cart_user_product") {
-		if err := migrator.DropIndex(&cartdomain.Item{}, "idx_cart_user_product"); err != nil {
-			return err
-		}
-	}
-
-	if !migrator.HasIndex(&cartdomain.Item{}, "idx_cart_user_product_sku") {
-		if err := migrator.CreateIndex(&cartdomain.Item{}, "idx_cart_user_product_sku"); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // ensureUserOAuthIdentityUserProviderUniqueIndex makes one provider binding per
 // user a database invariant. Historical duplicates are real login credentials,
 // including rows that legacy GetByUserProvider(...).First(...) hid from the UI,
@@ -727,7 +639,7 @@ func buildProductSKUMap() (map[uint]uint, error) {
 	return result, nil
 }
 
-// backfillLegacySKUID 回填历史 order/cart/card_secret 数据的 sku_id。
+// backfillLegacySKUID 回填历史 order/card_secret 数据的 sku_id。
 func backfillLegacySKUID(productToSKU map[uint]uint) error {
 	if len(productToSKU) == 0 {
 		return nil
@@ -740,11 +652,6 @@ func backfillLegacySKUID(productToSKU map[uint]uint) error {
 			}
 
 			if err := tx.Unscoped().Model(&orderdomain.OrderItem{}).
-				Where("product_id = ? AND sku_id = 0", productID).
-				Update("sku_id", skuID).Error; err != nil {
-				return err
-			}
-			if err := tx.Model(&cartdomain.Item{}).
 				Where("product_id = ? AND sku_id = 0", productID).
 				Update("sku_id", skuID).Error; err != nil {
 				return err
@@ -777,14 +684,6 @@ func validateSKUMigrationIntegrity() error {
 			query: func() (int64, error) {
 				var count int64
 				err := gormdb.DB.Model(&orderdomain.OrderItem{}).Where("sku_id = 0").Count(&count).Error
-				return count, err
-			},
-		},
-		{
-			name: "cart_items",
-			query: func() (int64, error) {
-				var count int64
-				err := gormdb.DB.Model(&cartdomain.Item{}).Where("sku_id = 0").Count(&count).Error
 				return count, err
 			},
 		},

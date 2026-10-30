@@ -25,8 +25,6 @@ import (
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
-	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
-	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
@@ -72,7 +70,7 @@ func newProductServiceForTest(t *testing.T) (catalogproductbootstrap.Services, *
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &cardsecretdomain.Secret{}, &cardsecretdomain.Batch{}, &memberleveldomain.MemberLevelPrice{}, &cartdomain.Item{}, &mappingdomain.Mapping{}, &mappingdomain.SKUMapping{}, &orderdomain.Order{}, &orderdomain.OrderItem{}, &paymentdomain.PaymentChannel{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &cardsecretdomain.Secret{}, &cardsecretdomain.Batch{}, &memberleveldomain.MemberLevelPrice{}, &mappingdomain.Mapping{}, &mappingdomain.SKUMapping{}, &orderdomain.Order{}, &orderdomain.OrderItem{}, &paymentdomain.PaymentChannel{}); err != nil {
 		t.Fatalf("auto migrate product service tables failed: %v", err)
 	}
 
@@ -83,7 +81,6 @@ func newProductServiceForTest(t *testing.T) (catalogproductbootstrap.Services, *
 		CardSecretBatches: cardsecretgormstore.NewBatch(db),
 		Categories:        categorygormstore.NewCategoryStore(db),
 		MemberLevelPrices: memberlevelgormstore.NewPriceStore(db),
-		Carts:             cartgormstore.New(db),
 		ProductMappings:   mappinggormstore.NewMappingStore(db),
 		Orders:            ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes"),
 		PaymentChannels:   paymentgormstore.NewChannelStore(db),

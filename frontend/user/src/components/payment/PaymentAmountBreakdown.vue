@@ -1,11 +1,11 @@
 <template>
   <div class="bg-secondary border rounded-2xl p-4">
     <div class="text-xs uppercase tracking-wider text-muted-foreground">{{ t('payment.payableAmountLabel') }}</div>
-    <div class="mt-1 text-2xl font-bold text-foreground">{{ payableAmountDisplay }}</div>
-    <div class="mt-4 space-y-2 text-xs">
+    <div class="payment-amount mt-1 break-all text-[26px] font-semibold leading-8 text-foreground">{{ payableAmountDisplay }}</div>
+    <div class="mt-4 space-y-2 text-[13px]">
       <div class="flex items-center justify-between gap-4">
         <span class="text-muted-foreground">{{ t('orderDetail.amountTotal') }}</span>
-        <span class="font-semibold text-foreground">{{ formatMoney(order.total_amount, order.currency) }}</span>
+        <span class="min-w-0 break-all text-right font-semibold text-foreground">{{ formatMoney(order.total_amount, order.currency) }}</span>
       </div>
       <div v-if="hasDiscountAmount(order.discount_amount)" class="flex items-center justify-between gap-4">
         <span class="text-muted-foreground">{{ t('orderDetail.amountDiscount') }}</span>
@@ -29,11 +29,11 @@
       </div>
       <div v-if="paymentResult.wallet_paid_amount !== undefined" class="flex items-center justify-between gap-4">
         <span class="text-muted-foreground">{{ t('payment.walletDeductLabel') }}</span>
-        <span class="font-medium text-foreground">{{ walletPaidDisplay }}</span>
+        <span class="min-w-0 break-all text-right font-medium text-foreground">{{ walletPaidDisplay }}</span>
       </div>
       <div v-if="paymentResult.online_pay_amount !== undefined" class="flex items-center justify-between gap-4">
         <span class="text-muted-foreground">{{ t('payment.onlinePayLabel') }}</span>
-        <span class="font-medium text-foreground">{{ onlinePayDisplay }}</span>
+        <span class="min-w-0 break-all text-right font-medium text-foreground">{{ onlinePayDisplay }}</span>
       </div>
     </div>
     <div v-if="showCountdown || pollingActive" class="mt-4 border-t pt-3 text-xs">
@@ -67,3 +67,10 @@ defineProps<{
 
 const { t } = useI18n()
 </script>
+
+<style scoped>
+.payment-amount {
+  font-family: "Rubik", var(--ui-font-family);
+  font-variant-numeric: tabular-nums;
+}
+</style>

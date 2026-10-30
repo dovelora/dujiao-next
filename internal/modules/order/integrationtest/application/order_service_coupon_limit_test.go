@@ -129,7 +129,6 @@ func newCouponLimitRaceFixture(t *testing.T, name string, usageLimit, perUserLim
 		Slug:            name + "-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "优惠券并发测试商品"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 		CreatedAt:       now,

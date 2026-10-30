@@ -1,6 +1,6 @@
 <template>
-  <div class="rounded-2xl border bg-card p-7 shadow-sm">
-    <div class="mb-4 flex items-center justify-between">
+  <div class="rounded-2xl border bg-card p-4 shadow-sm sm:p-7">
+    <div class="mb-4 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
       <h3 class="text-lg font-bold text-foreground">{{ t('personalCenter.security.loginLogsTitle') }}</h3>
       <span class="text-xs text-muted-foreground">{{ t('personalCenter.security.loginLogsTip') }}</span>
     </div>

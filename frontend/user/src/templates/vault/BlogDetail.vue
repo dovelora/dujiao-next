@@ -1,5 +1,5 @@
 <template>
-  <div class="mx-auto w-full max-w-[860px] px-6 pb-10 pt-2">
+  <div class="mx-auto w-full max-w-[860px] px-4 pb-10 pt-2 sm:px-6">
     <!-- Loading -->
     <div v-if="loading" class="grid gap-4 pt-6">
       <div class="h-6 w-2/5 rounded-md border bg-card"></div>
@@ -14,10 +14,10 @@
         <ChevronRight class="h-4 w-4 flex-none" />
         <RouterLink :to="backLink" class="hover:text-primary">{{ backText }}</RouterLink>
         <ChevronRight class="h-4 w-4 flex-none" />
-        <span class="max-w-[240px] truncate text-foreground">{{ getLocalizedText(post.title) }}</span>
+        <span class="min-w-0 max-w-full truncate text-foreground sm:max-w-[240px]">{{ getLocalizedText(post.title) }}</span>
       </nav>
 
-      <Card class="p-[30px]">
+      <Card class="p-4 sm:p-[30px]">
         <div v-if="post.thumbnail" class="mb-7 h-80 overflow-hidden rounded-md">
           <img :src="getImageUrl(post.thumbnail)" :alt="getLocalizedText(post.title)" loading="lazy" class="h-full w-full object-cover" />
         </div>
@@ -28,7 +28,7 @@
             <span class="text-[13px] font-semibold text-muted-foreground">{{ formatDate(post.published_at) }}</span>
           </div>
           <h1 class="text-[34px] font-extrabold leading-tight">{{ getLocalizedText(post.title) }}</h1>
-          <p v-if="post.summary" class="mt-3.5 text-[17px] leading-relaxed text-muted-foreground">{{ getLocalizedText(post.summary) }}</p>
+          <p v-if="post.summary" class="mt-3.5 text-sm leading-relaxed sm:text-[17px] text-muted-foreground">{{ getLocalizedText(post.summary) }}</p>
         </header>
 
         <div
@@ -41,7 +41,7 @@
           <h2 class="mb-[18px] flex items-center gap-3 text-[21px] font-bold">
             <span class="h-6 w-[5px] flex-none rounded-full bg-primary"></span>{{ t('blog.relatedProducts') }}
           </h2>
-          <div class="grid gap-3.5 grid-cols-[repeat(auto-fill,minmax(220px,1fr))]">
+          <div class="grid gap-3.5 grid-cols-[repeat(auto-fill,minmax(min(100%,220px),1fr))]">
             <RouterLink
               v-for="rp in relatedProducts"
               :key="rp.id"

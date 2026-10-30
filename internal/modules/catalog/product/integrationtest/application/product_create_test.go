@@ -39,7 +39,6 @@ func TestProductServiceCreateRejectsParentCategoryWithChildren(t *testing.T) {
 		Slug:            "invalid-parent-product",
 		TitleJSON:       map[string]interface{}{"zh-CN": "invalid-parent-product"},
 		PriceAmount:     decimal.NewFromInt(10),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		ManualStockTotal: func() *int {
 			value := 1
@@ -71,7 +70,6 @@ func TestProductServiceCreateFiltersUnavailablePaymentChannels(t *testing.T) {
 		Slug:              "payment-channel-create",
 		TitleJSON:         map[string]interface{}{"zh-CN": "payment-channel-create"},
 		PriceAmount:       decimal.NewFromInt(10),
-		PurchaseType:      constants.ProductPurchaseMember,
 		FulfillmentType:   constants.FulfillmentTypeAuto,
 		PaymentChannelIDs: []uint{deletedChannel.ID, inactiveChannel.ID, activeChannel.ID},
 		IsActive: func() *bool {
@@ -104,7 +102,6 @@ func TestProductServiceCreateRejectsInvalidPurchaseLimits(t *testing.T) {
 		Slug:                "invalid-limit-product",
 		TitleJSON:           map[string]interface{}{"zh-CN": "invalid-limit-product"},
 		PriceAmount:         decimal.NewFromInt(10),
-		PurchaseType:        constants.ProductPurchaseMember,
 		FulfillmentType:     constants.FulfillmentTypeManual,
 		ManualStockTotal:    intPtr(1),
 		MinPurchaseQuantity: intPtr(10),
@@ -130,7 +127,6 @@ func TestProductServiceCreateRollsBackProductAndSKUWhenWholesaleValidationFails(
 		Slug:            "write-rollback-product",
 		TitleJSON:       map[string]interface{}{"zh-CN": "write-rollback-product"},
 		PriceAmount:     decimal.NewFromInt(10),
-		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		WholesalePrices: &[]productdomain.WholesalePriceInput{{
 			MinQuantity: 0,
