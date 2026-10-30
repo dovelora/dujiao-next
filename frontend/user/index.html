@@ -33,8 +33,17 @@
       height: auto;
     }
 
-    .initial-loading {
+    .storefront-boot {
+      display: none;
+    }
+
+    .storefront-booting .storefront-initial-content {
+      display: none;
+    }
+
+    .storefront-booting .storefront-boot {
       position: fixed;
+      z-index: 1000;
       inset: 0;
       display: flex;
       flex-direction: column;
@@ -46,19 +55,19 @@
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
-    .initial-loading img {
+    .storefront-boot img {
       width: 48px;
       height: 48px;
       object-fit: contain;
     }
 
-    .initial-loading span {
+    .storefront-boot span {
       font-size: 12px;
       font-weight: 600;
       letter-spacing: .24em;
     }
 
-    .initial-loading-bar {
+    .storefront-boot-bar {
       width: 80px;
       height: 4px;
       overflow: hidden;
@@ -66,43 +75,56 @@
       background: #eef2f7;
     }
 
-    .initial-loading-bar::after {
+    .storefront-boot-bar::after {
       display: block;
       width: 50%;
       height: 100%;
       border-radius: inherit;
       background: #2563eb;
       content: "";
-      animation: initial-loading-progress 1.15s ease-in-out infinite;
+      animation: storefront-boot-progress 1.15s ease-in-out infinite;
     }
 
-    @keyframes initial-loading-progress {
+    @keyframes storefront-boot-progress {
       from { transform: translateX(-110%); }
       to { transform: translateX(210%); }
     }
 
     @media (prefers-color-scheme: dark) {
-      .initial-loading {
+      .storefront-boot {
         background: #0b1220;
         color: #cbd5e1;
       }
 
-      .initial-loading-bar {
+      .storefront-boot-bar {
         background: #1e293b;
       }
     }
   </style>
+  <script data-cfasync="false">
+    (() => {
+      const root = document.documentElement
+      root.classList.add('storefront-booting')
+      const finish = () => {
+        root.classList.remove('storefront-booting')
+        window.clearTimeout(timeout)
+      }
+      const timeout = window.setTimeout(finish, 15000)
+      window.addEventListener('storefront-ready', finish, { once: true })
+      window.addEventListener('storefront-failed', finish, { once: true })
+    })()
+  </script>
 </head>
 
 <body>
   <div id="app">
     <!--storefront-content-start-->
-    <div class="initial-loading" role="status" aria-live="polite" aria-label="Dovelora loading">
-      <img src="/site-icon.png" alt="" />
-      <span>DOVELORA</span>
-      <div class="initial-loading-bar"></div>
-    </div>
     <!--storefront-content-end-->
+  </div>
+  <div class="storefront-boot" role="status" aria-live="polite" aria-label="Dovelora loading">
+    <img src="/site-icon.png" alt="" />
+    <span>DOVELORA</span>
+    <div class="storefront-boot-bar"></div>
   </div>
   <script type="module" data-cfasync="false" src="/src/main.ts"></script>
 </body>

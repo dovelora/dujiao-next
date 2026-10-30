@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+import { createApp, nextTick } from 'vue'
 import { createPinia } from 'pinia'
 import { createHead } from '@unhead/vue/client'
 import './style.css'
@@ -6,7 +6,7 @@ import App from './App.vue'
 import router from './router'
 import i18n, { detectLocale, setI18nLocale, warmupLocaleMessages } from './i18n'
 import { useTelegramMiniAppStore } from './stores/telegramMiniApp'
-import { initTemplateOverride } from './templates/registry'
+import { getActiveTemplate, initTemplateOverride } from './templates/registry'
 
 // 预览用：?template=vault 持久化激活模板（站长正式切换走站点配置）
 initTemplateOverride()
@@ -32,8 +32,17 @@ Promise.all([
   router.isReady(),
   useTelegramMiniAppStore(pinia).init(),
   setI18nLocale(detectLocale()),
-]).then(() => {
+]).then(async () => {
+  if (getActiveTemplate() === 'vault' && router.currentRoute.value.meta.resellerConsole !== true) {
+    // Vite waits for this chunk's CSS before resolving the import.
+    await import('./templates/vault/layout/VaultLayout.vue')
+  }
   app.mount('#app')
+  await nextTick()
+  window.dispatchEvent(new Event('storefront-ready'))
+}).catch((error) => {
+  window.dispatchEvent(new Event('storefront-failed'))
+  console.error('Storefront initialization failed:', error)
 })
 
 void router.isReady().then(() => {
